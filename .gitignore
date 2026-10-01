@@ -1,0 +1,10 @@
+node_modules/
+qa/
+dist/
+交付/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db

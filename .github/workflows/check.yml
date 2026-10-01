@@ -1,0 +1,23 @@
+name: Static website checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: node --test tests/*.test.mjs
+      - run: node scripts/build.mjs
+      - run: node scripts/check.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: static-website
+          path: dist/
+          retention-days: 7

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+    <defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b6d8b7"/><stop offset="1" stop-color="#75a58c"/></linearGradient>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#90b6b1"/><stop offset="1" stop-color="#426b67"/></linearGradient>
+    <linearGradient id="c" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3c9ac"/><stop offset="1" stop-color="#cf9878"/></linearGradient>
+    <linearGradient id="d" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9d3eb"/><stop offset="1" stop-color="#aaa0c1"/></linearGradient>
+    </defs><ellipse cx="200" cy="345" rx="104" ry="12" fill="#526a62" opacity=".09"/><path d="M43 155l31 47m283-47l-31 47" stroke="#274b3c" stroke-width="13" stroke-linecap="round"/><path d="M60 183q55-26 121 0l-8 73q-57 43-100-4zM219 183q66-26 121 0l-13 69q-43 47-100 4z" fill="url(#b)" stroke="#49684b" stroke-width="13"/><path d="M184 196q16-15 32 0" fill="none" stroke="#49684b" stroke-width="13"/><path d="M92 197l35 57m115-57l35 57" stroke="#97b39c" stroke-opacity=".5" stroke-width="14"/></svg>

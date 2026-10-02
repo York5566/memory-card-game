@@ -86,11 +86,20 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ## 網域與 GitHub
 
-`site.config.mjs` 的 `domain` 預設空字串，因此不產生測試網址的 canonical、sitemap 或 robots。正式網域確定後設為 `https://你的網域`，再建置即會產生正式網址的中繼資料、`sitemap.xml` 和 `robots.txt`。`basePath` 預設 `/`；若選擇 GitHub Pages 的儲存庫子路徑，可改成 `/儲存庫名稱/`。GitHub 版本控制不等於已指定 GitHub Pages。
+`site.config.mjs` 的 `domain` 預設空字串，因此不產生測試網址的 canonical、sitemap 或 robots。正式網域確定後設為 `https://你的網域`，再建置即會產生正式網址的中繼資料、`sitemap.xml` 和 `robots.txt`。`basePath` 由 `SITE_BASE_PATH` 環境變數指定，未指定時使用 `/`，方便本機預覽。
 
-`.gitignore` 排除 QA、建置成果、node_modules、暫存、環境變數及個人資料。原始碼、內建素材、鎖定檔及文件可以進版本控制。尚未初始化遠端儲存庫或提供帳號憑證。
+`.gitignore` 排除 QA、建置成果、node_modules、暫存、環境變數及個人資料。原始碼、內建素材、鎖定檔及文件可以進版本控制。`dist/` 不需提交，GitHub Actions 會從原始碼重新產生。
 
-`.github/workflows/check.yml` 是建置／檢查範本，使用官方 [checkout](https://github.com/actions/checkout)、[setup-node](https://github.com/actions/setup-node) 和 [upload-artifact](https://github.com/actions/upload-artifact)，只上傳建置成果供檢查，不部署。它尚未在遠端 GitHub 執行。
+`.github/workflows/check.yml` 提供原始碼測試與建置檢查。`.github/workflows/pages.yml` 會在推送到 `main` 後測試、建置並部署 `dist/`；部署時自動取得 Pages 子目錄，讓 CSS、JavaScript、圖庫及導覽連結都使用正確路徑。
+
+首次部署：
+
+1. 在 GitHub 儲存庫的 **Settings → Pages → Build and deployment → Source** 選擇 **GitHub Actions**。不要將原始碼根目錄交給預設 Jekyll，否則首頁可能顯示 README。
+2. 提交並推送本次的 `site.config.mjs`、`README.md` 及 `.github/workflows/pages.yml`。
+3. 到 **Actions** 等待 **Deploy website to GitHub Pages** 顯示成功；若已推送才切換 Source，可選此工作流程並按 **Run workflow**。
+4. 首頁為 `https://york5566.github.io/memory-card-game/`，遊戲頁為 `https://york5566.github.io/memory-card-game/games/memory/`。
+
+之後更新玩法或畫面並推送到 `main`，同一流程會自動重新部署。更新到其他版本時，請保留 `pages.yml` 與 `SITE_BASE_PATH` 的設定，避免丟失部署功能。
 
 ## Google 廣告預留
 

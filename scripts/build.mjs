@@ -23,16 +23,17 @@ export async function build() {
     ['home', '', '首頁', config.description],
     ['game', 'games/memory', '翻牌遊戲', '翻開兩張相同圖案，配對完成一場小挑戰。可設定玩法、調整畫面與保留本次排行榜。'],
     ['help', 'help', '使用說明', '翻牌遊戲的玩法、設定、排行榜與本機成績保存方式。'],
-    ['about', 'about', '關於網站', '慢慢玩是一個逐步增加小工具與小遊戲的網站，目前提供翻牌遊戲。'],
+    ['about', 'about', '關於網站', '網站目前提供翻牌遊戲、內建圖庫、畫面設定與成績紀錄功能。'],
     ['privacy', 'privacy', '隱私權說明', '了解瀏覽器本機設定、成績紀錄與目前的廣告狀態。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const [page, route, title, description] of routes) {
     let body = await readFile(join(root, `src/pages/${page}.html`), 'utf8');
     const canonical = domain && route !== null ? `${domain}${base}${route ? route + '/' : ''}` : '';
-    const meta = canonical ? `<link rel="canonical" href="${escape(canonical)}"><meta property="og:title" content="${escape(title + ' · ' + config.name)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}">` : '';
+    const documentTitle = title === config.name ? title : title + ' · ' + config.name;
+    const meta = canonical ? `<link rel="canonical" href="${escape(canonical)}"><meta property="og:title" content="${escape(documentTitle)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}">` : '';
     const html = template.replace('{{BODY}}', body).replace('{{META}}', meta).replaceAll('{{NAME}}', escape(config.name))
-      .replaceAll('{{TITLE}}', escape(title)).replaceAll('{{DESCRIPTION}}', escape(description))
+      .replaceAll('{{DOCUMENT_TITLE}}', escape(documentTitle)).replaceAll('{{TITLE}}', escape(title)).replaceAll('{{DESCRIPTION}}', escape(description))
       .replaceAll('{{BASE}}', base).replaceAll('{{PAGE}}', page);
     const dest = route === null ? join(output, '404.html') : join(output, route, 'index.html');
     await mkdir(dirname(dest), { recursive: true });

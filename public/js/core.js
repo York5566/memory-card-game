@@ -17,7 +17,7 @@ export function defaults() {
     ratioW: 4, ratioH: 5, columns: 0, gap: 14, radius: 16, boardScale: 100,
     cardColor: '#fffdf8', backColor: '#dfede6', matchColor: '#78a98c', backgroundColor: '#f4f7f0',
     headerText: '翻牌遊戲 / MEMORY GAME',
-    title: { text: '把每一對，慢慢找回來。', subtitle: '記住小小的日常，翻開一點好心情。', x: 0, y: 0, size: 24, opacity: 100, color: '#355849', align: 'left' },
+    title: { text: '找出所有相同的圖案', subtitle: '每次翻開兩張卡牌，完成全部配對。', x: 0, y: 0, size: 24, opacity: 100, color: '#355849', align: 'left' },
     back: transform({ asset: 'mint-v1', fit: 'cover' }),
     background: transform({ asset: 'dots-v1', fit: 'cover' }),
     logo: transform({ asset: 'none', canvasW: 180, canvasH: 54, boxX: 0, boxY: 0 }),
@@ -175,7 +175,12 @@ export class LocalStore {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || (raw.config !== undefined && (!raw.config || typeof raw.config !== 'object' || Array.isArray(raw.config)))) {
       this.warning('設定資料格式無法讀取，已暫用預設設定。'); return defaults();
     }
-    return sanitize(raw?.config || raw); // v0 direct config -> v1 wrapper; do not rewrite on read.
+    const config = sanitize(raw?.config || raw); // v0 direct config -> v1 wrapper; do not rewrite on read.
+    // Replace only the former stock copy; preserve player-authored titles and other settings.
+    const base = defaults();
+    if (config.title.text === '把每一對，慢慢找回來。') config.title.text = base.title.text;
+    if (config.title.subtitle === '記住小小的日常，翻開一點好心情。') config.title.subtitle = base.title.subtitle;
+    return config;
   }
   saveSettings(config) { if (this.settingsReadOnly) { this.warning('較新版本的設定已保留，請使用對應網站版本後再保存。'); return false; } return this.write('slow-play-settings', { version: VERSION, config: sanitize(config) }); }
   records() {

@@ -35,6 +35,21 @@ test('歷史明細与设置本機保存不载入會話排行榜', () => { const 
 test('滑桿多次 input 为一步复原，復原與重做正确', () => { const h = new History(defaults()); for (let n = 110; n <= 210; n++) h.update('logo.zoom', n); h.commit(); assert.equal(h.past.length, 1); assert.equal(h.value.logo.zoom, 210); h.update('logo.zoom', 200); h.commit(); assert.equal(h.past.length, 2); h.undo(); assert.equal(h.value.logo.zoom, 210); h.undo(); assert.equal(h.value.logo.zoom, 100); h.redo(); assert.equal(h.value.logo.zoom, 210); h.redo(); assert.equal(h.value.logo.zoom, 200); });
 test('恢复默认是可复原草稿，不影响已套用值', () => { const applied = defaults(); applied.pairs = 4; const h = new History(applied); h.replace(defaults()); assert.equal(h.value.pairs, 6); assert.equal(applied.pairs, 4); h.undo(); assert.equal(h.value.pairs, 4); });
 test('本機设置旧版直接对象迁移，未知素材安全回退', () => { const storage = new Storage(); storage.setItem('slow-play-settings', JSON.stringify({ ...defaults(), pairs: 8, back: { asset: 'removed', zoom: 120 } })); const store = new LocalStore(storage); const c = store.settings(); assert.equal(c.pairs, 8); assert.equal(c.back.asset, 'mint-v1'); assert.equal(c.back.zoom, 120); });
+test('舊預設文案更新，保留自訂標題、其他設定與原始儲存內容', () => {
+  for (const wrapped of [false, true]) {
+    const storage = new Storage(), c = defaults();
+    c.pairs = 8; c.title.text = '把每一對，慢慢找回來。'; c.title.subtitle = '記住小小的日常，翻開一點好心情。';
+    const raw = JSON.stringify(wrapped ? { version: 1, config: c } : c);
+    storage.setItem('slow-play-settings', raw);
+    const loaded = new LocalStore(storage).settings();
+    assert.equal(loaded.title.text, defaults().title.text); assert.equal(loaded.title.subtitle, defaults().title.subtitle);
+    assert.equal(loaded.pairs, 8); assert.equal(storage.getItem('slow-play-settings'), raw);
+    c.title.text = '活動自訂標題'; c.title.subtitle = '活動自訂說明';
+    storage.setItem('slow-play-settings', JSON.stringify(wrapped ? { version: 1, config: c } : c));
+    const custom = new LocalStore(storage).settings();
+    assert.equal(custom.title.text, c.title.text); assert.equal(custom.title.subtitle, c.title.subtitle);
+  }
+});
 test('较新设置版本不被旧版覆盖', () => { const storage = new Storage(); const raw = JSON.stringify({ version: 99, config: { future: true } }); storage.setItem('slow-play-settings', raw); const warnings = [], store = new LocalStore(storage, m => warnings.push(m)); assert.equal(store.settings().pairs, 6); assert.equal(store.saveSettings(defaults()), false); assert.equal(storage.getItem('slow-play-settings'), raw); assert.ok(warnings.length); });
 test('資料損壞与存取限制均有提示，仍可使用預設遊戲', () => { const storage = new Storage(); storage.setItem('slow-play-settings', 'broken'); const warnings = [], store = new LocalStore(storage, m => warnings.push(m)); assert.equal(store.settings().pairs, 6); assert.ok(warnings.length); const blocked = new LocalStore({ getItem() { throw Error('Denied'); }, setItem() { throw Error('Denied'); } }, m => warnings.push(m)); assert.equal(blocked.settings().pairs, 6); assert.equal(blocked.saveSettings(defaults()), false); assert.doesNotThrow(() => new Game(blocked.settings())); });
 test('容量不足不宣称成功保存，旧资料維持', () => { const storage = new Storage(); storage.setItem('slow-play-settings', 'old'); storage.setItem = () => { throw Error('QuotaExceeded'); }; const warnings = []; const store = new LocalStore(storage, m => warnings.push(m)); assert.equal(store.saveSettings(defaults()), false); assert.equal(storage.getItem('slow-play-settings'), 'old'); assert.ok(warnings.length); });

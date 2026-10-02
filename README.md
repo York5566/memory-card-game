@@ -1,8 +1,8 @@
-# 翻牌遊戲：純靜態網站版 v1.0.0
+# 翻牌遊戲：純靜態網站版 v1.0.1
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
-網站暫用站名為「慢慢玩」，可在 `site.config.mjs` 更換。交付是本機原始碼和靜態成果；沒有建立遠端 GitHub 儲存庫、推送、部署或啟用廣告。
+網站暫用站名為「翻牌遊戲」，可在 `site.config.mjs` 更換。交付包含原始碼、靜態成果及 GitHub Pages 部署流程；取得後仍需自行提交與推送，廣告預設關閉。
 
 ## 快速開始
 
@@ -100,6 +100,23 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 4. 首頁為 `https://york5566.github.io/memory-card-game/`，遊戲頁為 `https://york5566.github.io/memory-card-game/games/memory/`。
 
 之後更新玩法或畫面並推送到 `main`，同一流程會自動重新部署。更新到其他版本時，請保留 `pages.yml` 與 `SITE_BASE_PATH` 的設定，避免丟失部署功能。
+
+### 從 v1.0.0 更新既有 GitHub 儲存庫
+
+已經初始化並連上 GitHub 的專案，請沿用原資料夾與原有的 .git：
+
+1. 將本版資料夾裡的檔案與子資料夾複製到原專案根目錄，覆蓋同名檔案（含 .github、site.config.mjs、src、public、scripts、tests 與文件）。本交付不含 .git，不需重新初始化，也不要刪除原專案的 .git。
+2. 若自行改過內容，先查看差異再合併；不必复制 dist/，部署流程會重建。
+3. 在原專案終端執行 git status，確認只有本次更新檔案；再執行下列指令。
+
+```powershell
+git add .
+git commit -m "Update website to v1.0.1"
+git push
+```
+
+4. 到 Actions 等待 Deploy website to GitHub Pages 成功，再檢查遊戲頁。若 Pages 尚未設定，先將 Settings → Pages → Source 改為 GitHub Actions。
+
 
 ## Google 廣告預留
 

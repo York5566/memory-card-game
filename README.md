@@ -1,4 +1,4 @@
-# 翻牌遊戲：純靜態網站版 v1.0.1
+# 翻牌遊戲：純靜態網站版 v1.0.2
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
@@ -49,7 +49,8 @@ python -m http.server 4174 --bind 127.0.0.1 --directory dist
 
 - `/`：首頁，只介紹已完成的翻牌遊戲。
 - `/games/memory/`：可操作遊戲、設定、本次排行榜、成績紀錄。
-- `/help/`、`/about/`、`/privacy/`：使用說明、關於與隱私權。
+- `/help/`：使用說明。
+- 頁尾提供「問題或建議，歡迎來信」與聯絡信箱連結。
 - `/404.html`：靜態錯誤頁。
 
 手機、平板與桌面共用遊戲規則。卡牌支援鍵盤，設定及紀錄使用原生對話框管理焦點，減少動態效果模式會關閉翻牌動畫。
@@ -101,7 +102,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 之後更新玩法或畫面並推送到 `main`，同一流程會自動重新部署。更新到其他版本時，請保留 `pages.yml` 與 `SITE_BASE_PATH` 的設定，避免丟失部署功能。
 
-### 從 v1.0.0 更新既有 GitHub 儲存庫
+### 更新既有 GitHub 儲存庫
 
 已經初始化並連上 GitHub 的專案，請沿用原資料夾與原有的 .git：
 
@@ -111,7 +112,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ```powershell
 git add .
-git commit -m "Update website to v1.0.1"
+git commit -m "Update website to v1.0.2"
 git push
 ```
 
@@ -122,7 +123,7 @@ git push
 
 `site.config.mjs` 集中控制 `ads.enabled`、`demo`、`publisher`、`slot`、`consentReady`。預設全關，不填虛構 ID、不送出廣告請求。`demo: true` 只在使用說明下方顯示本機版位示意，不載入 Google。廣告不在卡牌操作區，也不在全螢幕遊戲內。
 
-`public/js/site.js` 包含有條件載入閘門與錯誤隱藏處理；遊戲不依賴廣告。此版本沒有完成真實 AdSense 帳號／廣告單元／CMP 整合。`consentReady` 是由站方控制的整合閘門，不是 CMP 或同意管理系統，也不表示獲得使用者同意。正式啟用前需依真實帳號提供的程式碼、適用地區的同意管理、最新政策與 ads.txt 指示處理並更新隱私權頁；廣告版位預留不保證審核或收益。
+`public/js/site.js` 包含有條件載入閘門與錯誤隱藏處理；遊戲不依賴廣告。此版本沒有完成真實 AdSense 帳號／廣告單元／CMP 整合。`consentReady` 是由站方控制的整合閘門，不是 CMP 或同意管理系統，也不表示獲得使用者同意。正式啟用前需依真實帳號提供的程式碼、適用地區的同意管理、最新政策與 ads.txt 指示處理並補齊相應說明；廣告版位預留不保證審核或收益。
 
 ## 模組與驗證
 

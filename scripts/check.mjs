@@ -17,7 +17,7 @@ for (const path of all) {
     if (!html.includes('lang="zh-Hant"') || !html.includes('<title>') || /\{\{\w+\}\}/.test(html)) throw Error('頁面中繼資料或模板不完整：' + path);
     if (/type=["']file|contenteditable|<form[^>]*action=["']https?:/i.test(html)) throw Error('出現未授權的匯入或外部傳送入口');
     for (const match of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
-      const url = match[1]; if (/^https?:|^data:/.test(url)) continue;
+      const url = match[1]; if (/^https?:|^data:|^mailto:/.test(url)) continue;
       const config = (await import('../site.config.mjs')).default;
       const base = config.basePath === '/' ? '/' : '/' + config.basePath.split('/').filter(Boolean).join('/') + '/';
       const rel = url.split('#')[0].slice(base.length);

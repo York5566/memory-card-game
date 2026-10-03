@@ -6,11 +6,23 @@ function imageLayer(path, layer, className = '') {
   const fit = layer.fit === 'stretch' ? 'fill' : layer.fit;
   return `<div class="art-layer ${className}" style="opacity:${layer.opacity / 100};transform:translate(${layer.x}%,${layer.y}%) rotate(${layer.rotation}deg) scale(${layer.zoom / 100});clip-path:inset(${layer.cropTop}% ${layer.cropRight}% ${layer.cropBottom}% ${layer.cropLeft}%)"><img src="${assetURL(path)}" alt="" draggable="false" style="object-fit:${fit}"></div>`;
 }
+export function createCard(c, id, index = 0) {
+  const p = PRODUCTS.find(p => p.id === id), setting = c.products.find(p => p.id === id);
+  const back = ASSETS.back.find(a => a.id === c.back.asset);
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'card'; button.dataset.index = index;
+  button.style.aspectRatio = `${c.ratioW} / ${c.ratioH}`;
+  button.style.minHeight = '54px';
+  button.style.setProperty('--card-radius', `${c.radius}px`);
+  button.style.setProperty('--match-color', c.matchColor);
+  button.innerHTML = `<span class="card-turn"><span class="card-face card-back" style="background:${c.backColor}">${imageLayer(back?.path, c.back)}</span><span class="card-face card-front" style="background:${c.cardColor}"><span class="product-art">${imageLayer(p.path, setting.image)}</span>${c.showLabels ? `<span class="product-label">${escapeHTML(p.name)}</span>` : ''}<span class="match-tick" aria-hidden="true">✓</span></span></span>`;
+  button.setAttribute('aria-label', `第 ${index + 1} 張，尚未翻開`);
+  return button;
+}
 export function createStage(container, config, cards, onFlip, preview = false) {
   const c = config;
   const bg = ASSETS.background.find(a => a.id === c.background.asset);
   const logo = ASSETS.logo.find(a => a.id === c.logo.asset);
-  const back = ASSETS.back.find(a => a.id === c.back.asset);
   container.style.backgroundColor = c.backgroundColor;
   container.innerHTML = `${imageLayer(bg?.path, c.background, 'stage-background')}<div class="stage-heading">
     ${logo?.path ? `<div class="logo-canvas" style="width:${c.logo.canvasW}px;height:${c.logo.canvasH}px;transform:translate(${c.logo.boxX}%,${c.logo.boxY}%)">${imageLayer(logo.path, c.logo)}</div>` : ''}
@@ -19,15 +31,7 @@ export function createStage(container, config, cards, onFlip, preview = false) {
   grid.style.gap = `${c.gap}px`;
   grid.style.width = `${c.boardScale}%`;
   const buttons = cards.map((id, index) => {
-    const p = PRODUCTS.find(p => p.id === id);
-    const setting = c.products.find(p => p.id === id);
-    const button = document.createElement('button');
-    button.type = 'button'; button.className = 'card'; button.dataset.index = index;
-    button.style.aspectRatio = `${c.ratioW} / ${c.ratioH}`;
-    button.style.setProperty('--card-radius', `${c.radius}px`);
-    button.style.setProperty('--match-color', c.matchColor);
-    button.innerHTML = `<span class="card-turn"><span class="card-face card-back" style="background:${c.backColor}">${imageLayer(back?.path, c.back)}</span><span class="card-face card-front" style="background:${c.cardColor}"><span class="product-art">${imageLayer(p.path, setting.image)}</span>${c.showLabels ? `<span class="product-label">${escapeHTML(p.name)}</span>` : ''}<span class="match-tick" aria-hidden="true">✓</span></span></span>`;
-    button.setAttribute('aria-label', `第 ${index + 1} 張，尚未翻開`);
+    const button = createCard(c, id, index);
     if (preview) button.tabIndex = -1; else button.addEventListener('click', () => onFlip(index));
     grid.append(button); return button;
   });

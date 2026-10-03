@@ -2,18 +2,11 @@ import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from '../site.config.mjs';
+import { siteAddress, pageMetadata, escapeHTML as escape } from './seo.mjs';
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'dist');
 if (dirname(output) !== root || !output.endsWith('dist')) throw Error('不安全的建置路徑');
-const base = `/${config.basePath.split('/').filter(Boolean).join('/')}${config.basePath === '/' ? '' : '/'}`;
-if (!/^\/[a-zA-Z0-9\u3400-\u9fff_.\-/]*$/.test(base)) throw Error('basePath 格式不正確');
-const escape = s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-let domain = '';
-if (config.domain) {
-  const url = new URL(config.domain);
-  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw Error('正式網域請使用 https://你的網域（不含子路徑）');
-  domain = url.origin;
-}
+const { base, domain } = siteAddress(config);
 export async function build() {
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
@@ -21,15 +14,13 @@ export async function build() {
   const template = await readFile(join(root, 'src/layout.html'), 'utf8');
   const routes = [
     ['home', '', '首頁', config.description],
-    ['game', 'games/memory', '翻牌遊戲', '翻開兩張相同圖案，配對完成一場小挑戰。可設定玩法、調整畫面與保留本次排行榜。'],
-    ['help', 'help', '使用說明', '翻牌遊戲的玩法、設定、排行榜與本機成績保存方式。'],
+    ['game', 'games/memory', '記憶配對挑戰', '免費線上翻牌遊戲，免登入即可挑戰記憶配對。選擇 2 至 12 對內建圖案，自訂限時、卡背與背景；支援手機、排行榜及本機成績紀錄。'],
+    ['help', 'help', '玩法與設定教學', '了解翻牌遊戲的配對規則、計時、暫停、內建圖庫、即時畫面預覽、排行榜與本機成績保存，並學習匯出 CSV 與鍵盤操作。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const [page, route, title, description] of routes) {
     let body = await readFile(join(root, `src/pages/${page}.html`), 'utf8');
-    const canonical = domain && route !== null ? `${domain}${base}${route ? route + '/' : ''}` : '';
-    const documentTitle = title === config.name ? title : title + ' · ' + config.name;
-    const meta = canonical ? `<link rel="canonical" href="${escape(canonical)}"><meta property="og:title" content="${escape(documentTitle)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}">` : '';
+    const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain });
     const html = template.replace('{{BODY}}', body).replace('{{META}}', meta).replaceAll('{{NAME}}', escape(config.name))
       .replaceAll('{{DOCUMENT_TITLE}}', escape(documentTitle)).replaceAll('{{TITLE}}', escape(title)).replaceAll('{{DESCRIPTION}}', escape(description))
       .replaceAll('{{BASE}}', base).replaceAll('{{PAGE}}', page);

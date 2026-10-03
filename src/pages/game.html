@@ -1,10 +1,11 @@
 <div class="page-heading"><div><p class="eyebrow">記憶配對</p><h1>翻牌遊戲</h1><p class="muted">翻開、記住，找到每一對相同的圖案。</p></div><div class="heading-tools"><div class="heading-actions"><button id="records-open" class="button quiet">成績紀錄</button><button id="settings-open" class="button" aria-describedby="settings-hint">⚙ <span>設定</span></button></div><p id="settings-hint" class="settings-hint"><strong>點「設定」可以調整</strong><span>配對數與限時 · 圖庫與卡背<br>背景、標題與 LOGO · 排行榜與成績保存</span></p></div></div>
 <div id="storage-warning" class="notice warning" role="status" hidden></div>
+<noscript><p class="notice warning">翻牌遊戲需要 JavaScript 才能操作。請在瀏覽器開啟 JavaScript，或先閱讀<a href="{{BASE}}help/">遊戲玩法與設定說明</a>。</p></noscript>
 <div class="game-layout">
   <section class="play-panel" aria-label="遊戲區">
     <div class="play-toolbar"><span id="rules-label" class="pill">6 對 / 12 張・不限時</span><button id="fullscreen" class="icon-button" aria-label="全螢幕" title="全螢幕">⛶</button></div>
     <div class="stats" aria-label="遊戲進度"><div><span>挑戰用時</span><strong id="elapsed">00:00<span>.000</span></strong></div><div><span>翻牌次數</span><strong id="flips">0</strong></div><div><span>完成配對</span><strong id="matched">0 <small>/ 6</small></strong></div></div>
-    <div class="game-controls"><button id="start" class="button primary">開始遊戲</button><button id="pause" class="button" disabled>暫停</button><button id="restart" class="button quiet">重新開始</button><button id="sound" class="icon-button" aria-label="關閉音效" title="關閉音效">♫</button></div>
+    <div class="game-controls"><button id="start" class="button primary">開始遊戲</button><button id="pause" class="button" disabled>暫停</button><button id="restart" class="button quiet" hidden>重新開始</button><button id="sound" class="icon-button" aria-label="關閉音效" title="關閉音效">♫</button></div>
     <div id="game-stage" class="stage"></div>
     <p id="game-status" class="game-status" role="status">準備好了嗎？開始後先看看所有圖案。</p>
   </section>

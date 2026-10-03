@@ -32,10 +32,12 @@ jobs:
         run: node scripts/build.mjs
         env:
           SITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
       - name: Check built links and assets
         run: node scripts/check.mjs
         env:
           SITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
       - name: Upload website output
         uses: actions/upload-pages-artifact@v4
         with:

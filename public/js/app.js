@@ -1,6 +1,7 @@
 import { Game, LocalStore, ruleKey, ruleSnapshot, groupLabel, rankRows, historicalRecord, elapsedText, MAX_RECORDS } from './core.js';
 import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction } from './site.js';
+import { createSounds } from './audio.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
 let storage;
@@ -15,8 +16,9 @@ let handledResult = null;
 let activeNickname = '玩家';
 let resultDate = 0;
 let soundOn = config.sound;
-const sounds = Object.fromEntries(['flip', 'match', 'miss', 'win'].map(name => [name, new Audio(document.body.dataset.base + `assets/${name}.wav`)]));
-function playSound(name) { if (!soundOn) return; const audio = sounds[name]; audio.currentTime = 0; audio.volume = .24; audio.play().catch(() => {}); }
+const sounds = createSounds(document.body.dataset.base, { onError: () => toast('音效暫時無法播放，請檢查音量或再開啟音效。') });
+sounds.setEnabled(soundOn);
+function playSound(name) { if (soundOn) void sounds.play(name); }
 function makeStage() {
   stage?.destroy(); stage = createStage($('#game-stage'), game.config, game.cards, index => {
     const action = game.flip(index);
@@ -41,6 +43,7 @@ function render() {
   $('#matched').innerHTML = `${game.matched.size / 2} <small>/ ${game.config.pairs}</small>`;
   $('#rules-label').textContent = `${game.config.pairs} 對 / ${game.cards.length} 張・${game.config.timed ? `限時 ${game.config.limitSeconds} 秒` : '不限時'}`;
   $('#pause').disabled = !['playing', 'preview', 'paused'].includes(game.state);
+  $('#restart').hidden = !['playing', 'preview', 'paused'].includes(game.state);
   $('#pause').textContent = game.state === 'paused' ? '繼續' : '暫停';
   $('#start').disabled = !['ready', 'won', 'timeout'].includes(game.state);
   $('#start').textContent = ['won', 'timeout'].includes(game.state) ? '再玩一局' : '開始遊戲';
@@ -70,13 +73,16 @@ function updateRankList() {
   host.innerHTML = '<ol class="rank-items">' + rows.map((r, i) => `<li><span class="rank-number">${i + 1}</span><div><strong>${esc(r.nickname)}</strong><span>${elapsedText(r.elapsedMs)}</span></div><small>${r.flips} 次翻牌</small></li>`).join('') + '</ol>';
 }
 function newRound(start = false) { game = new Game(config); handledResult = null; makeStage(); if (start) { activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); } render(); }
-$('#start').onclick = () => { if (game.state !== 'ready') newRound(); activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); render(); };
-$('#pause').onclick = () => { if (game.state === 'paused') game.resume(); else game.pause(); render(); };
+$('#start').onclick = () => { void sounds.prepare(); if (game.state !== 'ready') newRound(); activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); render(); };
+$('#pause').onclick = () => { void sounds.prepare(); if (game.state === 'paused') game.resume(); else game.pause(); render(); };
 $('#restart').onclick = async () => {
-  if (['preview', 'playing', 'paused'].includes(game.state)) { game.pause(); render(); if (!await confirmAction('重新開始這一局？', '這局尚未完成的進度會清除，本次排行榜與已保存成績會保留。', '重新開始')) return; }
-  newRound();
+  if (['preview', 'playing', 'paused'].includes(game.state)) {
+    const wasPaused = game.state === 'paused'; game.pause(); render();
+    if (!await confirmAction('重新開始這一局？', '這局尚未完成的進度會清除，本次排行榜與已保存成績會保留。', '重新開始')) { if (!wasPaused) game.resume(); render(); return; }
+  }
+  newRound(); $('#start').focus();
 };
-$('#sound').onclick = () => { soundOn = !soundOn; render(); };
+$('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if (soundOn) void sounds.prepare(); render(); };
 $('#rank-group').onchange = updateRankList;
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.pause()) render(); });
 window.addEventListener('pagehide', () => { sessionRows = []; });
@@ -94,7 +100,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.
 $('#settings-open').onclick = async () => {
   game.pause(); render();
   const { openSettings } = await import('./settings.js');
-  openSettings(config, next => { config = next; soundOn = config.sound; const saved = store.saveSettings(config); newRound(); renderRanking(); return saved; });
+  openSettings(config, next => { config = next; soundOn = config.sound; sounds.setEnabled(soundOn); void sounds.prepare(); const saved = store.saveSettings(config); newRound(); renderRanking(); return saved; });
 };
 $('#records-open').onclick = async () => {
   game.pause(); render();

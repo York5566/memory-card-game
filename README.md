@@ -1,4 +1,4 @@
-# 翻牌遊戲：純靜態網站版 v1.0.2
+# 翻牌遊戲：純靜態網站版 v1.0.3
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
@@ -30,7 +30,7 @@ node scripts/serve.mjs
 ## 建置、檢查與普通靜態伺服器
 
 ```powershell
-node --test tests/core.test.mjs
+node --test tests/*.test.mjs
 node scripts/build.mjs
 node scripts/check.mjs
 ```
@@ -73,9 +73,9 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ## 設定與內建素材維護
 
-設定有玩法、卡牌與圖庫、畫面、成績四個分頁。每個可調選項、每個分頁及全部設定可恢復預設。草稿與套用設定分離，支援復原、重做、Ctrl+Z／Cmd+Z；文字框保留原生文字復原。一段滑桿操作合併為一步。儲存並套用後面板保持開啟，遊戲回到準備畫面。關閉未套用草稿會詢問是否捨棄。
+設定有玩法、卡牌與圖庫、畫面、成績四個分頁。圖庫使用勾選選取圖案，沒有每張圖案的啟用狀態恢復按鈕；其他設定欄位、每個分頁及全部設定可恢復預設。草稿與套用設定分離，支援復原、重做、Ctrl+Z／Cmd+Z；文字框保留原生文字復原。一段滑桿操作合併為一步。儲存並套用後面板保持開啟，遊戲回到準備畫面。關閉未套用草稿會詢問是否捨棄。
 
-`public/js/stage.js` 同時繪製主畫面及畫面預覽；預覽保留主畫面寬度後整體縮小。圖片可完整顯示／填滿裁切／拉伸，並調整縮放、水平／垂直位置、透明度、旋轉和四側裁切。LOGO 畫布寬、高與畫布內圖案縮放獨立。
+`public/js/stage.js` 同時繪製主畫面及畫面預覽；整體預覽保留主畫面寬度、欄數及樣式後等比例縮放，另有卡牌細節、正面／卡背／配對成功檢視；調整卡背或圖案時自動顯示相應效果。選中的圖案即使未勾選，也能檢視構圖並顯示狀態。手機將預覽固定在設定上方，並可按「放大預覽」。圖片可完整顯示／填滿裁切／拉伸，並調整縮放、水平／垂直位置、透明度、旋轉和四側裁切。LOGO 畫布寬、高與畫布內圖案縮放獨立。
 
 圖庫清單：`public/js/core.js` 中的 `PRODUCTS`、`ASSETS`；預設設定與欄位定義也集中在此。素材放在 `public/assets/`。所有素材隨建置提供，不存在上傳、拖放、貼上圖片、相機或外部圖片網址入口。
 
@@ -87,11 +87,26 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ## 網域與 GitHub
 
-`site.config.mjs` 的 `domain` 預設空字串，因此不產生測試網址的 canonical、sitemap 或 robots。正式網域確定後設為 `https://你的網域`，再建置即會產生正式網址的中繼資料、`sitemap.xml` 和 `robots.txt`。`basePath` 由 `SITE_BASE_PATH` 環境變數指定，未指定時使用 `/`，方便本機預覽。
+`site.config.mjs` 由 `SITE_ORIGIN` 取得正式 HTTPS origin、`SITE_BASE_PATH` 取得網站子目錄。Pages 工作流程會自動提供兩者；一般本機預覽省略正式 origin，避免把 localhost 當成正式網址。
+
+各頁直接輸出獨立 title、description、H1、Open Graph 與 Twitter 摘要；首頁提供實際玩法介紹與內部連結。正式建置另外產生 canonical、WebSite／WebPage／WebApplication JSON-LD、`sitemap.xml` 與 `robots.txt`；404 使用 noindex 且不列入 sitemap。未添加不存在的評分、評論或關鍵字堆砌。
+
+GitHub 專案網站發布後，sitemap 位於 https://york5566.github.io/memory-card-game/sitemap.xml，可在 Google Search Console 提交。注意搜尋引擎只把 origin 根目錄的 `/robots.txt` 視為 robots 規則；專案子目錄中的 robots 檔案不能控制整個 github.io 網域，sitemap 仍可直接提交。是否及何時收錄、排名由搜尋引擎決定。
+
+本機模擬正式建置（測完移除環境變數即可回到根路徑預覽）：
+
+```powershell
+$env:SITE_ORIGIN = 'https://york5566.github.io'
+$env:SITE_BASE_PATH = '/memory-card-game/'
+node scripts/build.mjs
+node scripts/check.mjs
+```
+
+實作參考：[Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics)、[canonical](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)、[sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)、[MDN Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices)。
 
 `.gitignore` 排除 QA、建置成果、node_modules、暫存、環境變數及個人資料。原始碼、內建素材、鎖定檔及文件可以進版本控制。`dist/` 不需提交，GitHub Actions 會從原始碼重新產生。
 
-`.github/workflows/check.yml` 提供原始碼測試與建置檢查。`.github/workflows/pages.yml` 會在推送到 `main` 後測試、建置並部署 `dist/`；部署時自動取得 Pages 子目錄，讓 CSS、JavaScript、圖庫及導覽連結都使用正確路徑。
+`.github/workflows/check.yml` 提供原始碼測試與建置檢查。`.github/workflows/pages.yml` 會在推送到 `main` 後測試、建置並部署 `dist/`；部署時自動取得 Pages 正式 origin 與子目錄，讓 CSS、JavaScript、圖庫及導覽連結都使用正確路徑。
 
 首次部署：
 
@@ -112,7 +127,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ```powershell
 git add .
-git commit -m "Update website to v1.0.2"
+git commit -m "Update website to v1.0.3"
 git push
 ```
 
@@ -129,10 +144,12 @@ git push
 
 - `public/js/core.js`：規則、狀態機、設定資料、復原、本機保存、排序、CSV。
 - `stage.js`：主畫面與預覽共用圖片構圖、卡牌及排版。
-- `app.js`：遊戲操作與本次會話排行。
+- `app.js`：遊戲操作與本次會話排行；重新開始只在記憶預覽、遊戲中與暫停時顯示。
+- `audio.js`：提前下載音效、在使用者開局手勢建立並恢復 AudioContext，第一次翻牌等解碼完成再播放；靜音會取消待播放聲音。
+- `preview.js`：設定預覽選圖與自動切換牌面的規則。
 - `settings.js`、`records.js`：設定草稿及歷史明細。
 - `src/layout.html`、`src/pages/`：共用網站外殼與靜態內容。
 - `scripts/`：零第三方依賴的建置、預覽與成果檢查。
-- `tests/core.test.mjs`：有針對性的計時邊界、資料保存、排序與 CSV 測試。
+- `tests/*.test.mjs`：計時邊界、資料保存、排序、CSV、冷啟動音效、預覽與 SEO 網址安全測試。
 
 本次驗證證據及未實測範圍見 `驗收報告.md`。QA 快照、測試下載與截圖存放在忽略的 `qa/`，不混入網站成果或原始碼交付包。

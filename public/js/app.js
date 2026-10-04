@@ -16,6 +16,7 @@ let handledResult = null;
 let activeNickname = '玩家';
 let resultDate = 0;
 let soundOn = config.sound;
+let starting = false, startRequest = 0;
 const sounds = createSounds(document.body.dataset.base, { onError: () => toast('音效暫時無法播放，請檢查音量或再開啟音效。') });
 sounds.setEnabled(soundOn);
 function playSound(name) { if (soundOn) void sounds.play(name); }
@@ -45,8 +46,8 @@ function render() {
   $('#pause').disabled = !['playing', 'preview', 'paused'].includes(game.state);
   $('#restart').hidden = !['playing', 'preview', 'paused'].includes(game.state);
   $('#pause').textContent = game.state === 'paused' ? '繼續' : '暫停';
-  $('#start').disabled = !['ready', 'won', 'timeout'].includes(game.state);
-  $('#start').textContent = ['won', 'timeout'].includes(game.state) ? '再玩一局' : '開始遊戲';
+  $('#start').disabled = starting || !['ready', 'won', 'timeout'].includes(game.state);
+  $('#start').textContent = starting ? '準備遊戲…' : (['won', 'timeout'].includes(game.state) ? '再玩一局' : '開始遊戲');
   $('#nickname').disabled = game.state !== 'ready' && !['won', 'timeout'].includes(game.state);
   $('#sound').textContent = soundOn ? '♫' : '♪'; $('#sound').setAttribute('aria-label', soundOn ? '關閉音效' : '開啟音效'); $('#sound').title = soundOn ? '關閉音效' : '開啟音效'; $('#sound').classList.toggle('off', !soundOn);
   const states = {
@@ -72,8 +73,23 @@ function updateRankList() {
   if (!rows.length) { host.innerHTML = '<div class="empty-state"><span aria-hidden="true">✧</span><p>第一個位置，等你來</p><small>完成一局，就留下這次的好成績。</small></div>'; return; }
   host.innerHTML = '<ol class="rank-items">' + rows.map((r, i) => `<li><span class="rank-number">${i + 1}</span><div><strong>${esc(r.nickname)}</strong><span>${elapsedText(r.elapsedMs)}</span></div><small>${r.flips} 次翻牌</small></li>`).join('') + '</ol>';
 }
-function newRound(start = false) { game = new Game(config); handledResult = null; makeStage(); if (start) { activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); } render(); }
-$('#start').onclick = () => { void sounds.prepare(); if (game.state !== 'ready') newRound(); activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); render(); };
+function newRound(start = false) { startRequest++; starting = false; game = new Game(config); handledResult = null; makeStage(); if (start) { activeNickname = $('#nickname').value.trim() || '玩家'; game.start(); } render(); }
+$('#start').onclick = async () => {
+  if (starting) return;
+  if (game.state !== 'ready') newRound();
+  const request = ++startRequest;
+  const ready = sounds.prepare(); // Synchronous gesture unlock before rendering/await.
+  starting = true; render();
+  await ready;
+  if (request !== startRequest) return;
+  starting = false;
+  if (!document.querySelector('dialog[open]')) {
+    activeNickname = $('#nickname').value.trim() || '玩家';
+    game.start();
+    if (document.hidden) game.pause();
+  }
+  render();
+};
 $('#pause').onclick = () => { void sounds.prepare(); if (game.state === 'paused') game.resume(); else game.pause(); render(); };
 $('#restart').onclick = async () => {
   if (['preview', 'playing', 'paused'].includes(game.state)) {

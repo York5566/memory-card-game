@@ -1,13 +1,21 @@
 const NAMES = ['flip', 'match', 'miss', 'win'];
 
-// Fetch early; create/resume the audio context synchronously inside a user gesture.
-// A first flip waits for decoding instead of silently losing the sound.
+// Start an actual silent source inside the gesture, not only an empty context.
+// Wait for that source and the flip buffer before exposing the first playable card.
 export function createSounds(base, { Context = globalThis.AudioContext || globalThis.webkitAudioContext, fetchAudio = globalThis.fetch, onError = () => {} } = {}) {
-  let context, enabled = true, generation = 0, warned = false;
+  let context, warmup, warming = false, enabled = true, generation = 0, warned = false;
   const bytes = new Map(), buffers = new Map();
   const load = name => {
-    if (!bytes.has(name)) bytes.set(name, Promise.resolve().then(() => fetchAudio(`${base}assets/${name}.wav`))
-      .then(response => { if (!response.ok) throw Error(`Audio HTTP ${response.status}`); return response.arrayBuffer(); })
+    if (!bytes.has(name)) bytes.set(name, Promise.resolve().then(async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      try {
+        const response = await fetchAudio(`${base}assets/${name}.wav`, { signal: controller.signal });
+        if (!response.ok) throw Error(`Audio HTTP ${response.status}`);
+        return await response.arrayBuffer();
+      }
+      finally { clearTimeout(timer); }
+    })
       .catch(() => { bytes.delete(name); return null; }));
     return bytes.get(name);
   };
@@ -22,11 +30,29 @@ export function createSounds(base, { Context = globalThis.AudioContext || global
   function prepare() {
     if (!enabled) return Promise.resolve(false);
     try {
-      context ||= new Context();
-      // Do not await network or decoding before resume: activation would be lost.
-      const resumed = context.state === 'running' ? Promise.resolve() : context.resume();
+      if (!context || context.state === 'closed') {
+        context = new Context({ latencyHint: 'interactive' });
+        buffers.clear(); warmup = null;
+      }
+      const needsResume = context.state !== 'running';
+      // Both resume and source.start must run before awaiting anything.
+      const resumed = needsResume ? context.resume() : Promise.resolve();
+      if (!warmup || (needsResume && !warming)) {
+        const source = context.createBufferSource();
+        source.buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .12), context.sampleRate);
+        source.connect(context.destination);
+        warming = true;
+        warmup = new Promise(resolve => {
+          source.onended = () => { source.disconnect(); warming = false; resolve(); };
+        });
+        source.start(0);
+      }
       NAMES.forEach(name => { buffer(name).catch(() => {}); });
-      return Promise.resolve(resumed).then(() => true).catch(() => false);
+      const prepared = Promise.all([resumed, warmup, buffer('flip')]).then(() => context.state === 'running').catch(() => false);
+      return new Promise(resolve => {
+        const timer = setTimeout(() => resolve(false), 4000);
+        prepared.then(ready => { clearTimeout(timer); resolve(ready); });
+      });
     } catch { return Promise.resolve(false); }
   }
   return {

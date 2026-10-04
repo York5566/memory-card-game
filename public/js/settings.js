@@ -78,6 +78,23 @@ export function openSettings(applied, apply) {
     return `<div class="field"><div class="field-label"><label for="${id}">${label}</label><button type="button" class="reset-field" data-reset="${path}" aria-label="${label}恢復預設">恢復預設</button></div><div class="field-control">${control}</div>${key === 'pairs' ? `<p class="field-note" id="pairs-description">${value} 對 = ${value * 2} 張卡牌；已啟用 ${history.value.products.filter(p => p.enabled).length} 種圖案。</p>` : ''}</div>`;
   }
   function transformFields(prefix, title) { return `<details class="details-block"><summary>${title}</summary><div class="details-body">${TRANSFORM_SPECS.map(s => field(s, prefix)).join('')}</div></details>`; }
+  // Update values in place: rebuilding the form closes <details>, loses focus,
+  // and changes its scroll height while the user is editing a lower section.
+  function syncFields() {
+    const host = dialog.querySelector('#settings-fields');
+    const enabled = history.value.products.filter(p => p.enabled).length;
+    host.querySelectorAll('[data-path]').forEach(input => {
+      const value = get(history.value, input.dataset.path);
+      if (input.dataset.path === 'pairs') input.max = enabled;
+      if (input.type === 'checkbox') input.checked = value; else input.value = value;
+      input.setCustomValidity('');
+    });
+    host.querySelectorAll('[data-product]').forEach(input => { input.checked = history.value.products[Number(input.dataset.product)].enabled; });
+    host.querySelectorAll('[data-record-field]').forEach(input => { input.checked = history.value.records.fields.includes(input.dataset.recordField); });
+    const desc = host.querySelector('#pairs-description');
+    if (desc) desc.textContent = `${history.value.pairs} 對 = ${history.value.pairs * 2} 張卡牌；已啟用 ${enabled} 種圖案。`;
+    previewRender(); updateButtons();
+  }
   function library() {
     return `<details class="details-block" open><summary>內建圖庫</summary><div class="details-body"><p class="hint">勾選要加入遊戲的圖案，至少保留 2 種。調整下方圖案構圖時，預覽會自動放大顯示。</p><div class="library-list">${PRODUCTS.map((p, i) => `<label class="library-item"><img src="${assetURL(p.path)}" alt=""><span class="label-line"><input type="checkbox" data-product="${i}" ${history.value.products[i].enabled ? 'checked' : ''}>${p.name}</span></label>`).join('')}</div><label class="field-label" for="edit-product">調整正面圖案</label><select id="edit-product">${PRODUCTS.map((p, i) => `<option value="${i}" ${product === i ? 'selected' : ''}>${p.name}</option>`).join('')}</select><div id="product-fields">${TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join('')}</div></div></details>`;
   }
@@ -94,7 +111,7 @@ export function openSettings(applied, apply) {
       if (tab === 'cards') { history.value.back = copy(base.back); history.value.products = copy(base.products); }
       if (tab === 'screen') { history.value.background = copy(base.background); history.value.logo = copy(base.logo); history.value.title = copy(base.title); }
       if (tab === 'records') history.value.records = copy(base.records);
-      history.value = sanitize(history.value); history.commit(); renderTab(); previewRender(); status('已恢復本頁預設，尚未套用。');
+      history.value = sanitize(history.value); history.commit(); syncFields(); status('已恢復本頁預設，尚未套用。');
     };
     const picker = host.querySelector('#edit-product'); if (picker) picker.onchange = () => {
       history.commit(); product = Number(picker.value);
@@ -124,7 +141,7 @@ export function openSettings(applied, apply) {
       input.addEventListener('blur', () => { history.commit(); if (['number', 'range'].includes(input.type)) input.value = get(history.value, path); updateButtons(); });
     });
     host.querySelectorAll('[data-reset]').forEach(button => button.onclick = () => {
-      const path = button.dataset.reset; history.update(path, copy(get(base, path))); history.value = sanitize(history.value); history.commit(); renderTab(); focusPreview(path); status('已恢復此項預設，尚未套用。');
+      const path = button.dataset.reset; history.update(path, copy(get(base, path))); history.value = sanitize(history.value); history.commit(); syncFields(); focusPreview(path); status('已恢復此項預設，尚未套用。');
     });
     host.querySelectorAll('[data-product]').forEach(input => input.onchange = () => {
       const index = Number(input.dataset.product);
@@ -134,7 +151,7 @@ export function openSettings(applied, apply) {
       history.commit(); previewRender(); status(`圖庫已變更，已勾選 ${history.value.products.filter(p => p.enabled).length} 種圖案，配對數 ${history.value.pairs} 對。`);
     });
     host.querySelectorAll('[data-record-field],[data-reset-record-field]').forEach(input => {
-      const handler = () => { const key = input.dataset.recordField || input.dataset.resetRecordField; const fields = new Set(history.value.records.fields); if (input.dataset.resetRecordField || input.checked) fields.add(key); else fields.delete(key); history.update('records.fields', Object.keys(FIELDS).filter(k => fields.has(k))); history.commit(); renderTab(); status('保存欄位已變更，尚未套用。'); };
+      const handler = () => { const key = input.dataset.recordField || input.dataset.resetRecordField; const fields = new Set(history.value.records.fields); if (input.dataset.resetRecordField || input.checked) fields.add(key); else fields.delete(key); history.update('records.fields', Object.keys(FIELDS).filter(k => fields.has(k))); history.commit(); syncFields(); status('保存欄位已變更，尚未套用。'); };
       if (input.dataset.recordField) input.onchange = handler; else input.onclick = handler;
     });
   }
@@ -150,15 +167,15 @@ export function openSettings(applied, apply) {
     button.onclick = () => changeTab(button.dataset.tab);
     button.onkeydown = event => { const ids = Object.keys(TABS); let index = ids.indexOf(tab); if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); index = event.key === 'Home' ? 0 : event.key === 'End' ? ids.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + ids.length) % ids.length; changeTab(ids[index]); dialog.querySelector(`#tab-${tab}`).focus(); };
   });
-  const undo = () => { if (history.undo()) { renderTab(); status('已復原一步，尚未套用。'); } };
-  const redo = () => { if (history.redo()) { renderTab(); status('已重做一步，尚未套用。'); } };
+  const undo = () => { if (history.undo()) { syncFields(); status('已復原一步，尚未套用。'); } };
+  const redo = () => { if (history.redo()) { syncFields(); status('已重做一步，尚未套用。'); } };
   dialog.querySelector('#settings-undo').onclick = undo; dialog.querySelector('#settings-redo').onclick = redo;
   dialog.onkeydown = event => {
     if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z') return;
     if (event.target.matches('input[type=text],textarea,[contenteditable=true]')) return;
     event.preventDefault(); if (event.shiftKey) redo(); else undo();
   };
-  dialog.querySelector('#settings-reset-all').onclick = () => { history.replace(base); renderTab(); status('全部設定已恢復預設，尚未套用。成績紀錄保持原樣。'); };
+  dialog.querySelector('#settings-reset-all').onclick = () => { history.replace(base); syncFields(); status('全部設定已恢復預設，尚未套用。成績紀錄保持原樣。'); };
   dialog.querySelector('#settings-apply').onclick = async () => {
     const invalid = [...dialog.querySelectorAll('input')].find(input => !input.checkValidity());
     if (invalid) { if (dialog.querySelector('.preview-expanded')) dialog.querySelector('#preview-expand').click(); invalid.reportValidity(); return; }

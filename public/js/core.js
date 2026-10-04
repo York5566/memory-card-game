@@ -7,7 +7,7 @@ const names = ['無線耳機', '隨行杯', '經典相機', '香氛', '智慧手
 export const PRODUCTS = names.map((name, i) => ({ id: `everyday-${i + 1}`, name, version: 1, path: `assets/products/${String(i + 1).padStart(2, '0')}.svg` }));
 export const ASSETS = {
   back: [{ id: 'mint-v1', name: '薄荷卡背', path: 'assets/back-mint.svg' }, { id: 'peach-v1', name: '杏桃卡背', path: 'assets/back-peach.svg' }],
-  background: [{ id: 'dots-v1', name: '輕輕點點', path: 'assets/dots.svg' }, { id: 'none', name: '不顯示背景圖片', path: '' }],
+  background: [{ id: 'dots-v1', name: '柔色波浪', path: 'assets/soft-waves.svg' }, { id: 'none', name: '不顯示背景圖片', path: '' }],
   logo: [{ id: 'memory-v1', name: '翻牌遊戲標記', path: 'assets/logo.svg' }, { id: 'none', name: '不顯示 LOGO', path: '' }],
 };
 export function transform(extra = {}) { return { fit: 'contain', zoom: 100, x: 0, y: 0, opacity: 100, rotation: 0, cropLeft: 0, cropRight: 0, cropTop: 0, cropBottom: 0, ...extra }; }

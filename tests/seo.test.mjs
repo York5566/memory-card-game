@@ -27,3 +27,28 @@ test('拒絕不安全的 base 路徑與帶驗證資訊或子路徑的正式網�
   for (const basePath of ['/../', '/./foo', '/bad?path']) assert.throws(() => siteAddress({ ...config, basePath }));
   for (const domain of ['http://example.com', 'https://name:secret@example.com', 'https://example.com/path']) assert.throws(() => siteAddress({ ...config, domain }));
 });
+
+test('每個正式頁面提供絕對 PNG 分享圖、尺寸、替代文字與一致網址', () => {
+  for (const [page, route] of [['home', ''], ['game', 'games/memory'], ['help', 'help']]) {
+    const current = { ...config, domain: 'https://wwwne1198.party', basePath: '/' };
+    const output = pageMetadata({ ...game, page, route }, current, siteAddress(current));
+    assert.ok(output.meta.includes(`property="og:image" content="https://wwwne1198.party/assets/social/${page}.png"`));
+    assert.ok(output.meta.includes('name="twitter:card" content="summary_large_image"'));
+    assert.ok(output.meta.includes('property="og:image:width" content="1200"'));
+    assert.ok(output.meta.includes('property="og:image:height" content="630"'));
+    assert.ok(output.meta.includes('property="og:image:alt"'));
+    const graph = JSON.parse(output.meta.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+    assert.equal(graph[0].name, '翻牌遊戲'); assert.equal(graph[0].url, 'https://wwwne1198.party/');
+    assert.equal(graph[2].url, `https://wwwne1198.party/assets/social/${page}.png`);
+    assert.equal(graph[1].primaryImageOfPage['@id'], graph[2]['@id']);
+  }
+});
+
+test('只有提供真實驗證碼時，正式首頁輸出 Search Console 驗證標籤', () => {
+  const current = { ...config, googleSiteVerification: 'token"<&' };
+  const home = { ...game, page: 'home', route: '' };
+  const output = pageMetadata(home, current, siteAddress(current));
+  assert.ok(output.meta.includes('content="token&quot;&lt;&amp;"'));
+  assert.ok(!pageMetadata(game, current, siteAddress(current)).meta.includes('google-site-verification'));
+  assert.ok(!pageMetadata(home, config, siteAddress(config)).meta.includes('google-site-verification'));
+});

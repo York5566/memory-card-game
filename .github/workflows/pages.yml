@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '22'
           package-manager-cache: false
-      - name: Read GitHub Pages path
+      - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v5
       - name: Test game rules
@@ -31,13 +31,9 @@ jobs:
       - name: Build website for Pages
         run: node scripts/build.mjs
         env:
-          SITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
+          GOOGLE_SITE_VERIFICATION: ${{ vars.GOOGLE_SITE_VERIFICATION }}
       - name: Check built links and assets
         run: node scripts/check.mjs
-        env:
-          SITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
-          SITE_ORIGIN: ${{ steps.pages.outputs.origin }}
       - name: Upload website output
         uses: actions/upload-pages-artifact@v4
         with:

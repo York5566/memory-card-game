@@ -3,11 +3,11 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { root, build } from './build.mjs';
 import config from '../site.config.mjs';
-await build();
+await build({ preview: true });
 const output = resolve(root, 'dist');
 const port = Number(process.env.PORT || 4173);
 const base = config.basePath === '/' ? '/' : '/' + config.basePath.split('/').filter(Boolean).join('/') + '/';
-const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.wav': 'audio/wav' };
+const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav' };
 createServer(async (req, res) => {
   try {
     let pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);

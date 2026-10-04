@@ -1,8 +1,8 @@
-# 翻牌遊戲：純靜態網站版 v1.0.6
+# 翻牌遊戲：純靜態網站版 v1.0.7
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
-網站暫用站名為「翻牌遊戲」，可在 `site.config.mjs` 更換。交付包含原始碼、靜態成果及 GitHub Pages 部署流程；取得後仍需自行提交與推送，廣告預設關閉。
+網站名稱為「翻牌遊戲」，正式網域為 https://wwwne1198.party/，集中設定於 `site.config.mjs`。交付包含原始碼、靜態成果及 GitHub Pages 部署流程；取得後仍需自行提交與推送，廣告預設關閉。
 
 首次按「開始遊戲」會先準備音效：在點擊時啟動無聲暖機，等待翻牌音檔解碼完成才開始記憶預覽或遊戲。準備期間按鈕顯示「準備遊戲…」；關閉音效時直接開始。音檔下載及音訊準備設有 4 秒等待上限，避免網路或瀏覽器音訊阻擋造成無法開始。
 
@@ -37,7 +37,7 @@ node scripts/build.mjs
 node scripts/check.mjs
 ```
 
-建置只輸出 HTML、CSS、JavaScript、SVG 與 WAV 至 `dist/`。`scripts/serve.mjs` 啟動前自動建置；它只是本機靜態預覽伺服器，沒有遊戲 API。修改原始碼後執行 `node scripts/build.mjs`，再重新整理已開啟的頁面。
+建置只輸出 HTML、CSS、JavaScript、SVG、PNG 與 WAV 至 `dist/`。`scripts/serve.mjs` 啟動前自動建置；它只是本機靜態預覽伺服器，沒有遊戲 API。修改原始碼後執行 `node scripts/build.mjs`，再重新整理已開啟的頁面。
 
 正式託管只需提供 `dist/` 內容，無須 Node 或 Python 常駐服務、資料庫、帳號系統或雲端圖片儲存。例如已有 Python 的環境可用普通靜態伺服器驗證：
 
@@ -87,54 +87,25 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 2. 若移除 ID，舊設定會回退至預設內建素材；不保存絕對路徑或臨時網址。
 3. 更新 `素材來源.md`，執行測試及建置，再依選定的 GitHub／託管流程發布。
 
-## 網域與 GitHub
+## 網域、SEO 與 GitHub
 
-`site.config.mjs` 由 `SITE_ORIGIN` 取得正式 HTTPS origin、`SITE_BASE_PATH` 取得網站子目錄。Pages 工作流程會自動提供兩者；一般本機預覽省略正式 origin，避免把 localhost 當成正式網址。
+正式首頁：https://wwwne1198.party/
 
-各頁直接輸出獨立 title、description、H1、Open Graph 與 Twitter 摘要；首頁提供實際玩法介紹與內部連結。正式建置另外產生 canonical、WebSite／WebPage／WebApplication JSON-LD、`sitemap.xml` 與 `robots.txt`；404 使用 noindex 且不列入 sitemap。未添加不存在的評分、評論或關鍵字堆砌。
+遊戲：https://wwwne1198.party/games/memory/
 
-GitHub 專案網站發布後，sitemap 位於 https://york5566.github.io/memory-card-game/sitemap.xml，可在 Google Search Console 提交。注意搜尋引擎只把 origin 根目錄的 `/robots.txt` 視為 robots 規則；專案子目錄中的 robots 檔案不能控制整個 github.io 網域，sitemap 仍可直接提交。是否及何時收錄、排名由搜尋引擎決定。
+說明：https://wwwne1198.party/help/
 
-本機模擬正式建置（測完移除環境變數即可回到根路徑預覽）：
+`site.config.mjs` 預設正式 origin 為 `https://wwwne1198.party`、basePath 為 `/`。CSS、JavaScript、圖片、導覽、canonical、OG 與 sitemap 都由此產生。Pages 工作流程不再把歷史專案子目錄帶入自訂網域的成品。仍可明確以 `SITE_ORIGIN`、`SITE_BASE_PATH` 覆寫，但目前網域不需要這些環境變數。
 
-```powershell
-$env:SITE_ORIGIN = 'https://york5566.github.io'
-$env:SITE_BASE_PATH = '/memory-card-game/'
-node scripts/build.mjs
-node scripts/check.mjs
-```
+各頁直接輸出獨立 title、description、H1、OG 與 Twitter 大圖摘要，並有 WebSite／WebPage／ImageObject 結構化資料；遊戲頁另有 WebApplication。分享圖為 1200×630 PNG，設計原稿在 `design/social/`。沒有虛構評分或評論。首頁與說明提供靜態玩法內容、常見問題與內部連結。
 
-實作參考：[Google JavaScript SEO](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics)、[canonical](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls)、[sitemap](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap)、[MDN Web Audio](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices)。
+正式建置包含 sitemap、robots、CNAME 與 .nojekyll；404 不索引，舊 `/memory-card-game/` 的三個對應頁面立即轉址到新版，不列入 sitemap。所有不存在的網址仍應由託管服務回傳 404。
 
-`.gitignore` 排除 QA、建置成果、node_modules、暫存、環境變數及個人資料。原始碼、內建素材、鎖定檔及文件可以進版本控制。`dist/` 不需提交，GitHub Actions 會從原始碼重新產生。
+`node scripts/serve.mjs` 會產生本機預覽：無 canonical、無 sitemap、noindex。單獨建置預覽使用 `node scripts/build.mjs --preview`，檢查用 `node scripts/check.mjs --preview`。正式發布使用不帶 --preview 的建置命令。GitHub Actions 每次會重新正式建置，不會使用本機預覽成果。
 
-`.github/workflows/check.yml` 提供原始碼測試與建置檢查。`.github/workflows/pages.yml` 會在推送到 `main` 後測試、建置並部署 `dist/`；部署時自動取得 Pages 正式 origin 與子目錄，讓 CSS、JavaScript、圖庫及導覽連結都使用正確路徑。
+`.github/workflows/check.yml` 負責 CI；`pages.yml` 在推送 main 後測試、建置、檢查並部署 dist。dist、QA、node_modules、環境變數及個人資料都由 .gitignore 排除。請沿用原專案與 .git，更新時將原始碼覆蓋到原 Git 根目錄，不需重新初始化。
 
-首次部署：
-
-1. 在 GitHub 儲存庫的 **Settings → Pages → Build and deployment → Source** 選擇 **GitHub Actions**。不要將原始碼根目錄交給預設 Jekyll，否則首頁可能顯示 README。
-2. 提交並推送本次的 `site.config.mjs`、`README.md` 及 `.github/workflows/pages.yml`。
-3. 到 **Actions** 等待 **Deploy website to GitHub Pages** 顯示成功；若已推送才切換 Source，可選此工作流程並按 **Run workflow**。
-4. 首頁為 `https://york5566.github.io/memory-card-game/`，遊戲頁為 `https://york5566.github.io/memory-card-game/games/memory/`。
-
-之後更新玩法或畫面並推送到 `main`，同一流程會自動重新部署。更新到其他版本時，請保留 `pages.yml` 與 `SITE_BASE_PATH` 的設定，避免丟失部署功能。
-
-### 更新既有 GitHub 儲存庫
-
-已經初始化並連上 GitHub 的專案，請沿用原資料夾與原有的 .git：
-
-1. 將本版資料夾裡的檔案與子資料夾複製到原專案根目錄，覆蓋同名檔案（含 .github、site.config.mjs、src、public、scripts、tests 與文件）。本交付不含 .git，不需重新初始化，也不要刪除原專案的 .git。
-2. 若自行改過內容，先查看差異再合併；不必复制 dist/，部署流程會重建。
-3. 在原專案終端執行 git status，確認只有本次更新檔案；再執行下列指令。
-
-```powershell
-git add .
-git commit -m "Update website to v1.0.5"
-git push
-```
-
-4. 到 Actions 等待 Deploy website to GitHub Pages 成功，再檢查遊戲頁。若 Pages 尚未設定，先將 Settings → Pages → Source 改為 GitHub Actions。
-
+發布步驟、Google Search Console 驗證與 sitemap 提交、各平台分享快取說明，見 [搜尋索引與發布檢查.md](搜尋索引與發布檢查.md)。
 
 ## Google 廣告預留
 

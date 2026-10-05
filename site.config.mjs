@@ -5,6 +5,7 @@ export default {
   basePath: process.env.SITE_BASE_PATH ?? '/',
   domain: process.env.SITE_ORIGIN ?? 'https://wwwne1198.party',
   googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || '',
+  ga4MeasurementId: process.env.GA4_MEASUREMENT_ID ?? 'G-VXMTJFXBHE',
   ads: {
     enabled: false,
     demo: false,

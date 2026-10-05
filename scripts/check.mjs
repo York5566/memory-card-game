@@ -3,6 +3,7 @@ import { resolve, extname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import config from '../site.config.mjs';
 import { siteAddress } from './seo.mjs';
+import { analyticsMarkup } from './analytics.mjs';
 // URL decoding is needed for the Traditional Chinese checkout on Windows.
 const { fileURLToPath } = await import('node:url');
 const dir = fileURLToPath(new URL('..', import.meta.url));
@@ -23,6 +24,9 @@ for (const path of all) {
     if (titles.has(title)) throw Error('頁面標題重複：' + path); titles.add(title);
     if ((html.match(/<h1[\s>]/g) || []).length !== 1 || !/<meta name="description" content="[^"]+">/.test(html)) throw Error('頁面需要單一 H1 與摘要：' + path);
     const is404 = path.endsWith('404.html'), isRedirect = html.includes('data-redirect="true"'), canonical = html.match(/<link rel="canonical" href="([^"]+)">/)?.[1];
+    const analytics = html.match(/<script data-site-analytics="ga4">[\s\S]*?<\/script>/g) || [];
+    const expectedAnalytics = analyticsMarkup(config, { domain }, is404 || isRedirect ? '404' : 'content');
+    if (analytics.length !== (expectedAnalytics ? 1 : 0) || (expectedAnalytics && !html.includes(expectedAnalytics))) throw Error('GA4 代碼重複、ID 不一致或不應出現在預覽／錯誤頁：' + path);
     if (is404 && (!html.includes('noindex, follow') || canonical)) throw Error('404 索引設定有誤');
     if (isRedirect) {
       const relative = path.slice(resolve(dir, 'dist').length + 1).replaceAll('\\', '/').replace(/^memory-card-game\//, '').replace(/index\.html$/, '');

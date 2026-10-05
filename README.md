@@ -1,4 +1,4 @@
-# 翻牌遊戲：純靜態網站版 v1.0.7
+# 翻牌遊戲：純靜態網站版 v1.0.8
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
@@ -106,6 +106,16 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 `.github/workflows/check.yml` 負責 CI；`pages.yml` 在推送 main 後測試、建置、檢查並部署 dist。dist、QA、node_modules、環境變數及個人資料都由 .gitignore 排除。請沿用原專案與 .git，更新時將原始碼覆蓋到原 Git 根目錄，不需重新初始化。
 
 發布步驟、Google Search Console 驗證與 sitemap 提交、各平台分享快取說明，見 [搜尋索引與發布檢查.md](搜尋索引與發布檢查.md)。
+
+## GA4 流量分析
+
+已加入使用者提供的 GA4 評估 ID `G-VXMTJFXBHE`。正式首頁、遊戲頁與使用說明會載入 Google tag，使用 GA4 預設頁面瀏覽及其資料串流設定。沒有另外新增開始遊戲、過關、暱稱或歷史成績的自訂追蹤事件。
+
+`site.config.mjs` 的 `ga4MeasurementId` 集中管理 ID，可用 `GA4_MEASUREMENT_ID` 環境變數覆寫，設為空字串可關閉。本機預覽不輸出 GA4；正式成品即使被拿到 localhost、file:// 或其他網域開啟，也會因 origin 檢查而不載入追蹤。404 與舊網址轉址頁不追蹤，每頁只初始化一次。Google tag 以非同步方式載入，遊戲功能不等待追蹤程式完成。
+
+提交並推送至 main，等待 Pages 部署成功後，使用瀏覽器開啟正式網站並到 GA4「即時」報表確認收集。一般報表處理可能需要 24～48 小時。評估 ID 已設定不代表帳號端已實際收到資料；本次驗證不向正式 GA4 帳號送測試事件。GA4 會將網站瀏覽資訊傳送至 Google，遊戲原有本機保存功能仍由自己的程式處理。
+
+官方說明：[安裝 Google tag](https://developers.google.com/tag-platform/gtagjs)、[驗證 GA4](https://developers.google.com/analytics/devguides/collection/ga4/troubleshoot)。
 
 ## Google 廣告預留
 

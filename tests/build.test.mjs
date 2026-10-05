@@ -9,7 +9,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
   const directory = await mkdtemp(join(tmpdir(), 'memory-site-build-'));
   try {
     for (const item of ['scripts', 'src', 'public', 'site.config.mjs', 'package.json']) await cp(new URL(item, source), join(directory, item), { recursive: true });
-    const env = { ...process.env }; delete env.SITE_ORIGIN; delete env.SITE_BASE_PATH;
+    const env = { ...process.env }; delete env.SITE_ORIGIN; delete env.SITE_BASE_PATH; delete env.GA4_MEASUREMENT_ID;
     const run = (file, extra = {}, args = []) => spawnSync(process.execPath, [file, ...args], { cwd: directory, env: { ...env, ...extra }, encoding: 'utf8' });
     const success = result => assert.equal(result.status, 0, result.stderr || result.stdout);
     const read = path => readFile(join(directory, 'dist', path), 'utf8');
@@ -29,6 +29,18 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.notEqual(run('scripts/check.mjs').status, 0);
       await writeFile(join(directory, 'dist/index.html'), original);
     });
+    await t.test('三個正式內容頁都有 GA4，404 與舊轉址不追蹤，重複標籤會被攔截', async () => {
+      for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
+        const html = await read(path);
+        assert.equal((html.match(/data-site-analytics="ga4"/g) || []).length, 1);
+        assert.ok(html.includes('G-VXMTJFXBHE'));
+      }
+      for (const path of ['404.html', 'memory-card-game/index.html', 'memory-card-game/games/memory/index.html', 'memory-card-game/help/index.html']) assert.ok(!(await read(path)).includes('G-VXMTJFXBHE'));
+      const original = await read('index.html'), tag = original.match(/<script data-site-analytics="ga4">[\s\S]*?<\/script>/)[0];
+      await writeFile(join(directory, 'dist/index.html'), original.replace('</head>', tag + '</head>'));
+      assert.notEqual(run('scripts/check.mjs').status, 0);
+      await writeFile(join(directory, 'dist/index.html'), original);
+    });
     await t.test('保留明確指定 GitHub Pages 子目錄的建置能力', async () => {
       const variables = { SITE_ORIGIN: 'https://york5566.github.io', SITE_BASE_PATH: '/memory-card-game/' };
       success(run('scripts/build.mjs', variables)); success(run('scripts/check.mjs', variables));
@@ -39,6 +51,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       success(run('scripts/check.mjs', {}, ['--preview']));
       const html = await read('index.html');
       assert.match(html, /noindex, follow/); assert.ok(!html.includes('rel="canonical"')); assert.ok(!html.includes('test-token'));
+      assert.ok(!html.includes('G-VXMTJFXBHE')); assert.ok(!html.includes('googletagmanager.com'));
       assert.equal(await read('robots.txt'), 'User-agent: *\nDisallow: /\n');
       await assert.rejects(read('sitemap.xml'), { code: 'ENOENT' });
       await assert.rejects(read('CNAME'), { code: 'ENOENT' });

@@ -3,6 +3,7 @@ import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from '../site.config.mjs';
 import { siteAddress, pageMetadata, escapeHTML as escape } from './seo.mjs';
+import { analyticsMarkup } from './analytics.mjs';
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'dist');
 if (dirname(output) !== root || !output.endsWith('dist')) throw Error('不安全的建置路徑');
@@ -21,7 +22,7 @@ export async function build({ preview = false } = {}) {
   for (const [page, route, title, description] of routes) {
     let body = await readFile(join(root, `src/pages/${page}.html`), 'utf8');
     const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain });
-    const html = template.replace('{{BODY}}', body).replace('{{META}}', meta).replaceAll('{{NAME}}', escape(config.name))
+    const html = template.replace('{{BODY}}', body).replace('{{META}}', meta).replace('{{ANALYTICS}}', analyticsMarkup(config, { domain }, page)).replaceAll('{{NAME}}', escape(config.name))
       .replaceAll('{{DOCUMENT_TITLE}}', escape(documentTitle)).replaceAll('{{TITLE}}', escape(title)).replaceAll('{{DESCRIPTION}}', escape(description))
       .replaceAll('{{BASE}}', base).replaceAll('{{PAGE}}', page);
     const dest = route === null ? join(output, '404.html') : join(output, route, 'index.html');

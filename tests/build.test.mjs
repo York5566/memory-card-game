@@ -23,7 +23,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.ok(!html.includes('york5566.github.io')); assert.ok(!html.includes('/memory-card-game/'));
       assert.match(await read('memory-card-game/games/memory/index.html'), /content="0; url=https:\/\/wwwne1198\.party\/games\/memory\/"/);
       const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 3);
-      assert.ok(!sitemap.includes('memory-card-game')); assert.ok(!sitemap.includes('404'));
+      assert.ok(!sitemap.includes('/memory-card-game/')); assert.ok(!sitemap.includes('404'));
     });
     await t.test('檢查會拒絕回歸舊的 CSS 子目錄', async () => {
       const original = await read('index.html');
@@ -48,6 +48,39 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       const graph = JSON.parse(gameHTML.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
       assert.ok(graph[1].mainEntity.featureList.some(feature => feature.includes('上傳照片')));
       assert.match(gameHTML, /成績紀錄預設開啟/);
+    });
+    await t.test('搜尋圖示與縮圖提供真實檔案、可見 HTML、主要圖片及圖片 sitemap', async () => {
+      const imageURL = 'https://wwwne1198.party/assets/previews/memory-card-game.png';
+      for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
+        const html = await read(path);
+        assert.ok(!html.includes('rel="icon" type="image/svg+xml"'));
+        assert.match(html, /rel="icon" type="image\/png" sizes="96x96" href="\/assets\/favicon-96.png"/);
+        assert.ok(html.includes('href="/favicon.ico"'));
+        assert.match(html, /<img[^>]+src="\/assets\/previews\/memory-card-game.png"[^>]+alt="[^"]+"/);
+        const graph = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+        assert.equal(graph[2].contentUrl, imageURL);
+        assert.equal(graph[1].primaryImageOfPage['@id'], graph[2]['@id']);
+        assert.equal(graph[2].height, 900);
+      }
+      const sitemap = await read('sitemap.xml');
+      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 3);
+      assert.ok(sitemap.includes(`<image:loc>${imageURL}</image:loc>`));
+    });
+    await t.test('損毀 ICO、移除可見縮圖或圖片 sitemap 都會被發布檢查攔截', async () => {
+      const icoPath = join(directory, 'dist/favicon.ico'), ico = await readFile(icoPath);
+      await writeFile(icoPath, Buffer.from('broken icon'));
+      assert.notEqual(run('scripts/check.mjs').status, 0);
+      await writeFile(icoPath, ico);
+      for (const [path, alter] of [
+        ['index.html', html => html.replace('src="/assets/previews/memory-card-game.png"', 'src="/assets/products/02.svg"')],
+        ['sitemap.xml', xml => xml.replace(/<image:image>.*?<\/image:image>/g, '')],
+      ]) {
+        const original = await read(path);
+        await writeFile(join(directory, 'dist', path), alter(original));
+        assert.notEqual(run('scripts/check.mjs').status, 0);
+        await writeFile(join(directory, 'dist', path), original);
+      }
+      success(run('scripts/check.mjs'));
     });
     await t.test('三個正式內容頁都有 GA4，404 與舊轉址不追蹤，重複標籤會被攔截', async () => {
       for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {

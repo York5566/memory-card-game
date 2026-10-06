@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from '../site.config.mjs';
-import { siteAddress, pageMetadata, escapeHTML as escape } from './seo.mjs';
+import { siteAddress, pageMetadata, SEARCH_PREVIEW, escapeHTML as escape } from './seo.mjs';
 import { analyticsMarkup } from './analytics.mjs';
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'dist');
@@ -34,8 +34,8 @@ export async function build({ preview = false } = {}) {
   }
   await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud })};\n`);
   if (domain) {
-    const urls = routes.filter(([, route]) => route !== null).map(([, route]) => `<url><loc>${escape(domain + base + (route ? route + '/' : ''))}</loc></url>`).join('');
-    await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
+    const urls = routes.filter(([, route]) => route !== null).map(([, route]) => `<url><loc>${escape(domain + base + (route ? route + '/' : ''))}</loc><image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image></url>`).join('');
+    await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${urls}</urlset>`);
     await writeFile(join(output, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${domain}${base}sitemap.xml\n`);
     if (base === '/' && new URL(domain).hostname === 'wwwne1198.party') {
       await writeFile(join(output, 'CNAME'), 'wwwne1198.party\n');

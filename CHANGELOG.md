@@ -1,5 +1,11 @@
 # 更新紀錄
 
+## 1.1.2 — 2026-10-07
+
+- favicon 改為明確宣告 Google 支援的 96px PNG，補上根目錄多尺寸 favicon.ico，移除搜尋 favicon 的 SVG 宣告。
+- 新增無文字的 1200×900 卡牌配對示意圖，以有替代文字的靜態 img 放入首頁、遊戲與教學頁；同步 primaryImageOfPage、WebApplication image 與圖片 sitemap。
+- 保留各頁社群分享海報，新增圖示格式、主要圖片與 sitemap 發布檢查及回歸測試，補充 Search Console 更新步驟。
+
 ## 1.1.1 — 2026-10-07
 
 - 新使用者與恢復預設時開啟成績保存；保留既有明確關閉的設定。

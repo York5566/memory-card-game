@@ -39,7 +39,9 @@ test('每個正式頁面提供絕對 PNG 分享圖、尺寸、替代文字與一
     assert.ok(output.meta.includes('property="og:image:alt"'));
     const graph = JSON.parse(output.meta.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
     assert.equal(graph[0].name, '翻牌遊戲'); assert.equal(graph[0].url, 'https://wwwne1198.party/');
-    assert.equal(graph[2].url, `https://wwwne1198.party/assets/social/${page}.png`);
+    assert.equal(graph[2].url, 'https://wwwne1198.party/assets/previews/memory-card-game.png');
+    assert.equal(graph[2].width, 1200); assert.equal(graph[2].height, 900);
+    if (page === 'game') assert.equal(graph[1].mainEntity.image, graph[2].url);
     assert.equal(graph[1].primaryImageOfPage['@id'], graph[2]['@id']);
   }
 });

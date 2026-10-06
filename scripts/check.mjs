@@ -2,7 +2,7 @@ import { readdir, readFile, access } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import config from '../site.config.mjs';
-import { siteAddress } from './seo.mjs';
+import { siteAddress, SEARCH_PREVIEW } from './seo.mjs';
 import { analyticsMarkup } from './analytics.mjs';
 // URL decoding is needed for the Traditional Chinese checkout on Windows.
 const { fileURLToPath } = await import('node:url');
@@ -24,6 +24,21 @@ for (const path of all) {
     if (titles.has(title)) throw Error('頁面標題重複：' + path); titles.add(title);
     if ((html.match(/<h1[\s>]/g) || []).length !== 1 || !/<meta name="description" content="[^"]+">/.test(html)) throw Error('頁面需要單一 H1 與摘要：' + path);
     const is404 = path.endsWith('404.html'), isRedirect = html.includes('data-redirect="true"'), canonical = html.match(/<link rel="canonical" href="([^"]+)">/)?.[1];
+    if (!isRedirect) {
+      if (!html.includes(`<link rel="icon" type="image/png" sizes="96x96" href="${base}assets/favicon-96.png">`) || !html.includes(`href="${base}favicon.ico"`) || /rel="icon" type="image\/svg\+xml"/.test(html)) throw Error('favicon 必須明確提供可爬取的 PNG 與 ICO');
+      const icon = await readFile(resolve(dir, 'dist/assets/favicon-96.png')), ico = await readFile(resolve(dir, 'dist/favicon.ico'));
+      if (icon.length < 24 || icon.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || icon.readUInt32BE(16) !== 96 || icon.readUInt32BE(20) !== 96) throw Error('PNG favicon 必須為 96×96');
+      if (ico.length < 6 || ico.readUInt16LE(0) !== 0 || ico.readUInt16LE(2) !== 1 || ico.readUInt16LE(4) < 1 || 6 + 16 * ico.readUInt16LE(4) > ico.length) throw Error('favicon.ico 格式不完整');
+      let has96 = false;
+      for (let i = 0; i < ico.readUInt16LE(4); i++) {
+        const offset = 6 + i * 16, width = ico[offset] || 256, height = ico[offset + 1] || 256;
+        const size = ico.readUInt32LE(offset + 8), start = ico.readUInt32LE(offset + 12);
+        if (width !== height || !size || start < 6 + 16 * ico.readUInt16LE(4) || start + size > ico.length) throw Error('favicon.ico 的圖層不完整');
+        if (width === 96) has96 = true;
+      }
+      if (!has96) throw Error('favicon.ico 缺少 96×96 圖層');
+    }
+    if (!is404 && !isRedirect && !new RegExp(`<img[^>]+src="${base}${SEARCH_PREVIEW.path}"[^>]+alt="[^"]+"`).test(html)) throw Error('頁面缺少可直接爬取且有替代文字的主要圖片');
     const analytics = html.match(/<script data-site-analytics="ga4">[\s\S]*?<\/script>/g) || [];
     const expectedAnalytics = analyticsMarkup(config, { domain }, is404 || isRedirect ? '404' : 'content');
     if (analytics.length !== (expectedAnalytics ? 1 : 0) || (expectedAnalytics && !html.includes(expectedAnalytics))) throw Error('GA4 代碼重複、ID 不一致或不應出現在預覽／錯誤頁：' + path);
@@ -39,6 +54,11 @@ for (const path of all) {
       canonicalURLs.push(canonical);
       const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1];
       if (!json || JSON.parse(json)['@graph'][1].url !== canonical) throw Error('結構化資料網址有誤');
+      const graph = JSON.parse(json)['@graph'], primary = graph[2];
+      if (primary.url !== domain + base + SEARCH_PREVIEW.path || primary.contentUrl !== primary.url || graph[1].primaryImageOfPage['@id'] !== primary['@id'] || primary.width !== SEARCH_PREVIEW.width || primary.height !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片標記有誤');
+      const preview = await readFile(resolve(dir, 'dist', SEARCH_PREVIEW.path));
+      if (preview.length < 24 || preview.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || preview.readUInt32BE(16) !== SEARCH_PREVIEW.width || preview.readUInt32BE(20) !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片格式或尺寸有誤');
+      checked++;
       if (html.includes('noindex') || !html.includes('max-image-preview:large')) throw Error('正式頁面索引設定有誤');
       const meta = key => html.match(new RegExp(`<meta (?:property|name)="${key}" content="([^"]+)">`))?.[1];
       if (meta('og:url') !== canonical || meta('og:site_name') !== config.name || meta('twitter:card') !== 'summary_large_image') throw Error('社群分享網址或站名有誤');
@@ -61,6 +81,8 @@ if (domain) {
   const sitemap = await readFile(resolve(dir, 'dist/sitemap.xml'), 'utf8');
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1]).sort();
   if (JSON.stringify(urls) !== JSON.stringify(canonicalURLs.sort())) throw Error('sitemap 與正式頁面網址不一致');
+  const images = [...sitemap.matchAll(/<image:loc>(.*?)<\/image:loc>/g)].map(m => m[1]);
+  if (!sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"') || images.length !== canonicalURLs.length || images.some(url => url !== domain + base + SEARCH_PREVIEW.path)) throw Error('圖片 sitemap 與可見主要圖片不一致');
   const robots = await readFile(resolve(dir, 'dist/robots.txt'), 'utf8');
   if (!robots.includes(`Sitemap: ${domain}${base}sitemap.xml`)) throw Error('robots 的 sitemap 網址有誤');
   if (domain === 'https://wwwne1198.party' && base === '/') {

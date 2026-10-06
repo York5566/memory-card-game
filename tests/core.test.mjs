@@ -11,6 +11,23 @@ function pairs(g) { const map = new Map(); g.cards.forEach((id, i) => { if (!map
 function win(g) { for (const [a, b] of pairs(g)) { g.flip(a); g.flip(b); } }
 class Storage { constructor() { this.data = new Map(); } getItem(key) { return this.data.get(key) ?? null; } setItem(key, value) { this.data.set(key, value); } }
 
+test('新瀏覽器及缺少保存欄位的舊設定預設保存成績；明確關閉仍保留', () => {
+  assert.equal(new LocalStore(new Storage()).settings().records.enabled, true);
+  assert.equal(sanitize({ records: { leaderboard: true } }).records.enabled, true);
+  for (const wrapped of [false, true]) {
+    const c = defaults(); c.records.enabled = false;
+    const raw = JSON.stringify(wrapped ? { version: 1, config: c } : c), storage = new Storage();
+    storage.setItem('slow-play-settings', raw);
+    assert.equal(new LocalStore(storage).settings().records.enabled, false);
+    assert.equal(storage.getItem('slow-play-settings'), raw);
+  }
+});
+test('恢復預設重新開啟成績保存，仍可復原回關閉狀態', () => {
+  const c = defaults(); c.records.enabled = false; const history = new History(c);
+  history.replace(defaults()); assert.equal(history.value.records.enabled, true);
+  history.undo(); assert.equal(history.value.records.enabled, false);
+});
+
 test('預設 6 對為 12 張，所有图案恰好成對且來自內建圖庫', () => { const g = new Game(defaults()); assert.equal(g.cards.length, 12); for (const [id, n] of g.cards.reduce((m, id) => m.set(id, (m.get(id) || 0) + 1), new Map())) { assert.equal(n, 2); assert.ok(PRODUCTS.some(p => p.id === id)); } });
 test('圖庫數量限制配對選項；未知 ID 與外部路徑不進入設定', () => { const c = defaults(); c.pairs = 12; c.products.forEach((p, i) => p.enabled = i < 3); c.products.push({ id: 'foreign', enabled: true, image: { url: 'https://example.com/photo' } }); c.logo.asset = 'https://evil.com/logo'; const safe = sanitize(c); assert.equal(safe.pairs, 3); assert.equal(safe.products.length, 12); assert.equal(safe.logo.asset, 'none'); assert.ok(!JSON.stringify(safe).includes('https:')); });
 test('非法數值、色碼與裁切安全回退，不产生空圖庫', () => { const c = defaults(); c.pairs = NaN; c.cardColor = 'url(javascript:alert(1))'; c.products.forEach(p => p.enabled = false); c.logo.opacity = Infinity; c.back.cropLeft = 99; const safe = sanitize(c); assert.equal(safe.pairs, 2); assert.equal(safe.products.filter(p => p.enabled).length, 2); assert.equal(safe.cardColor, defaults().cardColor); assert.equal(safe.logo.opacity, 100); assert.equal(safe.back.cropLeft, 45); });

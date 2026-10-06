@@ -22,7 +22,7 @@ export function defaults() {
     background: transform({ asset: 'dots-v1', fit: 'cover' }),
     logo: transform({ asset: 'none', canvasW: 180, canvasH: 54, boxX: 0, boxY: 0 }),
     products: PRODUCTS.map(p => ({ id: p.id, enabled: true, image: transform({ zoom: 90 }) })),
-    records: { enabled: false, leaderboard: true, fields: Object.keys(FIELDS) }, event: '',
+    records: { enabled: true, leaderboard: true, fields: Object.keys(FIELDS) }, event: '',
   };
 }
 export const TRANSFORM_SPECS = [

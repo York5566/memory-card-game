@@ -31,6 +31,24 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.notEqual(run('scripts/check.mjs').status, 0);
       await writeFile(join(directory, 'dist/index.html'), original);
     });
+    await t.test('搜尋與分享標籤、可爬取的本文共同描述自訂圖片，教學連結有對應錨點', async () => {
+      const titles = new Set();
+      for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
+        const html = await read(path), title = html.match(/<title>(.*?)<\/title>/s)[1]; titles.add(title);
+        assert.match(title, /上傳/);
+        assert.match(html.match(/<h1[^>]*>(.*?)<\/h1>/s)[1], /圖片/);
+        assert.match(html.match(/<meta name="description" content="([^"]+)"/)[1], /上傳/);
+        assert.ok(html.includes(`property="og:title" content="${title}"`));
+        assert.ok(html.includes(`name="twitter:title" content="${title}"`));
+        assert.match(html, /PNG、JPG/); assert.match(html, /背景與 LOGO/);
+      }
+      assert.equal(titles.size, 3);
+      assert.ok((await read('help/index.html')).includes('id="upload-images"'));
+      const gameHTML = await read('games/memory/index.html');
+      const graph = JSON.parse(gameHTML.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+      assert.ok(graph[1].mainEntity.featureList.some(feature => feature.includes('上傳照片')));
+      assert.match(gameHTML, /成績紀錄預設開啟/);
+    });
     await t.test('三個正式內容頁都有 GA4，404 與舊轉址不追蹤，重複標籤會被攔截', async () => {
       for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
         const html = await read(path);

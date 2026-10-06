@@ -18,8 +18,8 @@ export async function build({ preview = false } = {}) {
   const template = await readFile(join(root, 'src/layout.html'), 'utf8');
   const routes = [
     ['home', '', '首頁', config.description],
-    ['game', 'games/memory', '記憶配對挑戰', '免費線上翻牌遊戲，免登入即可挑戰記憶配對。選擇 2 至 12 對圖案，上傳自訂卡背與背景、調整構圖，用數字代碼跨裝置載入設定；支援手機與排行榜。'],
-    ['help', 'help', '玩法與設定教學', '了解翻牌遊戲的配對規則、計時、暫停、自訂圖片、數字代碼、即時畫面預覽、排行榜與本機成績保存，並學習匯出 CSV 與鍵盤操作。'],
+    ['game', 'games/memory', '上傳照片，自訂記憶配對卡牌', '上傳自己的照片或圖片，免費製作線上記憶配對卡牌。可替換 12 種圖案、卡背、背景與 LOGO，調整縮放、位置、旋轉及裁切，選擇 2 至 12 對卡牌與限時挑戰。成績預設保存在目前瀏覽器。'],
+    ['help', 'help', '圖片上傳與玩法設定教學', '學習如何上傳 PNG、JPG、WebP 圖片，自訂翻牌遊戲的配對圖案、卡背、背景與 LOGO，調整圖片構圖、使用數字代碼載入設定，以及查看成績紀錄與匯出 CSV。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const [page, route, title, description] of routes) {

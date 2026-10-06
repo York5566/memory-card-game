@@ -1,4 +1,4 @@
-# 翻牌遊戲：純靜態網站版 v1.1.0
+# 翻牌遊戲：純靜態網站版 v1.1.1
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
@@ -67,7 +67,7 @@ python -m http.server 4174 --bind 127.0.0.1 --directory dist
 
 設定以 `slow-play-settings` 保存至此瀏覽器 localStorage，有 v1 包裝格式及 v0 直接設定物件遷移。只接受已定義欄位、內建素材 ID、自訂圖片 SHA-256 與圖案名稱；圖片二進位存於 IndexedDB，未知素材安全回退，較新版本不覆寫。
 
-成績紀錄預設關閉，可與排行榜獨立開關。開啟後以 `slow-play-records` 保存，最多 500 筆。只有使用者選取欄位寫入 `values`，必要識別碼與當時規則另外保存；排行榜不增加持久保存欄位。關閉保存不刪舊紀錄，恢復設定預設也不刪成績。歷史明細不計算總排行。
+成績紀錄預設開啟，可與排行榜獨立開關。首次使用及恢復預設均開啟；已有明確關閉的設定保持關閉。完成遊戲後以 `slow-play-records` 保存，最多 500 筆。只有使用者選取欄位寫入 `values`，必要識別碼與當時規則另外保存；排行榜不增加持久保存欄位。關閉保存不刪舊紀錄，恢復設定預設也不刪成績。歷史明細不計算總排行。
 
 資料損壞、容量不足或存取被阻擋會顯示提示，遊戲仍可玩。損壞／未知版本的成績資料不自動覆寫；本次新成績保留在頁面內，可先匯出。清除網站資料、無痕模式結束、更換網域或瀏覽器可能影響保存內容。
 
@@ -97,7 +97,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 `site.config.mjs` 預設正式 origin 為 `https://wwwne1198.party`、basePath 為 `/`。CSS、JavaScript、圖片、導覽、canonical、OG 與 sitemap 都由此產生。Pages 工作流程不再把歷史專案子目錄帶入自訂網域的成品。仍可明確以 `SITE_ORIGIN`、`SITE_BASE_PATH` 覆寫，但目前網域不需要這些環境變數。
 
-各頁直接輸出獨立 title、description、H1、OG 與 Twitter 大圖摘要，並有 WebSite／WebPage／ImageObject 結構化資料；遊戲頁另有 WebApplication。分享圖為 1200×630 PNG，設計原稿在 `design/social/`。沒有虛構評分或評論。首頁與說明提供靜態玩法內容、常見問題與內部連結。
+各頁以「可上傳圖片／照片、自訂記憶配對卡牌」作主題，直接輸出獨立 title、description、H1、OG 與 Twitter 大圖摘要，並有 WebSite／WebPage／ImageObject 結構化資料；遊戲頁另有 WebApplication。分享圖為 1200×630 PNG，設計原稿在 `design/social/`。沒有虛構評分或評論。首頁與說明提供靜態玩法內容、常見問題與內部連結。
 
 正式建置包含 sitemap、robots、CNAME 與 .nojekyll；404 不索引，舊 `/memory-card-game/` 的三個對應頁面立即轉址到新版，不列入 sitemap。所有不存在的網址仍應由託管服務回傳 404。
 
@@ -137,7 +137,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 本次驗證證據及未實測範圍見 `驗收報告.md`。QA 快照、測試下載與截圖存放在忽略的 `qa/`，不混入網站成果或原始碼交付包。
 
-## 自訂圖片與雲端代碼（v1.1.0）
+## 自訂圖片與雲端代碼（v1.1.1）
 
 - `public/js/images.js`、`image-input.js`：讀取尺寸、瀏覽器壓縮、移除中繼資料、IndexedDB 與圖片 URL。
 - `profile-format.js`：前後端共用的二進位封包、白名單設定、圖片 SHA-256 與容量驗證。

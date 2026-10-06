@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "memory-game-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "API_ENABLED": "true",
+    "ALLOWED_ORIGINS": "https://wwwne1198.party"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "memory-card-game", "database_id": "bce04f96-bdca-4994-9684-ff766182bef5", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "memory-card-game" }],
+  "ratelimits": [{ "name": "API_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }],
+  "triggers": { "crons": ["17 * * * *"] },
+  "observability": { "enabled": false }
+}

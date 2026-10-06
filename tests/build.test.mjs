@@ -16,6 +16,8 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
     await t.test('預設正式建置的 CSS、SEO、sitemap 全部使用自訂網域根路徑', async () => {
       success(run('scripts/build.mjs')); success(run('scripts/check.mjs'));
       const html = await read('index.html');
+      const cloud = JSON.parse((await read('js/site-config.js')).replace(/^export default /, '').trim().replace(/;$/, '')).cloud;
+      assert.equal(cloud.origin, 'https://wwwne1198.party'); assert.equal(cloud.preview, false); assert.ok(cloud.siteKey);
       assert.match(html, /href="\/style\.css"/); assert.match(html, /src="\/js\/site\.js"/);
       assert.match(html, /rel="canonical" href="https:\/\/wwwne1198\.party\/"/);
       assert.ok(!html.includes('york5566.github.io')); assert.ok(!html.includes('/memory-card-game/'));

@@ -2,12 +2,14 @@ import { Game, LocalStore, ruleKey, ruleSnapshot, groupLabel, rankRows, historic
 import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction } from './site.js';
 import { createSounds } from './audio.js';
+import { loadImages } from './images.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
 let storage;
 try { storage = window.localStorage; } catch { storage = { getItem() { throw Error(); }, setItem() { throw Error(); } }; }
 const store = new LocalStore(storage, warning);
 let config = store.settings();
+if ((await loadImages(config)).length) warning('部分自訂圖片不在此瀏覽器，已暫用內建圖片。請重新上傳，或使用數字代碼載入。');
 let records = store.records();
 let sessionRows = []; // Intentionally memory-only; never persisted or restored from history.
 let game = new Game(config);

@@ -19,7 +19,7 @@ for (const path of all) {
   if (extname(path) === '.html') {
     const html = await readFile(path, 'utf8');
     if (!html.includes('lang="zh-Hant"') || !html.includes('<title>') || /\{\{\w+\}\}/.test(html)) throw Error('頁面中繼資料或模板不完整：' + path);
-    if (/type=["']file|contenteditable|<form[^>]*action=["']https?:/i.test(html)) throw Error('出現未授權的匯入或外部傳送入口');
+    if (/contenteditable|<form[^>]*action=["']https?:/i.test(html)) throw Error('出現未授權的外部表單傳送入口');
     const title = html.match(/<title>(.*?)<\/title>/s)?.[1];
     if (titles.has(title)) throw Error('頁面標題重複：' + path); titles.add(title);
     if ((html.match(/<h1[\s>]/g) || []).length !== 1 || !/<meta name="description" content="[^"]+">/.test(html)) throw Error('頁面需要單一 H1 與摘要：' + path);

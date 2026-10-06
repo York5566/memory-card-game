@@ -6,6 +6,10 @@ export default {
   domain: process.env.SITE_ORIGIN ?? 'https://wwwne1198.party',
   googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || '',
   ga4MeasurementId: process.env.GA4_MEASUREMENT_ID ?? 'G-VXMTJFXBHE',
+  cloud: {
+    apiURL: process.env.CLOUD_API_URL ?? 'https://memory-game-api.wwwne1198.workers.dev',
+    siteKey: process.env.TURNSTILE_SITE_KEY ?? '0x4AAAAAAFO-lRDUAUd9M0PH',
+  },
   ads: {
     enabled: false,
     demo: false,

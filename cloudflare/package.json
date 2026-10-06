@@ -1,0 +1,26 @@
+{
+  "name": "memory-game-api",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "check": "wrangler deploy --dry-run",
+    "test": "node --test tests/*.test.mjs",
+    "test:runtime": "node tests/runtime.mjs",
+    "migrate": "wrangler d1 migrations apply memory-card-game --remote",
+    "deploy": "wrangler deploy"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "miniflare": "^5.20261001.0-alpha",
+    "wrangler": "4.147.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20261001.1": true
+  }
+}

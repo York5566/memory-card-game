@@ -42,6 +42,7 @@ export const get = (obj, path) => path.split('.').reduce((o, key) => o?.[key], o
 export function set(obj, path, value) { const parts = path.split('.'); const key = parts.pop(); let target = obj; for (const p of parts) target = target[p]; target[key] = value; }
 function sanitizeLayer(incoming, base) {
   const out = copy(base);
+  if (/^[a-f0-9]{64}$/.test(incoming?.upload || '')) out.upload = incoming.upload;
   for (const [key, , type, lo, hi] of TRANSFORM_SPECS) {
     const v = incoming?.[key];
     if (type === 'select') { if (lo.some(([id]) => v === id)) out[key] = v; }
@@ -64,11 +65,11 @@ export function sanitize(incoming) {
   for (const key of ['back', 'background', 'logo']) out[key] = { ...out[key], ...sanitizeLayer(incoming[key], out[key]) };
   out.products = out.products.map(p => {
     const saved = Array.isArray(incoming.products) ? incoming.products.find(x => x && x.id === p.id) : null;
-    return { id: p.id, enabled: typeof saved?.enabled === 'boolean' ? saved.enabled : true, image: sanitizeLayer(saved?.image, p.image) };
+    return { id: p.id, enabled: typeof saved?.enabled === 'boolean' ? saved.enabled : true, image: sanitizeLayer(saved?.image, p.image), ...(typeof saved?.label === 'string' && saved.label.trim() ? { label: saved.label.trim().slice(0, 30) } : {}) };
   });
   if (out.products.filter(p => p.enabled).length < 2) out.products.slice(0, 2).forEach(p => p.enabled = true);
   out.pairs = Math.min(out.pairs, out.products.filter(p => p.enabled).length);
-  if (Array.isArray(incoming.records?.fields)) out.records.fields = [...new Set(incoming.records.fields.filter(key => key in FIELDS))];
+  if (Array.isArray(incoming.records?.fields)) out.records.fields = [...new Set(incoming.records.fields.filter(key => typeof key === 'string' && Object.hasOwn(FIELDS, key)))];
   return out;
 }
 export function elapsedText(ms) { return Number.isFinite(ms) ? `${Math.floor(ms / 1000)} 秒 ${Math.floor(ms % 1000)} 毫秒` : '未記錄'; }
@@ -77,7 +78,7 @@ export function ruleSnapshot(c) {
     version: 'web-rules-v1', pairs: c.pairs, timed: c.timed, limitSeconds: c.timed ? c.limitSeconds : null,
     previewSeconds: c.previewSeconds, mismatchMs: c.mismatchMs, ratioW: c.ratioW, ratioH: c.ratioH, columns: c.columns,
     showLabels: c.showLabels, cardColor: c.cardColor,
-    products: c.products.filter(p => p.enabled).map(p => ({ id: p.id, version: PRODUCTS.find(a => a.id === p.id).version, image: copy(p.image) })).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    products: c.products.filter(p => p.enabled).map(p => ({ id: p.id, version: PRODUCTS.find(a => a.id === p.id).version, image: copy(p.image), ...(c.showLabels && p.label ? { label: p.label } : {}) })).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
   };
 }
 export function canonical(value) {

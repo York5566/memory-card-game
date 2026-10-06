@@ -53,3 +53,16 @@ dialog{border:1px solid var(--border);border-radius:18px;padding:26px;background
 /* Preserve content height so fullscreen does not extend the stage artwork below the cards. */
 .play-panel:fullscreen>.play-toolbar,.play-panel:fullscreen>.stats,.play-panel:fullscreen>.game-controls,.play-panel:fullscreen>.game-status,.play-panel.expanded-view>.play-toolbar,.play-panel.expanded-view>.stats,.play-panel.expanded-view>.game-controls,.play-panel.expanded-view>.game-status{flex:none}
 .play-panel:fullscreen>.game-status,.play-panel.expanded-view>.game-status{width:min(100%,1100px);margin:12px auto 0}
+
+/* Local images and cloud settings */
+.upload-panel,.cloud-card{padding:16px;border:1px solid #d6e3d9;border-radius:14px;background:#f5f9f5;margin:16px 0;overflow-wrap:anywhere}
+.upload-label{display:block;font-weight:600;margin:12px 0 8px}
+.upload-label input{display:block;width:100%;margin-top:8px;max-width:100%;font-size:13px}
+.upload-label input::file-selector-button{border:1px solid #b6cbbd;border-radius:8px;background:#fff;padding:8px 12px;color:#355849;margin-right:8px;cursor:pointer}
+.upload-status,.cloud-receipt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-size:13px}
+.cloud-card h4{margin:0 0 10px}.cloud-card p,.cloud-notice{font-size:14px;line-height:1.75}
+.cloud-card input{display:block;width:100%;margin:8px 0 12px;font-size:20px;letter-spacing:.1em}
+.cloud-code{display:block;font-size:26px;letter-spacing:.12em;font-weight:700;color:#355849;user-select:all;margin-top:12px}
+.cloud-receipt{padding:12px;border-bottom:1px solid #d6e3d9}.cloud-receipt code{font-size:17px;user-select:all}
+.cloud-notice{padding:12px;background:#fff5dc;border-radius:10px}.settings-tabs{flex-wrap:wrap}
+#turnstile-host{max-width:100%;overflow:auto} .settings-dialog[aria-busy=true]{cursor:progress}

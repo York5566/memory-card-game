@@ -27,7 +27,7 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
       - name: Test game rules
-        run: node --test tests/*.test.mjs
+        run: node --test tests/*.test.mjs cloudflare/tests/*.test.mjs
       - name: Build website for Pages
         run: node scripts/build.mjs
         env:

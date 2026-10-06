@@ -1,12 +1,16 @@
 import { defaults, copy, History, SPECS, TRANSFORM_SPECS, PRODUCTS, FIELDS, get, set, canonical, sanitize } from './core.js';
-import { createStage, createCard, escapeHTML as esc, assetURL } from './stage.js';
+import { createStage, createCard, productName, escapeHTML as esc, assetURL } from './stage.js';
+import { imageURL, importImage, pruneImages } from './images.js';
+import { cloudReady, saveCloud, loadCloud, deleteCloud, receipts } from './cloud.js';
+import { formatCode } from './profile-format.js';
 import { previewCards, previewTarget } from './preview.js';
 import { toast, confirmAction } from './site.js';
-const TABS = { play: '玩法', cards: '卡牌與圖庫', screen: '畫面', records: '成績' };
+const TABS = { play: '玩法', cards: '卡牌與圖庫', screen: '畫面', records: '成績', cloud: '雲端代碼' };
 export function openSettings(applied, apply) {
   const dialog = document.querySelector('#settings-dialog'); if (dialog.open) return;
   let saved = copy(applied), history = new History(applied), tab = 'play', product = 0, preview, frameRequest = 0;
   let showing = { view: 'board', face: 'front' };
+  let busy = false, lastCode = '';
   const base = defaults(); const prior = document.activeElement;
   dialog.innerHTML = `<header class="dialog-header"><div><h2 id="settings-title">設定</h2><p>調整草稿；儲存並套用後，遊戲回到準備畫面。</p></div><button class="icon-button close-settings" aria-label="關閉設定">×</button></header>
     <div class="settings-body"><div class="settings-form"><div class="settings-tabs" role="tablist" aria-label="設定分頁">${Object.entries(TABS).map(([id, name]) => `<button class="tab" id="tab-${id}" role="tab" aria-controls="settings-fields" data-tab="${id}">${name}</button>`).join('')}</div><div id="settings-fields" class="settings-fields" role="tabpanel"></div></div>
@@ -15,15 +19,22 @@ export function openSettings(applied, apply) {
     <div class="preview-frame"><div id="preview-stage" class="stage"></div><div id="preview-card"></div><div id="preview-records" hidden></div></div><p class="preview-caption" id="preview-caption"></p><p class="preview-hint" id="preview-summary"></p></aside></div>
     <footer class="settings-footer"><div><div class="undo-row"><button class="button small" id="settings-undo">復原</button><button class="button small" id="settings-redo">重做</button><button class="reset-field" id="settings-reset-all">全部設定恢復預設</button></div><div class="save-status" id="save-status" role="status">僅儲存在此瀏覽器。</div></div><div class="footer-actions"><button class="button" id="settings-close">關閉</button><button class="button primary" id="settings-apply">儲存並套用</button></div></footer>`;
   const status = message => { dialog.querySelector('#save-status').textContent = message; };
+  async function operation(message, task) {
+    if (busy) return; busy = true; status(message);
+    const controls = [...dialog.querySelectorAll('button,input,select')].map(node => [node, node.disabled]);
+    controls.forEach(([node]) => node.disabled = true); dialog.setAttribute('aria-busy', 'true');
+    try { await task(); } catch (error) { status(error.message || '操作失敗，請再試一次。'); }
+    finally { busy = false; dialog.removeAttribute('aria-busy'); controls.forEach(([node, disabled]) => node.disabled = disabled); syncFields(); }
+  }
   const dirty = () => canonical(history.value) !== canonical(saved);
-  function updateButtons() { dialog.querySelector('#settings-undo').disabled = !history.past.length && !history.pending; dialog.querySelector('#settings-redo').disabled = !history.future.length; }
+  function updateButtons() { dialog.querySelector('#settings-undo').disabled = busy || (!history.past.length && !history.pending); dialog.querySelector('#settings-redo').disabled = busy || !history.future.length; }
   function previewRender() {
     if (frameRequest) return;
     frameRequest = requestAnimationFrame(() => { frameRequest = 0; drawPreview(); });
   }
   function drawPreview() {
     preview?.destroy(); const c = sanitize(history.value);
-    const selected = PRODUCTS[product], cards = previewCards(c, selected.id);
+    const selected = { ...PRODUCTS[product], name: productName(c, PRODUCTS[product].id) }, cards = previewCards(c, selected.id);
     const stage = dialog.querySelector('#preview-stage');
     preview = createStage(stage, c, cards, () => {}, true);
     preview.update({ state: 'preview', isRevealed: () => showing.face !== 'back', matched: new Set(showing.face === 'matched' ? [0, 1] : []), open: [] });
@@ -70,7 +81,7 @@ export function openSettings(applied, apply) {
     const [key, label, type, lo, hi, step = 1] = spec; const path = prefix + key; const value = get(history.value, path); const id = 'setting-' + path.replaceAll('.', '-');
     let control;
     if (type === 'boolean') control = `<input id="${id}" type="checkbox" data-path="${path}" ${value ? 'checked' : ''}>`;
-    if (type === 'text') control = `<input id="${id}" type="text" data-path="${path}" maxlength="${lo}" value="${esc(value)}">`;
+    if (type === 'text') control = `<input id="${id}" type="text" data-path="${path}" maxlength="${lo}" value="${esc(value ?? '')}">`;
     if (type === 'select') control = `<select id="${id}" data-path="${path}">${lo.map(([id, text]) => `<option value="${id}" ${value === id ? 'selected' : ''}>${esc(text)}</option>`).join('')}</select>`;
     if (type === 'color') control = `<input id="${id}" type="color" data-path="${path}" value="${value}"><input type="text" class="color-code" aria-label="${label}色碼" data-path="${path}" data-color-code="true" pattern="#[0-9a-fA-F]{6}" maxlength="7" value="${value}" spellcheck="false">`;
     if (type === 'number') { const max = key === 'pairs' ? history.value.products.filter(p => p.enabled).length : hi;
@@ -86,25 +97,57 @@ export function openSettings(applied, apply) {
     host.querySelectorAll('[data-path]').forEach(input => {
       const value = get(history.value, input.dataset.path);
       if (input.dataset.path === 'pairs') input.max = enabled;
-      if (input.type === 'checkbox') input.checked = value; else input.value = value;
+      if (input.type === 'checkbox') input.checked = value; else input.value = value ?? '';
       input.setCustomValidity('');
     });
     host.querySelectorAll('[data-product]').forEach(input => { input.checked = history.value.products[Number(input.dataset.product)].enabled; });
     host.querySelectorAll('[data-record-field]').forEach(input => { input.checked = history.value.records.fields.includes(input.dataset.recordField); });
     const desc = host.querySelector('#pairs-description');
     if (desc) desc.textContent = `${history.value.pairs} 對 = ${history.value.pairs * 2} 張卡牌；已啟用 ${enabled} 種圖案。`;
+    host.querySelectorAll('[data-upload-state]').forEach(node => { const id = get(history.value, node.dataset.uploadState)?.upload; node.textContent = id ? (imageURL(id) ? '使用自訂圖片' : '圖片遺失，請重新選取') : '使用內建圖片'; });
+    host.querySelectorAll('[data-remove-image]').forEach(node => node.hidden = !get(history.value, node.dataset.removeImage)?.upload);
+    host.querySelectorAll('[data-thumbnail]').forEach(node => { const i = Number(node.dataset.thumbnail); node.src = imageURL(history.value.products[i].image.upload) || assetURL(PRODUCTS[i].path); });
+    host.querySelectorAll('[data-product-name]').forEach(node => node.textContent = productName(history.value, PRODUCTS[Number(node.dataset.productName)].id));
+    host.querySelectorAll('#edit-product option').forEach(node => node.textContent = productName(history.value, PRODUCTS[Number(node.value)].id));
     previewRender(); updateButtons();
   }
+  function uploadField(path, label) {
+    const custom = get(history.value, path)?.upload;
+    return `<div class="upload-panel"><strong>${label}</strong><p class="field-note">PNG、JPG、WebP，原圖最多 10 MiB；自動壓縮至 256 KiB。圖片先保存在此瀏覽器，產生雲端代碼時才上傳。</p><label class="upload-label">選擇圖片<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="${path}"></label><div class="upload-status"><span data-upload-state="${path}">${custom ? '使用自訂圖片' : '使用內建圖片'}</span><button class="button small" data-remove-image="${path}" ${custom ? '' : 'hidden'}>移除自訂圖片</button></div></div>`;
+  }
+  function productFields() { return uploadField(`products.${product}.image`, '替換這個圖案') + field(['label', '圖案名稱', 'text', 30], `products.${product}.`) + TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join(''); }
   function library() {
-    return `<details class="details-block" open><summary>內建圖庫</summary><div class="details-body"><p class="hint">勾選要加入遊戲的圖案，至少保留 2 種。調整下方圖案構圖時，預覽會自動放大顯示。</p><div class="library-list">${PRODUCTS.map((p, i) => `<label class="library-item"><img src="${assetURL(p.path)}" alt=""><span class="label-line"><input type="checkbox" data-product="${i}" ${history.value.products[i].enabled ? 'checked' : ''}>${p.name}</span></label>`).join('')}</div><label class="field-label" for="edit-product">調整正面圖案</label><select id="edit-product">${PRODUCTS.map((p, i) => `<option value="${i}" ${product === i ? 'selected' : ''}>${p.name}</option>`).join('')}</select><div id="product-fields">${TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join('')}</div></div></details>`;
+    return `<details class="details-block" open><summary>遊戲圖庫</summary><div class="details-body"><p class="hint">勾選要加入遊戲的圖案，至少保留 2 種。可替換 12 個圖案；在下方選擇圖案後上傳自己的圖片，並調整名稱與構圖。</p><div class="library-list">${PRODUCTS.map((p, i) => `<label class="library-item"><img data-thumbnail="${i}" src="${imageURL(history.value.products[i].image.upload) || assetURL(p.path)}" alt=""><span class="label-line"><input type="checkbox" data-product="${i}" ${history.value.products[i].enabled ? 'checked' : ''}><span data-product-name="${i}">${esc(productName(history.value, p.id))}</span></span></label>`).join('')}</div><label class="field-label" for="edit-product">調整正面圖案</label><select id="edit-product">${PRODUCTS.map((p, i) => `<option value="${i}" ${product === i ? 'selected' : ''}>${esc(productName(history.value, p.id))}</option>`).join('')}</select><div id="product-fields">${productFields()}</div></div></details>`;
+  }
+  function renderCloud(host) {
+    const ready = cloudReady();
+    host.innerHTML = `<h3>把設定帶到另一台裝置</h3><p>產生 12 位數字代碼，保存目前草稿、構圖與自訂圖片。另一台裝置輸入代碼後，按「儲存並套用」即可使用。</p>${ready ? '' : '<p class="cloud-notice">此預覽未連接雲端，或雲端功能尚未啟用。本機圖片上傳與設定仍可正常使用。</p>'}<div class="cloud-card"><h4>1. 保存目前草稿</h4><p>每份最多 15 張圖片、4 MiB。只傳送設定與圖片，不傳送暱稱、排行榜或成績紀錄。</p><p>持有代碼的人都能讀取圖片與設定，請勿放入私密內容。最後一次透過代碼讀取起，30 天未使用自動刪除；只在本機玩遊戲不會延長期限。</p><button class="button primary" id="cloud-save" ${ready ? '' : 'disabled'}>產生代碼</button><output id="cloud-result" class="cloud-code" aria-live="polite">${esc(formatCode(lastCode))}</output></div><div class="cloud-card"><h4>2. 載入雲端設定</h4><label for="cloud-code-input">12 位數字代碼</label><input id="cloud-code-input" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="1234 5678 9012"><button class="button" id="cloud-load" ${ready ? '' : 'disabled'}>載入到草稿</button><p>載入會替換目前草稿，可用「復原」回到先前設定。成功載入後圖片會保存在此裝置，不必每局重新下載。</p></div><div id="turnstile-host"></div><p class="hint">每個網路每日最多產生 5 組、讀取 60 次；達到全站配額時，雲端功能暫停，本機遊戲仍可繼續。清除瀏覽器資料會移除本機圖片與刪除憑證。</p><details class="details-block"><summary>此瀏覽器建立的代碼（${receipts().length}）</summary><div id="cloud-receipts"></div></details>`;
+    const challengeHost = host.querySelector('#turnstile-host');
+    host.querySelector('#cloud-save').onclick = () => operation('正在保存草稿，請完成下方驗證…', async () => {
+      history.commit(); const result = await saveCloud(history.value, challengeHost); lastCode = result.code;
+      host.querySelector('#cloud-result').textContent = formatCode(result.code); drawReceipts();
+      status(`已保存，代碼 ${formatCode(result.code)}。30 天未透過代碼讀取將自動刪除。`);
+    });
+    host.querySelector('#cloud-load').onclick = () => operation('正在載入設定，請完成下方驗證…', async () => {
+      const next = await loadCloud(host.querySelector('#cloud-code-input').value, challengeHost); history.replace(next); status('雲端設定已載入草稿。請檢查預覽，再按「儲存並套用」。');
+    });
+    function drawReceipts() {
+      host.querySelector('#cloud-receipts').innerHTML = receipts().map(row => `<div class="cloud-receipt"><code>${esc(formatCode(row.code))}</code><button class="button small" data-delete-code="${esc(row.code)}" ${ready ? '' : 'disabled'}>刪除雲端檔</button></div>`).join('') || '<p>尚未建立代碼。</p>';
+      host.querySelectorAll('[data-delete-code]').forEach(button => button.onclick = async () => {
+        if (!await confirmAction('刪除這份雲端設定？', '代碼將立即失效；已下載到裝置的設定與圖片會保留。', '刪除雲端檔')) return;
+        operation('正在刪除，請完成下方驗證…', async () => { await deleteCloud(button.dataset.deleteCode, challengeHost); drawReceipts(); status('雲端設定已刪除。'); });
+      });
+    }
+    drawReceipts(); previewRender();
   }
   function renderTab() {
     const host = dialog.querySelector('#settings-fields');
     host.setAttribute('aria-labelledby', `tab-${tab}`);
     for (const button of dialog.querySelectorAll('[data-tab]')) { button.setAttribute('aria-selected', String(button.dataset.tab === tab)); button.tabIndex = button.dataset.tab === tab ? 0 : -1; }
+    if (tab === 'cloud') { renderCloud(host); host.scrollTop = 0; return; }
     host.innerHTML = `<div class="tab-top"><h3>${TABS[tab]}</h3><button class="button small" id="reset-page">本頁恢復預設</button></div>${SPECS[tab].map(s => field(s)).join('')}`;
-    if (tab === 'cards') host.insertAdjacentHTML('beforeend', transformFields('back.', '卡背圖片構圖') + library());
-    if (tab === 'screen') host.insertAdjacentHTML('beforeend', transformFields('background.', '背景圖片構圖') + transformFields('logo.', 'LOGO 畫布內圖片構圖'));
+    if (tab === 'cards') host.insertAdjacentHTML('beforeend', uploadField('back', '自訂卡背') + transformFields('back.', '卡背圖片構圖') + library());
+    if (tab === 'screen') host.insertAdjacentHTML('beforeend', uploadField('background', '自訂背景') + transformFields('background.', '背景圖片構圖') + uploadField('logo', '自訂 LOGO') + transformFields('logo.', 'LOGO 畫布內圖片構圖'));
     if (tab === 'records') host.insertAdjacentHTML('beforeend', `<p class="hint">成績紀錄最多 500 筆，僅儲存在此瀏覽器。關閉保存不刪除舊成績。排行榜不會加入歷史明細。</p><h3>保存的成績欄位</h3><div class="fields-list">${Object.entries(FIELDS).map(([key, name]) => `<div><label><input type="checkbox" data-record-field="${key}" ${history.value.records.fields.includes(key) ? 'checked' : ''}>${name}</label><button class="reset-field" data-reset-record-field="${key}" aria-label="${name}欄位恢復預設">恢復預設</button></div>`).join('')}</div><p class="hint">成績識別碼、完整組別識別碼、是否限時與限時時長固定保留。即使排行榜開啟，也只保存你勾選的其他欄位。</p>`);
     host.querySelector('#reset-page').onclick = () => {
       history.begin(); SPECS[tab].forEach(([path]) => set(history.value, path, copy(get(base, path))));
@@ -115,12 +158,17 @@ export function openSettings(applied, apply) {
     };
     const picker = host.querySelector('#edit-product'); if (picker) picker.onchange = () => {
       history.commit(); product = Number(picker.value);
-      const fields = host.querySelector('#product-fields'); fields.innerHTML = TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join(''); bindFields(fields);
+      const fields = host.querySelector('#product-fields'); fields.innerHTML = productFields(); bindFields(fields);
       focusPreview(`products.${product}.image`);
     };
-    bindFields(host); previewRender();
+    bindFields(host); host.scrollTop = 0; previewRender();
   }
   function bindFields(host) {
+    host.querySelectorAll('[data-upload]').forEach(input => input.onchange = () => {
+      const file = input.files[0], path = input.dataset.upload; if (!file) return;
+      operation('正在處理圖片…', async () => { const result = await importImage(file, path === 'background'); history.update(`${path}.upload`, result.id); history.commit(); focusPreview(`${path}.upload`); status(`圖片已保存於本機（${Math.ceil(result.bytes / 1024)} KiB），尚未套用。可繼續調整縮放、位置、旋轉與裁切。`); }); input.value = '';
+    });
+    host.querySelectorAll('[data-remove-image]').forEach(button => button.onclick = () => { history.begin(); delete get(history.value, button.dataset.removeImage).upload; history.commit(); syncFields(); focusPreview(`${button.dataset.removeImage}.upload`); status('已移除自訂圖片，尚未套用。'); });
     host.querySelectorAll('[data-path]').forEach(input => {
       const path = input.dataset.path;
       const update = () => {
@@ -131,17 +179,18 @@ export function openSettings(applied, apply) {
         }
         if (input.dataset.colorCode) { if (!/^#[0-9a-f]{6}$/i.test(value)) { input.setCustomValidity('請填入完整的 #RRGGBB 色碼。'); return; } input.setCustomValidity(''); }
         history.update(path, value);
+        if (path.endsWith('.asset')) { delete get(history.value, path.split('.')[0]).upload; syncFields(); }
         host.querySelectorAll('[data-path]').forEach(other => { if (other !== input && other.dataset.path === path) { if (other.type === 'checkbox') other.checked = value; else other.value = value; } });
         const desc = host.querySelector('#pairs-description'); if (path === 'pairs' && desc) desc.textContent = `${value} 對 = ${value * 2} 張卡牌；已啟用 ${history.value.products.filter(p => p.enabled).length} 種圖案。`;
         focusPreview(path); status('草稿已變更，尚未套用。');
       };
       input.addEventListener('focus', () => { history.begin(); focusPreview(path); }); input.addEventListener('pointerdown', () => history.begin());
       input.addEventListener('input', update);
-      input.addEventListener('change', () => { update(); history.commit(); updateButtons(); });
+      input.addEventListener('change', () => { update(); history.commit(); if (path.endsWith('.label')) syncFields(); updateButtons(); });
       input.addEventListener('blur', () => { history.commit(); if (['number', 'range'].includes(input.type)) input.value = get(history.value, path); updateButtons(); });
     });
     host.querySelectorAll('[data-reset]').forEach(button => button.onclick = () => {
-      const path = button.dataset.reset; history.update(path, copy(get(base, path))); history.value = sanitize(history.value); history.commit(); syncFields(); focusPreview(path); status('已恢復此項預設，尚未套用。');
+      const path = button.dataset.reset; history.update(path, copy(get(base, path))); if (path.endsWith('.asset')) delete get(history.value, path.split('.')[0]).upload; history.value = sanitize(history.value); history.commit(); syncFields(); focusPreview(path); status('已恢復此項預設，尚未套用。');
     });
     host.querySelectorAll('[data-product]').forEach(input => input.onchange = () => {
       const index = Number(input.dataset.product);
@@ -156,13 +205,14 @@ export function openSettings(applied, apply) {
     });
   }
   async function close() {
+    if (busy) { status('圖片或雲端操作進行中，請等候完成。'); return; }
     history.commit();
     if (dirty() && !await confirmAction('捨棄未套用的設定？', '已套用的設定與成績紀錄會保留，這次未套用的草稿將捨棄。', '捨棄草稿')) return;
-    cancelAnimationFrame(frameRequest); frameRequest = 0; preview?.destroy(); resize.disconnect(); dialog.close(); prior?.focus();
+    cancelAnimationFrame(frameRequest); frameRequest = 0; preview?.destroy(); resize.disconnect(); dialog.close(); prior?.focus(); void pruneImages(saved).catch(() => {});
   }
   dialog.oncancel = event => { event.preventDefault(); close(); };
   dialog.querySelector('.close-settings').onclick = close; dialog.querySelector('#settings-close').onclick = close;
-  function changeTab(next) { history.commit(); tab = next; if (tab === 'play' || tab === 'screen') showing.view = 'board'; renderTab(); }
+  function changeTab(next) { if (busy) return; history.commit(); tab = next; if (tab === 'play' || tab === 'screen') showing.view = 'board'; renderTab(); }
   dialog.querySelectorAll('[data-tab]').forEach(button => {
     button.onclick = () => changeTab(button.dataset.tab);
     button.onkeydown = event => { const ids = Object.keys(TABS); let index = ids.indexOf(tab); if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return; event.preventDefault(); index = event.key === 'Home' ? 0 : event.key === 'End' ? ids.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + ids.length) % ids.length; changeTab(ids[index]); dialog.querySelector(`#tab-${tab}`).focus(); };
@@ -171,6 +221,7 @@ export function openSettings(applied, apply) {
   const redo = () => { if (history.redo()) { syncFields(); status('已重做一步，尚未套用。'); } };
   dialog.querySelector('#settings-undo').onclick = undo; dialog.querySelector('#settings-redo').onclick = redo;
   dialog.onkeydown = event => {
+    if (busy) return;
     if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z') return;
     if (event.target.matches('input[type=text],textarea,[contenteditable=true]')) return;
     event.preventDefault(); if (event.shiftKey) redo(); else undo();

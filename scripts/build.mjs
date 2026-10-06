@@ -9,14 +9,17 @@ const output = join(root, 'dist');
 if (dirname(output) !== root || !output.endsWith('dist')) throw Error('不安全的建置路徑');
 export async function build({ preview = false } = {}) {
   const { base, domain } = siteAddress({ ...config, domain: preview ? '' : config.domain });
+  const cloud = { ...config.cloud, preview, origin: domain };
+  if (cloud.apiURL) { const url = new URL(cloud.apiURL); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.pathname !== '/') throw Error('雲端 API 必須是 HTTPS 網域根網址'); }
+  if (preview) cloud.siteKey = ''; // Local previews never upload to the production account.
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
   await cp(join(root, 'public'), output, { recursive: true });
   const template = await readFile(join(root, 'src/layout.html'), 'utf8');
   const routes = [
     ['home', '', '首頁', config.description],
-    ['game', 'games/memory', '記憶配對挑戰', '免費線上翻牌遊戲，免登入即可挑戰記憶配對。選擇 2 至 12 對內建圖案，自訂限時、卡背與背景；支援手機、排行榜及本機成績紀錄。'],
-    ['help', 'help', '玩法與設定教學', '了解翻牌遊戲的配對規則、計時、暫停、內建圖庫、即時畫面預覽、排行榜與本機成績保存，並學習匯出 CSV 與鍵盤操作。'],
+    ['game', 'games/memory', '記憶配對挑戰', '免費線上翻牌遊戲，免登入即可挑戰記憶配對。選擇 2 至 12 對圖案，上傳自訂卡背與背景、調整構圖，用數字代碼跨裝置載入設定；支援手機與排行榜。'],
+    ['help', 'help', '玩法與設定教學', '了解翻牌遊戲的配對規則、計時、暫停、自訂圖片、數字代碼、即時畫面預覽、排行榜與本機成績保存，並學習匯出 CSV 與鍵盤操作。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const [page, route, title, description] of routes) {
@@ -29,7 +32,7 @@ export async function build({ preview = false } = {}) {
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, html);
   }
-  await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads })};\n`);
+  await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud })};\n`);
   if (domain) {
     const urls = routes.filter(([, route]) => route !== null).map(([, route]) => `<url><loc>${escape(domain + base + (route ? route + '/' : ''))}</loc></url>`).join('');
     await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);

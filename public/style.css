@@ -68,5 +68,12 @@ dialog{border:1px solid var(--border);border-radius:18px;padding:26px;background
 #turnstile-host{max-width:100%;overflow:auto} .settings-dialog[aria-busy=true]{cursor:progress}
 
 /* Overlay only: the original fullscreen padding and game layout stay unchanged. */
-#fullscreen-zoom-hint{position:fixed;top:88px;right:16px;z-index:1000;max-width:calc(100vw - 32px);width:max-content;padding:12px 20px;font-size:1rem;font-weight:600;line-height:1.6;text-align:center;overflow-wrap:anywhere;border-radius:12px;background:#355545;color:#fff;pointer-events:none;box-shadow:0 8px 24px #173b3026;opacity:1;transition:opacity .7s linear}
-#fullscreen-zoom-hint[data-state=closing]{opacity:0}
+#fullscreen-zoom-hint{position:fixed;top:108px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;justify-content:center;gap:7px;max-width:calc(100vw - 32px);width:max-content;padding:8px 40px;font-family:system-ui,"Microsoft JhengHei",sans-serif;font-size:1rem;font-weight:400;line-height:1.5;text-align:center;border-radius:8px;background:#282c32;color:#fff;pointer-events:none;opacity:1}
+#fullscreen-zoom-hint kbd{flex:none;font:inherit;border:1px solid #fff;border-radius:2px;padding:4px 5px;line-height:1.25}
+#fullscreen-zoom-hint span{overflow-wrap:anywhere;min-width:0}
+#fullscreen-zoom-hint[data-state=visible]{animation:fullscreen-hint-in .35s ease-out both}
+#fullscreen-zoom-hint[data-state=closing]{animation:fullscreen-hint-out .7s ease-out both}
+@keyframes fullscreen-hint-in{from{opacity:0}to{opacity:1}}
+@keyframes fullscreen-hint-out{from{opacity:1}to{opacity:0}}
+@media(max-width:540px){#fullscreen-zoom-hint{padding:8px 16px;font-size:.9375rem}}
+@media(prefers-reduced-motion:reduce){#fullscreen-zoom-hint[data-state=closing]{opacity:0}}

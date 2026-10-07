@@ -3,7 +3,7 @@ import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction } from './site.js';
 import { createSounds } from './audio.js';
 import { loadImages } from './images.js';
-import { createFullscreenHint, positionFullscreenHint } from './fullscreen.js';
+import { createFullscreenHint } from './fullscreen.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
 let storage;
@@ -105,11 +105,9 @@ $('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if
 $('#rank-group').onchange = updateRankList;
 const playPanel = $('.play-panel');
 const zoomNotice = $('#fullscreen-zoom-hint');
-const placeZoomHint = () => positionFullscreenHint(zoomNotice, playPanel);
-const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === playPanel || playPanel.classList.contains('expanded-view'), placeZoomHint);
-const repositionZoomHint = () => { if (!zoomNotice.hidden) placeZoomHint(); };
-window.addEventListener('resize', repositionZoomHint);
-playPanel.addEventListener('scroll', repositionZoomHint, { passive: true });
+const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === playPanel || playPanel.classList.contains('expanded-view'), () => {
+  zoomNotice.innerHTML = '<kbd>CTRL</kbd><span>+滾輪可以調整畫面大小</span>';
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.pause()) render(); });
 window.addEventListener('pagehide', () => { sessionRows = []; fullscreenHint.cancel(); });
 window.addEventListener('pageshow', event => { if (event.persisted) { sessionRows = []; renderRanking(); } });

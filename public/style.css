@@ -66,3 +66,7 @@ dialog{border:1px solid var(--border);border-radius:18px;padding:26px;background
 .cloud-receipt{padding:12px;border-bottom:1px solid #d6e3d9}.cloud-receipt code{font-size:17px;user-select:all}
 .cloud-notice{padding:12px;background:#fff5dc;border-radius:10px}.settings-tabs{flex-wrap:wrap}
 #turnstile-host{max-width:100%;overflow:auto} .settings-dialog[aria-busy=true]{cursor:progress}
+
+/* Overlay only: the original fullscreen padding and game layout stay unchanged. */
+#fullscreen-zoom-hint{position:fixed;top:88px;right:16px;z-index:1000;max-width:calc(100vw - 32px);width:max-content;padding:12px 20px;font-size:1rem;font-weight:600;line-height:1.6;text-align:center;overflow-wrap:anywhere;border-radius:12px;background:#355545;color:#fff;pointer-events:none;box-shadow:0 8px 24px #173b3026;opacity:1;transition:opacity .7s linear}
+#fullscreen-zoom-hint[data-state=closing]{opacity:0}

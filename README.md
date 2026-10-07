@@ -1,4 +1,4 @@
-# 翻牌遊戲：純靜態網站版 v1.1.2
+# 翻牌遊戲：純靜態網站版 v1.1.5
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
@@ -137,7 +137,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 本次驗證證據及未實測範圍見 `驗收報告.md`。QA 快照、測試下載與截圖存放在忽略的 `qa/`，不混入網站成果或原始碼交付包。
 
-## 自訂圖片與雲端代碼（v1.1.2）
+## 自訂圖片與雲端代碼（v1.1.5）
 
 - `public/js/images.js`、`image-input.js`：讀取尺寸、瀏覽器壓縮、移除中繼資料、IndexedDB 與圖片 URL。
 - `profile-format.js`：前後端共用的二進位封包、白名單設定、圖片 SHA-256 與容量驗證。
@@ -149,3 +149,5 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 本機預覽刻意停用正式雲端上傳與 GA4，避免測試消耗正式配額。完整雲端驗收須先部署 Worker、填入 Secret，再以正式網站及第二個獨立瀏覽器操作。
 
 搜尋 favicon 同時宣告固定路徑的 96px PNG 與多尺寸 ICO。搜尋主要圖片為可見於三個內容頁的無文字卡牌示意圖（1200×900 PNG），加入 primaryImageOfPage 及圖片 sitemap；社群分享保留原本各頁的 1200×630 海報。發布後需等待 Google 重新抓取，無法由程式保證搜尋結果必定顯示縮圖。詳見《搜尋索引與發布檢查.md》。
+
+設定按鈕沿用開始遊戲的綠底白字樣式。全螢幕／放大遊戲檢視進入時立即浮動顯示「CTRL+滾輪可以調整畫面大小」，約 3.8 秒後開始淡出、4.5 秒後清除；退出或離開頁面會取消。提示優先放在上方角落或背景空位，避開遊戲資訊，視窗縮放或捲動時重新定位；不增加預留空間，不改變原本的間距、版型與牌面位置。停留與淡出依 [Chromium 預設時序](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/chrome/browser/ui/exclusive_access/exclusive_access_bubble.h)；[淡出實作](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/chrome/browser/ui/views/exclusive_access/exclusive_access_bubble_views.cc)為 700ms。瀏覽器沒有提供原生提醒的實際顯示或結束事件，因此無法保證所有版本及互動情況完全同步。沒有攔截 Ctrl+滾輪的瀏覽器縮放操作。

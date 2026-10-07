@@ -1,4 +1,4 @@
-<div class="page-heading"><div><p class="eyebrow">記憶配對</p><h1>自訂圖片翻牌遊戲</h1><p class="muted">上傳自己的照片製作配對卡牌，也能替換卡背與背景；翻開、記住，找到每一對相同圖案。</p></div><div class="heading-tools"><div class="heading-actions"><button id="records-open" class="button quiet">成績紀錄</button><button id="settings-open" class="button" aria-describedby="settings-hint">⚙ <span>設定</span></button></div><p id="settings-hint" class="settings-hint"><strong>點「設定」可以調整</strong><span>配對數與限時 · 自訂圖片與構圖<br>背景、標題與 LOGO · 雲端代碼跨裝置載入</span></p></div></div>
+<div class="page-heading"><div><p class="eyebrow">記憶配對</p><h1>自訂圖片翻牌遊戲</h1><p class="muted">上傳自己的照片製作配對卡牌，也能替換卡背與背景；翻開、記住，找到每一對相同圖案。</p></div><div class="heading-tools"><div class="heading-actions"><button id="records-open" class="button quiet">成績紀錄</button><button id="settings-open" class="button primary" aria-describedby="settings-hint">⚙ <span>設定</span></button></div><p id="settings-hint" class="settings-hint"><strong>點「設定」可以調整</strong><span>配對數與限時 · 自訂圖片與構圖<br>背景、標題與 LOGO · 雲端代碼跨裝置載入</span></p></div></div>
 <div id="storage-warning" class="notice warning" role="status" hidden></div>
 <noscript><p class="notice warning">翻牌遊戲需要 JavaScript 才能操作。請在瀏覽器開啟 JavaScript，或先閱讀<a href="{{BASE}}help/">遊戲玩法與設定說明</a>。</p></noscript>
 <div class="game-layout">
@@ -8,6 +8,7 @@
     <div class="game-controls"><button id="start" class="button primary">開始遊戲</button><button id="pause" class="button" disabled>暫停</button><button id="restart" class="button quiet" hidden>重新開始</button><button id="sound" class="icon-button" aria-label="關閉音效" title="關閉音效">♫</button></div>
     <div id="game-stage" class="stage"></div>
     <p id="game-status" class="game-status" role="status">準備好了嗎？開始後先看看所有圖案。</p>
+    <div id="fullscreen-zoom-hint" role="status" aria-atomic="true" hidden></div>
   </section>
   <aside class="side-panel">
     <section class="player-box"><p class="eyebrow">這一局的玩家</p><label for="nickname">暱稱 <span class="muted">（選填）</span></label><input id="nickname" type="text" maxlength="40" placeholder="想用什麼名字玩？" autocomplete="off"><p class="hint">留白時顯示「玩家」。暱稱不會傳到伺服器。</p></section>

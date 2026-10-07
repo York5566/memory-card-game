@@ -3,6 +3,7 @@ import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction } from './site.js';
 import { createSounds } from './audio.js';
 import { loadImages } from './images.js';
+import { createFullscreenHint, positionFullscreenHint } from './fullscreen.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
 let storage;
@@ -102,18 +103,28 @@ $('#restart').onclick = async () => {
 };
 $('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if (soundOn) void sounds.prepare(); render(); };
 $('#rank-group').onchange = updateRankList;
+const playPanel = $('.play-panel');
+const zoomNotice = $('#fullscreen-zoom-hint');
+const placeZoomHint = () => positionFullscreenHint(zoomNotice, playPanel);
+const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === playPanel || playPanel.classList.contains('expanded-view'), placeZoomHint);
+const repositionZoomHint = () => { if (!zoomNotice.hidden) placeZoomHint(); };
+window.addEventListener('resize', repositionZoomHint);
+playPanel.addEventListener('scroll', repositionZoomHint, { passive: true });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.pause()) render(); });
-window.addEventListener('pagehide', () => { sessionRows = []; });
+window.addEventListener('pagehide', () => { sessionRows = []; fullscreenHint.cancel(); });
 window.addEventListener('pageshow', event => { if (event.persisted) { sessionRows = []; renderRanking(); } });
 $('#fullscreen').onclick = async () => {
   const panel = $('.play-panel');
   if (document.fullscreenElement) { await document.exitFullscreen().catch(() => {}); return; }
-  if (panel.classList.contains('expanded-view')) { panel.classList.remove('expanded-view'); $('#fullscreen').setAttribute('aria-label', '全螢幕'); return; }
+  if (panel.classList.contains('expanded-view')) { panel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', '全螢幕'); return; }
   try { if (!panel.requestFullscreen) throw Error(); await panel.requestFullscreen(); }
-  catch { panel.classList.add('expanded-view'); $('#fullscreen').setAttribute('aria-label', '退出放大遊戲檢視'); toast('此瀏覽器不支援全螢幕，已切換放大遊戲檢視。再按一次或按 Esc 即可退出。'); }
+  catch { panel.classList.add('expanded-view'); fullscreenHint.schedule(); $('#fullscreen').setAttribute('aria-label', '退出放大遊戲檢視'); toast('此瀏覽器不支援全螢幕，已切換放大遊戲檢視。再按一次或按 Esc 即可退出。'); }
 };
-document.addEventListener('fullscreenchange', () => $('#fullscreen').setAttribute('aria-label', document.fullscreenElement ? '退出全螢幕' : '全螢幕'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { $('.play-panel').classList.remove('expanded-view'); $('#fullscreen').setAttribute('aria-label', '全螢幕'); } });
+document.addEventListener('fullscreenchange', () => {
+  $('#fullscreen').setAttribute('aria-label', document.fullscreenElement ? '退出全螢幕' : '全螢幕');
+  if (document.fullscreenElement === playPanel) fullscreenHint.schedule(); else fullscreenHint.cancel();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { $('.play-panel').classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', '全螢幕'); } });
 // Secondary panels are loaded only when opened; primary game is immediately playable.
 $('#settings-open').onclick = async () => {
   game.pause(); render();

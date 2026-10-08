@@ -22,7 +22,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.match(html, /rel="canonical" href="https:\/\/wwwne1198\.party\/"/);
       assert.ok(!html.includes('york5566.github.io')); assert.ok(!html.includes('/memory-card-game/'));
       assert.match(await read('memory-card-game/games/memory/index.html'), /content="0; url=https:\/\/wwwne1198\.party\/games\/memory\/"/);
-      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 3);
+      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 12);
       assert.ok(!sitemap.includes('/memory-card-game/')); assert.ok(!sitemap.includes('404'));
     });
     await t.test('檢查會拒絕回歸舊的 CSS 子目錄', async () => {
@@ -30,6 +30,26 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       await writeFile(join(directory, 'dist/index.html'), original.replace('href="/style.css"', 'href="/memory-card-game/style.css"'));
       assert.notEqual(run('scripts/check.mjs').status, 0);
       await writeFile(join(directory, 'dist/index.html'), original);
+    });
+    await t.test('四種語言直接輸出完整 HTML，語言選單保留頁面位置，SEO 互相對應', async () => {
+      for (const [lang, prefix] of [['zh-Hant',''],['en','en/'],['ja','ja/'],['ko','ko/']]) for (const route of ['', 'games/memory/', 'help/']) {
+        const html = await read(prefix + route + 'index.html');
+        assert.ok(html.includes(`<html lang="${lang}">`));
+        assert.ok(html.includes(`rel="canonical" href="https://wwwne1198.party/${prefix}${route}"`));
+        assert.equal((html.match(/<link rel="alternate" hreflang=/g) || []).length, 5);
+        for(const other of ['','en/','ja/','ko/']) assert.ok(html.includes(`href="/${other}${route}" lang=`));
+        assert.match(html,/href="\/style.css"/);assert.match(html,/src="\/js\/site.js"/);
+        if(lang==='en') {
+          const article = html.split('<main id="main">')[1].split('</main>')[0];
+          assert.ok(!/[\u3400-\u9fff]/.test(article),'English main content must not fall back to Chinese');
+        }
+        assert.equal((html.match(/data-site-analytics="ga4"/g) || []).length,1);
+      }
+      for(const prefix of ['en/','ja/','ko/']) assert.ok((await read(prefix+'404.html')).includes('noindex, follow'));
+      const path=join(directory,'dist/ja/games/memory/index.html'), original=await read('ja/games/memory/index.html');
+      await writeFile(path,original.replace('hreflang="en" href="https://wwwne1198.party/en/games/memory/"','hreflang="en" href="https://wwwne1198.party/en/"'));
+      assert.notEqual(run('scripts/check.mjs').status,0,'Wrong-page hreflang must fail validation');
+      await writeFile(path,original);
     });
     await t.test('搜尋與分享標籤、可爬取的本文共同描述自訂圖片，教學連結有對應錨點', async () => {
       const titles = new Set();
@@ -63,7 +83,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
         assert.equal(graph[2].height, 900);
       }
       const sitemap = await read('sitemap.xml');
-      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 3);
+      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 12);
       assert.ok(sitemap.includes(`<image:loc>${imageURL}</image:loc>`));
     });
     await t.test('損毀 ICO、移除可見縮圖或圖片 sitemap 都會被發布檢查攔截', async () => {

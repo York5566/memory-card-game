@@ -1,6 +1,6 @@
 <div class="page-heading"><div><p class="eyebrow">記憶配對</p><h1>自訂圖片翻牌遊戲</h1><p class="muted">上傳自己的照片製作配對卡牌，也能替換卡背與背景；翻開、記住，找到每一對相同圖案。</p></div><div class="heading-tools"><div class="heading-actions"><button id="records-open" class="button quiet">成績紀錄</button><button id="settings-open" class="button primary" aria-describedby="settings-hint">⚙ <span>設定</span></button></div><p id="settings-hint" class="settings-hint"><strong>點「設定」可以調整</strong><span>配對數與限時 · 自訂圖片與構圖<br>背景、標題與 LOGO · 雲端代碼跨裝置載入</span></p></div></div>
 <div id="storage-warning" class="notice warning" role="status" hidden></div>
-<noscript><p class="notice warning">翻牌遊戲需要 JavaScript 才能操作。請在瀏覽器開啟 JavaScript，或先閱讀<a href="{{BASE}}help/">遊戲玩法與設定說明</a>。</p></noscript>
+<noscript><p class="notice warning">翻牌遊戲需要 JavaScript 才能操作。請在瀏覽器開啟 JavaScript，或先閱讀<a href="{{LOCALE_BASE}}help/">遊戲玩法與設定說明</a>。</p></noscript>
 <div class="game-layout">
   <section class="play-panel" aria-label="遊戲區">
     <div class="play-toolbar"><span id="rules-label" class="pill">6 對 / 12 張・不限時</span><button id="fullscreen" class="icon-button" aria-label="全螢幕" title="全螢幕">⛶</button></div>
@@ -16,8 +16,8 @@
     <div class="small-guide"><span class="guide-icon" aria-hidden="true">✦</span><div><h3>配對方式</h3><p>一次翻開兩張牌。找到一對，就留下來；不同的圖案會再蓋上。</p></div></div>
   </aside>
 </div>
-<section class="below-game" aria-labelledby="custom-images-title"><h2 id="custom-images-title">上傳自己的圖片，製作記憶配對卡牌</h2><figure class="page-illustration"><img src="{{BASE}}assets/previews/memory-card-game.png" width="1200" height="900" alt="六張翻牌卡牌，隨行杯、相機與運動鞋各成一對" loading="lazy" decoding="async"><figcaption>內建圖案的配對示意；可在設定換成自己的照片或圖片。</figcaption></figure><p>按右上角「設定」，在「卡牌與圖庫」選擇要替換的圖案，上傳 PNG、JPG 或 WebP 照片，再調整圖案名稱、縮放、位置、旋轉與裁切。12 種配對圖案和卡背皆可自訂；背景與 LOGO 則在「畫面」更換。</p><p>即時預覽確認效果後，按「儲存並套用」開始玩。圖片先保存在此瀏覽器；成績紀錄預設開啟，也可在設定中關閉。</p><a href="{{BASE}}help/#upload-images">查看自訂圖片與照片上傳教學</a></section>
-<section class="below-game"><h2>怎麼玩？</h2><div class="steps"><p><b>01</b><strong>先看一眼</strong>記住開局預覽中的圖案位置。</p><p><b>02</b><strong>翻開兩張</strong>找出一樣的圖案，配成一對。</p><p><b>03</b><strong>收集所有配對</strong>完成後再挑戰一次，看看進步了多少。</p></div><a href="{{BASE}}help/">查看完整使用說明</a><div data-ad-placement="help"></div></section>
+<section class="below-game" aria-labelledby="custom-images-title"><h2 id="custom-images-title">上傳自己的圖片，製作記憶配對卡牌</h2><figure class="page-illustration"><img src="{{BASE}}assets/previews/memory-card-game.png" width="1200" height="900" alt="六張翻牌卡牌，隨行杯、相機與運動鞋各成一對" loading="lazy" decoding="async"><figcaption>內建圖案的配對示意；可在設定換成自己的照片或圖片。</figcaption></figure><p>按右上角「設定」，在「卡牌與圖庫」選擇要替換的圖案，上傳 PNG、JPG 或 WebP 照片，再調整圖案名稱、縮放、位置、旋轉與裁切。12 種配對圖案和卡背皆可自訂；背景與 LOGO 則在「畫面」更換。</p><p>即時預覽確認效果後，按「儲存並套用」開始玩。圖片先保存在此瀏覽器；成績紀錄預設開啟，也可在設定中關閉。</p><a href="{{LOCALE_BASE}}help/#upload-images">查看自訂圖片與照片上傳教學</a></section>
+<section class="below-game"><h2>怎麼玩？</h2><div class="steps"><p><b>01</b><strong>先看一眼</strong>記住開局預覽中的圖案位置。</p><p><b>02</b><strong>翻開兩張</strong>找出一樣的圖案，配成一對。</p><p><b>03</b><strong>收集所有配對</strong>完成後再挑戰一次，看看進步了多少。</p></div><a href="{{LOCALE_BASE}}help/">查看完整使用說明</a><div data-ad-placement="help"></div></section>
 <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title"></dialog>
 <dialog id="records-dialog" class="records-dialog" aria-labelledby="records-title"></dialog>
 <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title"></h2><p id="confirm-message"></p><div class="dialog-actions"><button id="confirm-cancel" class="button">取消</button><button id="confirm-ok" class="button primary">確定</button></div></dialog>

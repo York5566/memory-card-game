@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Inspect dimensions before decoding to avoid expanding huge compressed images in memory.
 export function inputDimensions(bytes) {
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -21,5 +22,5 @@ export function inputDimensions(bytes) {
       i += size;
     }
   }
-  throw new Error('無法讀取圖片，請選擇有效的 PNG、JPG 或 WebP。');
+  throw new Error(t('無法讀取圖片，請選擇有效的 PNG、JPG 或 WebP。'));
 }

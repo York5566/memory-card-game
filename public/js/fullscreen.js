@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 // Match Chromium's default bubble: 350ms fade-in, fade-out at 3800ms for 700ms.
 // The browser does not expose its own bubble's actual visibility to the page.
 export function createFullscreenHint(notice, isActive, decorate = () => {}) {
@@ -10,7 +11,7 @@ export function createFullscreenHint(notice, isActive, decorate = () => {}) {
   const schedule = () => {
     cancel();
     if (!isActive()) return;
-    notice.textContent = 'CTRL+滾輪可以調整畫面大小';
+    notice.textContent = t('CTRL+滾輪可以調整畫面大小');
     decorate();
     notice.dataset.state = 'visible';
     // Flush the hidden state so re-entry starts a fresh CSS fade-in.

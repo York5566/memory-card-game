@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { sanitize, canonical } from './core.js';
 
 export const LIMITS = Object.freeze({ imageBytes: 256 * 1024, packageBytes: 4 * 1024 * 1024, images: 15, manifestBytes: 64 * 1024, edge: 1536, retentionDays: 30 });
@@ -8,7 +9,7 @@ export const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.dige
 export const normalizeCode = value => String(value).replace(/[\s-]/g, '');
 export const formatCode = value => normalizeCode(value).replace(/(\d{4})(?=\d)/g, '$1 ');
 export function validCode(value) { return /^\d{12}$/.test(normalizeCode(value)); }
-function assert(ok, message = '設定檔格式不正確或圖片已損壞。') { if (!ok) throw new Error(message); }
+function assert(ok, message = t('設定檔格式不正確或圖片已損壞。')) { if (!ok) throw new Error(message); }
 
 // Canvas may embed an ICC profile even after rasterization. Strip metadata before hashing/storage.
 export function stripWebpMetadata(bytes) {
@@ -61,7 +62,7 @@ export function webpDimensions(bytes) {
     }
     offset = end + (size % 2); assert(offset <= bytes.length);
   }
-  assert(frame && width > 0 && height > 0 && width <= LIMITS.edge && height <= LIMITS.edge, '圖片尺寸超過上限。');
+  assert(frame && width > 0 && height > 0 && width <= LIMITS.edge && height <= LIMITS.edge, t('圖片尺寸超過上限。'));
   return { width, height };
 }
 
@@ -69,14 +70,14 @@ export async function encodeProfile(config, getImage) {
   const clean = sanitize(config), images = [], payloads = [];
   for (const id of imageIds(clean)) {
     const blob = await getImage(id);
-    assert(blob, '找不到自訂圖片，請重新選取圖片後再產生代碼。');
+    assert(blob, t('找不到自訂圖片，請重新選取圖片後再產生代碼。'));
     const bytes = new Uint8Array(await blob.arrayBuffer()), dimensions = webpDimensions(bytes);
     assert(await sha256(bytes) === id);
     images.push({ id, bytes: bytes.length, ...dimensions }); payloads.push(bytes);
   }
   const manifest = encoder.encode(JSON.stringify({ version: 1, config: clean, images }));
   const length = 12 + manifest.length + payloads.reduce((n, p) => n + p.length, 0);
-  assert(manifest.length <= LIMITS.manifestBytes && length <= LIMITS.packageBytes && images.length <= LIMITS.images, '設定檔超過 4 MiB 上限。');
+  assert(manifest.length <= LIMITS.manifestBytes && length <= LIMITS.packageBytes && images.length <= LIMITS.images, t('設定檔超過 4 MiB 上限。'));
   const out = new Uint8Array(length); out.set(magic); new DataView(out.buffer).setUint32(8, manifest.length); out.set(manifest, 12);
   let offset = 12 + manifest.length; for (const p of payloads) { out.set(p, offset); offset += p.length; }
   return out;
@@ -104,9 +105,9 @@ export async function decodeProfile(bytes) {
 }
 
 export async function readLimited(body, max) {
-  assert(body, '請求內容為空。'); const reader = body.getReader(), parts = []; let length = 0;
+  assert(body, t('請求內容為空。')); const reader = body.getReader(), parts = []; let length = 0;
   try {
-    for (;;) { const { value, done } = await reader.read(); if (done) break; length += value.length; if (length > max) { await reader.cancel(); throw new Error('資料超過容量上限。'); } parts.push(value); }
+    for (;;) { const { value, done } = await reader.read(); if (done) break; length += value.length; if (length > max) { await reader.cancel(); throw new Error(t('資料超過容量上限。')); } parts.push(value); }
   } finally { reader.releaseLock(); }
   const out = new Uint8Array(length); let offset = 0; for (const p of parts) { out.set(p, offset); offset += p.length; } return out;
 }

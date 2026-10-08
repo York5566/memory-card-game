@@ -1,3 +1,4 @@
+import { t, msg, region } from './i18n.js';
 // Pure browser-independent rules. Inject a monotonic clock for deterministic checks.
 export const VERSION = 1;
 export const MAX_RECORDS = 500;
@@ -72,7 +73,7 @@ export function sanitize(incoming) {
   if (Array.isArray(incoming.records?.fields)) out.records.fields = [...new Set(incoming.records.fields.filter(key => typeof key === 'string' && Object.hasOwn(FIELDS, key)))];
   return out;
 }
-export function elapsedText(ms) { return Number.isFinite(ms) ? `${Math.floor(ms / 1000)} 秒 ${Math.floor(ms % 1000)} 毫秒` : '未記錄'; }
+export function elapsedText(ms) { return Number.isFinite(ms) ? msg`${Math.floor(ms / 1000)} 秒 ${Math.floor(ms % 1000)} 毫秒` : t('未記錄'); }
 export function ruleSnapshot(c) {
   return {
     version: 'web-rules-v1', pairs: c.pairs, timed: c.timed, limitSeconds: c.timed ? c.limitSeconds : null,
@@ -88,7 +89,7 @@ export function canonical(value) {
 }
 // Complete canonical ID is collision-free for this rule format, and portable without async hashing.
 export const ruleKey = config => canonical(ruleSnapshot(config));
-export function groupLabel(rule) { return `${rule.pairs * 2} 張・${rule.timed ? `限時 ${rule.limitSeconds} 秒` : '不限時'}・預覽 ${rule.previewSeconds} 秒・${rule.products.length} 種圖案`; }
+export function groupLabel(rule) { return msg`${rule.pairs * 2} 張・${rule.timed ? msg`限時 ${rule.limitSeconds} 秒` : t('不限時')}・預覽 ${rule.previewSeconds} 秒・${rule.products.length} 種圖案`; }
 export function rankRows(rows, group) { return rows.filter(r => r.outcome === 'won' && (!group || r.groupId === group)).map((r, i) => ({ r, i })).sort((a, b) => a.r.elapsedMs - b.r.elapsedMs || a.r.flips - b.r.flips || a.r.completedAt - b.r.completedAt || a.i - b.i).map(x => x.r); }
 export function shuffle(items, random = Math.random) {
   const out = [...items];
@@ -164,17 +165,17 @@ export class LocalStore {
   constructor(storage, warning = () => {}) { this.storage = storage; this.warning = warning; this.recordsUnsafe = false; }
   read(key, fallback) {
     try { const raw = this.storage.getItem(key); return raw === null ? copy(fallback) : JSON.parse(raw); }
-    catch { if (key === 'slow-play-records') this.recordsUnsafe = true; this.warning('無法讀取本機資料，可能已損壞或被瀏覽器阻擋。遊戲仍可使用；原始資料不會自動覆寫。'); return copy(fallback); }
+    catch { if (key === 'slow-play-records') this.recordsUnsafe = true; this.warning(t('無法讀取本機資料，可能已損壞或被瀏覽器阻擋。遊戲仍可使用；原始資料不會自動覆寫。')); return copy(fallback); }
   }
   write(key, value) {
     try { this.storage.setItem(key, JSON.stringify(value)); return true; }
-    catch { this.warning('無法保存到此瀏覽器，可能是儲存空間不足或權限限制。這次操作仍會生效，但重新整理後可能遺失。'); return false; }
+    catch { this.warning(t('無法保存到此瀏覽器，可能是儲存空間不足或權限限制。這次操作仍會生效，但重新整理後可能遺失。')); return false; }
   }
   settings() {
     const raw = this.read('slow-play-settings', { version: VERSION, config: defaults() });
-    if (raw?.version > VERSION) { this.warning('設定來自較新的網站版本，目前先使用預設；原始資料保留。'); this.settingsReadOnly = true; return defaults(); }
+    if (raw?.version > VERSION) { this.warning(t('設定來自較新的網站版本，目前先使用預設；原始資料保留。')); this.settingsReadOnly = true; return defaults(); }
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || (raw.config !== undefined && (!raw.config || typeof raw.config !== 'object' || Array.isArray(raw.config)))) {
-      this.warning('設定資料格式無法讀取，已暫用預設設定。'); return defaults();
+      this.warning(t('設定資料格式無法讀取，已暫用預設設定。')); return defaults();
     }
     const config = sanitize(raw?.config || raw); // v0 direct config -> v1 wrapper; do not rewrite on read.
     // Replace only the former stock copy; preserve player-authored titles and other settings.
@@ -183,15 +184,15 @@ export class LocalStore {
     if (config.title.subtitle === '記住小小的日常，翻開一點好心情。') config.title.subtitle = base.title.subtitle;
     return config;
   }
-  saveSettings(config) { if (this.settingsReadOnly) { this.warning('較新版本的設定已保留，請使用對應網站版本後再保存。'); return false; } return this.write('slow-play-settings', { version: VERSION, config: sanitize(config) }); }
+  saveSettings(config) { if (this.settingsReadOnly) { this.warning(t('較新版本的設定已保留，請使用對應網站版本後再保存。')); return false; } return this.write('slow-play-settings', { version: VERSION, config: sanitize(config) }); }
   records() {
     const data = this.read('slow-play-records', { version: VERSION, rows: [] });
     if (!data || data.version !== VERSION || !Array.isArray(data.rows) || data.rows.some(r => !r || typeof r.id !== 'string' || typeof r.groupId !== 'string' || !validRule(r.rule) || typeof r.values !== 'object' || !r.values || Array.isArray(r.values))) {
-      this.recordsUnsafe = true; this.warning('成績資料格式無法讀取，已保留原資料。這次成績可先下載 CSV；需明確刪除損壞資料後才能重新保存。'); return [];
+      this.recordsUnsafe = true; this.warning(t('成績資料格式無法讀取，已保留原資料。這次成績可先下載 CSV；需明確刪除損壞資料後才能重新保存。')); return [];
     }
     return data.rows.slice(-MAX_RECORDS).map(r => ({ id: r.id, groupId: r.groupId, rule: copy(r.rule), values: Object.fromEntries(Object.entries(r.values).filter(([k]) => k in FIELDS)) }));
   }
-  saveRecords(rows) { if (this.recordsUnsafe) { this.warning('原成績資料無法安全讀取，因此未覆寫。本次新增成績保留在頁面內，請先匯出。'); return false; } return this.write('slow-play-records', { version: VERSION, rows: rows.slice(-MAX_RECORDS) }); }
+  saveRecords(rows) { if (this.recordsUnsafe) { this.warning(t('原成績資料無法安全讀取，因此未覆寫。本次新增成績保留在頁面內，請先匯出。')); return false; } return this.write('slow-play-records', { version: VERSION, rows: rows.slice(-MAX_RECORDS) }); }
   clearRecords() { const ok = this.write('slow-play-records', { version: VERSION, rows: [] }); if (ok) this.recordsUnsafe = false; return ok; }
 }
 function validRule(rule) {
@@ -202,21 +203,21 @@ export function historicalRecord(result, config, id, completedAt, nickname) {
   return { id, groupId: ruleKey(config), rule: ruleSnapshot(config), values: Object.fromEntries(config.records.fields.map(k => [k, values[k]])) };
 }
 function csvCell(value) {
-  let s = value === undefined || value === null ? '未記錄' : String(value);
+  let s = value === undefined || value === null ? t('未記錄') : String(value);
   if (/^[\s\u0000-\u001f]*[=+\-@]/.test(s)) s = "'" + s;
   return '"' + s.replaceAll('"', '""') + '"';
 }
 export function toCSV(rows) {
   const keys = Object.keys(FIELDS).filter(k => rows.some(r => Object.hasOwn(r.values, k)));
-  const header = ['成績識別碼', '完整組別識別碼', '是否限時', '限時時長（秒）', ...keys.map(k => FIELDS[k]), ...(keys.includes('elapsedMs') ? ['挑戰用時（毫秒）'] : [])];
-  const content = rows.map(r => [r.id, r.groupId, r.rule.timed ? '是' : '否（不限時）', r.rule.timed ? (r.rule.limitSeconds ?? '未記錄') : '不限時', ...keys.map(k => {
+  const header = [t('成績識別碼'), t('完整組別識別碼'), t('是否限時'), t('限時時長（秒）'), ...keys.map(k => t(FIELDS[k])), ...(keys.includes('elapsedMs') ? [t('挑戰用時（毫秒）')] : [])];
+  const content = rows.map(r => [r.id, r.groupId, r.rule.timed ? t('是') : t('否（不限時）'), r.rule.timed ? (r.rule.limitSeconds ?? t('未記錄')) : t('不限時'), ...keys.map(k => {
     const v = r.values[k];
-    if (v === undefined || v === null) return '未記錄';
+    if (v === undefined || v === null) return t('未記錄');
     if (k === 'elapsedMs') return elapsedText(v);
-    if (k === 'completedAt') return new Date(v).toLocaleString('zh-TW', { hour12: false });
-    if (k === 'outcome') return v === 'won' ? '過關' : '時間到';
+    if (k === 'completedAt') return new Date(v).toLocaleString(region, { hour12: false });
+    if (k === 'outcome') return v === 'won' ? t('過關') : t('時間到');
     if (k === 'accuracy') return `${v}%`;
     return v;
-  }), ...(keys.includes('elapsedMs') ? [r.values.elapsedMs ?? '未記錄'] : [])]);
+  }), ...(keys.includes('elapsedMs') ? [r.values.elapsedMs ?? t('未記錄')] : [])]);
   return '\uFEFF' + [header, ...content].map(row => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }

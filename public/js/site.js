@@ -1,10 +1,16 @@
+import { t } from './i18n.js';
 import config from './site-config.js';
+document.querySelectorAll('[data-language-link]').forEach(link => link.addEventListener('click', event => {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+  const change = new CustomEvent('languagechange-request', { cancelable: true, detail: { href: link.href } });
+  if (!document.dispatchEvent(change)) event.preventDefault();
+}));
 const current = document.querySelector(`[data-nav="${document.body.dataset.page}"]`);
 if (current) current.setAttribute('aria-current', 'page');
 // An inactive ad configuration never contacts Google. Demo placements work fully offline.
 for (const host of document.querySelectorAll('[data-ad-placement]')) {
   if (config.ads.demo) {
-    host.className = 'ad-demo'; host.textContent = '廣告版位示意（未載入真實廣告）';
+    host.className = 'ad-demo'; host.textContent = t('廣告版位示意（未載入真實廣告）');
   } else if (config.ads.enabled && config.ads.consentReady && /^ca-pub-\d{16}$/.test(config.ads.publisher) && /^\d+$/.test(config.ads.slot)) {
     const ad = document.createElement('ins'); ad.className = 'adsbygoogle'; ad.style.display = 'block';
     ad.dataset.adClient = config.ads.publisher; ad.dataset.adSlot = config.ads.slot; ad.dataset.adFormat = 'auto'; ad.dataset.fullWidthResponsive = 'true';
@@ -16,7 +22,7 @@ for (const host of document.querySelectorAll('[data-ad-placement]')) {
   }
 }
 export function toast(text) { const box = document.querySelector('#toast'); box.textContent = text; box.classList.add('visible'); clearTimeout(toast.timer); toast.timer = setTimeout(() => box.classList.remove('visible'), 4500); }
-export function confirmAction(title, message, label = '確定') {
+export function confirmAction(title, message, label = t('確定')) {
   return new Promise(resolve => {
     const dialog = document.querySelector('#confirm-dialog'); const prior = document.activeElement;
     dialog.querySelector('#confirm-title').textContent = title; dialog.querySelector('#confirm-message').textContent = message;

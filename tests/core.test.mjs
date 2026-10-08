@@ -80,9 +80,9 @@ test('錯誤設定資料結構有提示並使用預設', () => { const storage =
 // Run the actual placement module in an inert DOM: scripts never connect to a network.
 function adFixture(ads) {
   const appended = []; const host = { className: '', textContent: '', hidden: false, children: [], append(node) { this.children.push(node); } };
-  const document = { body: { dataset: { page: 'game' } }, querySelector() { return null; }, querySelectorAll() { return [host]; }, head: { append(node) { appended.push(node); } }, createElement(tag) { return { tag, style: {}, dataset: {}, handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; } }; } };
+  const document = { body: { dataset: { page: 'game' } }, querySelector() { return null; }, querySelectorAll(selector) { return selector === '[data-ad-placement]' ? [host] : []; }, head: { append(node) { appended.push(node); } }, createElement(tag) { return { tag, style: {}, dataset: {}, handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; } }; } };
   const source = readFileSync(new URL('../public/js/site.js', import.meta.url), 'utf8').replace(/^import[^\n]+\n/gm, '').replaceAll('export function', 'function');
-  const window = {}; runInNewContext(source, { document, window, config: { ads } }); return { host, appended, window };
+  const window = {}; runInNewContext(source, { document, window, config: { ads }, t: text => text }); return { host, appended, window };
 }
 test('廣告預設關閉及不完整 ID 不建立外部程式請求', () => {
   const off = adFixture({ enabled: false, demo: false }); assert.equal(off.appended.length, 0); assert.equal(off.host.children.length, 0);

@@ -1,3 +1,4 @@
+import { t, LOCALES, localeBase } from '../public/js/i18n.js';
 import { readdir, readFile, access } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -18,7 +19,8 @@ for (const path of all) {
   if (extname(path) === '.js') { const check = spawnSync(process.execPath, ['--check', path], { encoding: 'utf8' }); if (check.status) throw Error(check.stderr); }
   if (extname(path) === '.html') {
     const html = await readFile(path, 'utf8');
-    if (!html.includes('lang="zh-Hant"') || !html.includes('<title>') || /\{\{\w+\}\}/.test(html)) throw Error('頁面中繼資料或模板不完整：' + path);
+    const language = html.match(/<html lang="([^"]+)"/)?.[1];
+    if (!Object.hasOwn(LOCALES, language) || !html.includes('<title>') || /\{\{\w+\}\}/.test(html)) throw Error('頁面中繼資料或模板不完整：' + path);
     if (/contenteditable|<form[^>]*action=["']https?:/i.test(html)) throw Error('出現未授權的外部表單傳送入口');
     const title = html.match(/<title>(.*?)<\/title>/s)?.[1];
     if (titles.has(title)) throw Error('頁面標題重複：' + path); titles.add(title);
@@ -52,16 +54,26 @@ for (const path of all) {
       const relative = path.slice(resolve(dir, 'dist').length + 1).replaceAll('\\', '/').replace(/index\.html$/, '');
       if (canonical !== domain + base + relative) throw Error('canonical 未指向實際發布路徑：' + path);
       canonicalURLs.push(canonical);
+      const pagePath = relative.slice(LOCALES[language].prefix.length);
+      const alternates = [...html.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)">/g)];
+      if (alternates.length !== 5 || new Set(alternates.map(m => m[1])).size !== 5) throw Error('Every content page needs four language alternates and x-default');
+      for (const id of [...Object.keys(LOCALES), 'x-default']) {
+        const other = id === 'x-default' ? 'zh-Hant' : id;
+        if (!alternates.some(m => m[1] === id && m[2] === domain + localeBase(base, other) + pagePath)) throw Error('Incorrect language alternate: ' + path);
+        await access(resolve(dir, 'dist', LOCALES[other].prefix + pagePath + 'index.html'));
+      }
+
       const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1];
       if (!json || JSON.parse(json)['@graph'][1].url !== canonical) throw Error('結構化資料網址有誤');
       const graph = JSON.parse(json)['@graph'], primary = graph[2];
+      if (graph[0].inLanguage !== language || graph[1].inLanguage !== language || graph[1].mainEntity && graph[1].mainEntity.inLanguage !== language) throw Error('Structured-data language mismatch');
       if (primary.url !== domain + base + SEARCH_PREVIEW.path || primary.contentUrl !== primary.url || graph[1].primaryImageOfPage['@id'] !== primary['@id'] || primary.width !== SEARCH_PREVIEW.width || primary.height !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片標記有誤');
       const preview = await readFile(resolve(dir, 'dist', SEARCH_PREVIEW.path));
       if (preview.length < 24 || preview.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || preview.readUInt32BE(16) !== SEARCH_PREVIEW.width || preview.readUInt32BE(20) !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片格式或尺寸有誤');
       checked++;
       if (html.includes('noindex') || !html.includes('max-image-preview:large')) throw Error('正式頁面索引設定有誤');
       const meta = key => html.match(new RegExp(`<meta (?:property|name)="${key}" content="([^"]+)">`))?.[1];
-      if (meta('og:url') !== canonical || meta('og:site_name') !== config.name || meta('twitter:card') !== 'summary_large_image') throw Error('社群分享網址或站名有誤');
+      if (meta('og:url') !== canonical || meta('og:site_name') !== t(config.name, language) || meta('twitter:card') !== 'summary_large_image') throw Error('社群分享網址或站名有誤');
       const image = meta('og:image');
       if (!image?.startsWith(domain + base) || meta('twitter:image') !== image || meta('og:image:secure_url') !== image || meta('og:image:type') !== 'image/png' || !meta('og:image:alt') || !meta('twitter:image:alt')) throw Error('社群圖片中繼資料不完整');
       const bytes = await readFile(resolve(dir, 'dist', image.slice((domain + base).length)));
@@ -81,6 +93,15 @@ if (domain) {
   const sitemap = await readFile(resolve(dir, 'dist/sitemap.xml'), 'utf8');
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1]).sort();
   if (JSON.stringify(urls) !== JSON.stringify(canonicalURLs.sort())) throw Error('sitemap 與正式頁面網址不一致');
+  for (const entry of sitemap.matchAll(/<url>(.*?)<\/url>/g)) {
+    const loc = entry[1].match(/<loc>(.*?)<\/loc>/)[1];
+    const relative = loc.slice((domain + base).length);
+    const page = await readFile(resolve(dir, 'dist', relative, 'index.html'), 'utf8');
+    const htmlLinks = [...page.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)">/g)].map(m => m[1] + ' ' + m[2]).sort();
+    const xmlLinks = [...entry[1].matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"\/>/g)].map(m => m[1] + ' ' + m[2]).sort();
+    if (JSON.stringify(htmlLinks) !== JSON.stringify(xmlLinks)) throw Error('Sitemap language alternatives differ from HTML');
+  }
+
   const images = [...sitemap.matchAll(/<image:loc>(.*?)<\/image:loc>/g)].map(m => m[1]);
   if (!sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"') || images.length !== canonicalURLs.length || images.some(url => url !== domain + base + SEARCH_PREVIEW.path)) throw Error('圖片 sitemap 與可見主要圖片不一致');
   const robots = await readFile(resolve(dir, 'dist/robots.txt'), 'utf8');

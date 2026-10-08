@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="{{LANG}}">
 <head>
   <meta charset="utf-8">
   {{ANALYTICS}}
@@ -17,8 +17,8 @@
 <body data-page="{{PAGE}}" data-base="{{BASE}}">
   <a class="skip" href="#main">跳到主要內容</a>
   <header class="site-header">
-    <a class="wordmark" href="{{BASE}}" aria-label="{{NAME}}首頁"><span class="brand-symbol" aria-hidden="true">✦</span>{{NAME}}</a>
-    <nav aria-label="主要導覽"><a href="{{BASE}}games/memory/" data-nav="game">翻牌遊戲</a><a href="{{BASE}}help/" data-nav="help">使用說明</a></nav>
+    <a class="wordmark" href="{{LOCALE_BASE}}" aria-label="{{NAME}}首頁"><span class="brand-symbol" aria-hidden="true">✦</span>{{NAME}}</a>
+    <div class="header-tools"><nav aria-label="主要導覽"><a href="{{LOCALE_BASE}}games/memory/" data-nav="game">翻牌遊戲</a><a href="{{LOCALE_BASE}}help/" data-nav="help">使用說明</a></nav>{{LANGUAGE_SWITCH}}</div>
   </header>
   <main id="main">{{BODY}}</main>
   <footer class="site-footer"><p class="contact-line"><span>問題或建議，歡迎來信：</span><a href="mailto:wwwne1198@gmail.com">wwwne1198@gmail.com</a></p></footer>

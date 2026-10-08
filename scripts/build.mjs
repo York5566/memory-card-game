@@ -1,3 +1,4 @@
+import { t, LOCALES, localeBase, localizeMarkup } from '../public/js/i18n.js';
 import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,20 +23,28 @@ export async function build({ preview = false } = {}) {
     ['help', 'help', '圖片上傳與玩法設定教學', '學習如何上傳 PNG、JPG、WebP 圖片，自訂翻牌遊戲的配對圖案、卡背、背景與 LOGO，調整圖片構圖、使用數字代碼載入設定，以及查看成績紀錄與匯出 CSV。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
-  for (const [page, route, title, description] of routes) {
+  for (const language of Object.keys(LOCALES)) for (const [page, route, sourceTitle, sourceDescription] of routes) {
+    const title = t(sourceTitle, language), description = t(sourceDescription, language);
+    const prefix = LOCALES[language].prefix;
+    const switcher = `<details class="language-menu"><summary aria-label="${escape(t('語言', language))}"><span aria-hidden="true">◎</span> ${LOCALES[language].label}</summary><nav aria-label="${escape(t('切換語言', language))}">${Object.entries(LOCALES).map(([id, info]) => `<a href="${localeBase(base, id)}${route ? route + '/' : ''}" lang="${id}" hreflang="${id}" ${id === language ? 'aria-current="true"' : 'data-language-link'}>${info.label}</a>`).join('')}</nav></details>`;
     let body = await readFile(join(root, `src/pages/${page}.html`), 'utf8');
-    const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain });
-    const html = template.replace('{{BODY}}', body).replace('{{META}}', meta).replace('{{ANALYTICS}}', analyticsMarkup(config, { domain }, page)).replaceAll('{{NAME}}', escape(config.name))
+    const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain }, language);
+    const html = localizeMarkup(template.replace('{{BODY}}', body), language).replace('{{META}}', meta).replace('{{ANALYTICS}}', analyticsMarkup(config, { domain }, page)).replaceAll('{{NAME}}', escape(t(config.name, language)))
+      .replaceAll('{{LANG}}', language).replaceAll('{{LOCALE_BASE}}', localeBase(base, language)).replace('{{LANGUAGE_SWITCH}}', switcher)
       .replaceAll('{{DOCUMENT_TITLE}}', escape(documentTitle)).replaceAll('{{TITLE}}', escape(title)).replaceAll('{{DESCRIPTION}}', escape(description))
       .replaceAll('{{BASE}}', base).replaceAll('{{PAGE}}', page);
-    const dest = route === null ? join(output, '404.html') : join(output, route, 'index.html');
+    const dest = route === null ? join(output, prefix, '404.html') : join(output, prefix, route, 'index.html');
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, html);
   }
   await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud })};\n`);
   if (domain) {
-    const urls = routes.filter(([, route]) => route !== null).map(([, route]) => `<url><loc>${escape(domain + base + (route ? route + '/' : ''))}</loc><image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image></url>`).join('');
-    await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${urls}</urlset>`);
+    const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([, route]) => route !== null).map(([, route]) => {
+      const path = route ? route + '/' : '';
+      const alternates = [...Object.keys(LOCALES), 'x-default'].map(id => `<xhtml:link rel="alternate" hreflang="${id}" href="${escape(domain + localeBase(base, id === 'x-default' ? 'zh-Hant' : id) + path)}"/>`).join('');
+      return `<url><loc>${escape(domain + localeBase(base, language) + path)}</loc>${alternates}<image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image></url>`;
+    })).join('');
+    await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`);
     await writeFile(join(output, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${domain}${base}sitemap.xml\n`);
     if (base === '/' && new URL(domain).hostname === 'wwwne1198.party') {
       await writeFile(join(output, 'CNAME'), 'wwwne1198.party\n');

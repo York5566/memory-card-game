@@ -1,4 +1,3 @@
-// Traditional Chinese source IDs; interpolate values only after translation.
 export const messages = {
   "部分自訂圖片不在此瀏覽器，已暫用內建圖片。請重新上傳，或使用數字代碼載入。": {
     "en": "Some custom images are missing on this browser. Built-in images are shown instead. Upload them again or load a cloud code.",
@@ -2115,11 +2114,6 @@ export const messages = {
     "ja": "言語と保存データ",
     "ko": "언어 및 저장 데이터"
   },
-  "網站支援繁體中文、英文、日文與韓文。使用頁首語言選單可切換到同一頁面的其他語言；不會依瀏覽器語言強制轉址。四種語言共用此瀏覽器已保存的設定、圖片與成績。自訂名稱不會被翻譯。切換會重新載入頁面，結束目前遊戲並清空本次排行榜；尚未套用的草稿請先儲存。": {
-    "en": "The site supports Traditional Chinese, English, Japanese and Korean. Use the header language menu to open the equivalent page; there are no forced browser-language redirects. All languages share this browser's saved settings, images and scores. Custom names are not translated. Switching reloads the page, ends the current game and clears its leaderboard. Save any unapplied draft first.",
-    "ja": "繁体字中国語・英語・日本語・韓国語に対応しています。ページ上部の言語メニューで同じページの別言語版へ移動でき、ブラウザーの言語による強制転送はしません。保存済みの設定・画像・成績は共通で、自分で入力した名前は翻訳しません。切り替えると再読み込みされ、ゲームと今回のランキングはリセットされます。下書きは先に保存してください。",
-    "ko": "번체 중국어, 영어, 일본어, 한국어를 지원합니다. 상단 언어 메뉴에서 같은 페이지의 다른 언어로 이동하며 브라우저 언어에 따른 강제 이동은 없습니다. 저장된 설정, 이미지, 기록은 모든 언어가 공유하며 직접 입력한 이름은 번역하지 않습니다. 변경 시 페이지가 다시 로드되어 현재 게임과 순위표가 초기화됩니다. 적용하지 않은 초안은 먼저 저장하세요."
-  },
   "首頁": {
     "en": "Home",
     "ja": "ホーム",
@@ -2309,5 +2303,15 @@ export const messages = {
     "en": "Cloud service is temporarily unavailable. Try later. Local data is kept.",
     "ja": "クラウドを一時的に利用できません。後でお試しください。ローカルデータは残ります。",
     "ko": "클라우드를 일시적으로 사용할 수 없습니다. 나중에 다시 시도하세요. 로컬 데이터는 유지됩니다."
+  },
+  "網站支援繁體中文、英文、日文與韓文。第一次從一般網址進站會依瀏覽器偏好選擇語言；未支援的語言會使用英文。頁首語言選單可切換同一頁面，並記住此瀏覽器的手動選擇。直接開啟英文、日文或韓文專用網址時會保留指定語言。四種語言共用此瀏覽器已保存的設定、圖片與成績，自訂名稱不會被翻譯。切換會重新載入頁面，結束目前遊戲並清空本次排行榜；尚未套用的草稿請先儲存。": {
+    "en": "The site supports Traditional Chinese, English, Japanese and Korean. On your first visit through a general URL, it selects a supported language from your browser preferences; unsupported languages fall back to English. Use the language menu in the header to switch the same page and remember your manual choice in this browser. Opening an English, Japanese or Korean URL directly keeps that language. All four languages share saved settings, images and scores in this browser; custom names are not translated. Switching reloads the page, ends the current game and clears the session leaderboard. Save any unapplied draft first.",
+    "ja": "繁体字中国語・英語・日本語・韓国語に対応しています。一般の URL から初めてアクセスすると、ブラウザーの言語設定に合わせて表示します。対応していない言語の場合は英語になります。ページ上部の言語メニューで同じページの言語を切り替えると、このブラウザーに選択を保存します。英語・日本語・韓国語専用の URL を直接開く場合は、その言語を維持します。4 言語で、このブラウザーに保存した設定・画像・成績を共有し、自分で付けた名前は翻訳しません。切り替えるとページが再読み込みされ、進行中のゲームと今回のランキングがリセットされます。未適用の設定は先に保存してください。",
+    "ko": "이 사이트는 번체 중국어, 영어, 일본어, 한국어를 지원합니다. 일반 주소로 처음 방문하면 브라우저의 언어 설정에 맞춰 표시하며, 지원하지 않는 언어는 영어로 표시합니다. 페이지 상단의 언어 메뉴에서 같은 페이지의 언어를 바꾸면 이 브라우저에 선택을 저장합니다. 영어, 일본어, 한국어 전용 주소를 직접 열면 해당 언어를 유지합니다. 네 언어는 이 브라우저에 저장된 설정, 이미지, 성적을 공유하며 직접 입력한 이름은 번역하지 않습니다. 언어를 바꾸면 페이지가 새로 로드되어 진행 중인 게임과 이번 순위가 초기화됩니다. 아직 적용하지 않은 설정은 먼저 저장해 주세요."
+  },
+  "語言記憶保存在此瀏覽器；清除網站資料後會重新依瀏覽器語言判斷。瀏覽器禁止保存時仍可手動切換，但下次開啟不保證記住。": {
+    "en": "Your language choice is saved in this browser. Clearing site data resets it, and the next visit uses browser preferences again. You can still switch languages when storage is blocked, but the choice may not be remembered next time.",
+    "ja": "言語の選択はこのブラウザーに保存されます。サイトデータを削除すると、次回は再びブラウザーの言語設定に合わせます。保存が禁止されていても切り替えはできますが、次回まで選択が維持されるとは限りません。",
+    "ko": "언어 선택은 이 브라우저에 저장됩니다. 사이트 데이터를 삭제하면 다음 방문 시 브라우저의 언어 설정을 다시 따릅니다. 저장이 차단되어도 언어를 바꿀 수 있지만 다음 방문까지 선택이 유지되지 않을 수 있습니다."
   }
 };

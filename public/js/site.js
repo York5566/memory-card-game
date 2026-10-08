@@ -1,9 +1,21 @@
 import { t } from './i18n.js';
 import config from './site-config.js';
+export function navigateLanguage(href, language) {
+  if (window.memoryGameLanguage) window.memoryGameLanguage.navigate(href, language);
+  else window.location.assign(href);
+}
 document.querySelectorAll('[data-language-link]').forEach(link => link.addEventListener('click', event => {
-  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
-  const change = new CustomEvent('languagechange-request', { cancelable: true, detail: { href: link.href } });
-  if (!document.dispatchEvent(change)) event.preventDefault();
+  const language = link.lang;
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
+    window.memoryGameLanguage?.remember(language); return;
+  }
+  event.preventDefault();
+  if (language === document.documentElement.lang) {
+    window.memoryGameLanguage?.remember(language);
+    link.closest('details')?.removeAttribute('open'); return;
+  }
+  const change = new CustomEvent('languagechange-request', { cancelable: true, detail: { href: link.href, language } });
+  if (document.dispatchEvent(change)) navigateLanguage(link.href, language);
 }));
 const current = document.querySelector(`[data-nav="${document.body.dataset.page}"]`);
 if (current) current.setAttribute('aria-current', 'page');

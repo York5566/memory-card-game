@@ -1,7 +1,7 @@
 import { t, msg, html, localizeMarkup } from './i18n.js';
 import { Game, LocalStore, ruleKey, ruleSnapshot, groupLabel, rankRows, historicalRecord, elapsedText, MAX_RECORDS } from './core.js';
 import { createStage, escapeHTML as esc } from './stage.js';
-import { toast, confirmAction } from './site.js';
+import { toast, confirmAction, navigateLanguage } from './site.js';
 import { createSounds } from './audio.js';
 import { loadImages } from './images.js';
 import { createFullscreenHint } from './fullscreen.js';
@@ -25,7 +25,7 @@ document.addEventListener('languagechange-request', async event => {
   if (!starting && !['playing', 'preview', 'paused'].includes(game.state) && !sessionRows.length) return;
   event.preventDefault();
   const resume = game.pause(); render();
-  if (await confirmAction(t('切換語言？'), t('切換語言會重新載入此頁，結束目前遊戲並清空本次排行榜。已保存的設定、圖片與成績紀錄會保留。'), t('切換語言'))) window.location.assign(event.detail.href);
+  if (await confirmAction(t('切換語言？'), t('切換語言會重新載入此頁，結束目前遊戲並清空本次排行榜。已保存的設定、圖片與成績紀錄會保留。'), t('切換語言'))) navigateLanguage(event.detail.href, event.detail.language);
   else if (resume) { game.resume(); render(); }
 });
 const sounds = createSounds(document.body.dataset.base, { onError: () => toast(t('音效暫時無法播放，請檢查音量或再開啟音效。')) });

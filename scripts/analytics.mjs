@@ -6,7 +6,7 @@ export function analyticsMarkup(config, { domain }, page) {
   return `<!-- Google tag (gtag.js) -->
   <script data-site-analytics="ga4">
   (function () {
-    if (window.location.origin !== ${JSON.stringify(domain)} || document.getElementById('site-ga4-loader')) return;
+    if (window.memoryGameLanguage?.redirecting || window.location.origin !== ${JSON.stringify(domain)} || document.getElementById('site-ga4-loader')) return;
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
     window.gtag('js', new Date());

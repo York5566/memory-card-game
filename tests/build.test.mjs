@@ -39,6 +39,9 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
         assert.equal((html.match(/<link rel="alternate" hreflang=/g) || []).length, 5);
         for(const other of ['','en/','ja/','ko/']) assert.ok(html.includes(`href="/${other}${route}" lang=`));
         assert.match(html,/href="\/style.css"/);assert.match(html,/src="\/js\/site.js"/);
+        assert.ok(html.includes(`src="/js/language.js" data-base="/" data-page="${route === '' ? 'home' : route.startsWith('help') ? 'help' : 'game'}"`));
+        assert.ok(html.indexOf('src="/js/language.js"') < html.indexOf('data-site-analytics="ga4"'), 'Detect before analytics initializes');
+        assert.equal((html.match(/data-language-link/g) || []).length, 4, 'Current language is also selectable and can be remembered');
         if(lang==='en') {
           const article = html.split('<main id="main">')[1].split('</main>')[0];
           assert.ok(!/[\u3400-\u9fff]/.test(article),'English main content must not fall back to Chinese');

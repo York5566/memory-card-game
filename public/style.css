@@ -3,8 +3,10 @@
 .site-header{height:auto!important;min-height:84px;gap:16px;padding-top:16px!important;padding-bottom:16px!important;flex-wrap:wrap}
 .header-tools{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
 .language-menu{position:relative;z-index:20;font-size:.875rem}
-.language-menu summary{cursor:pointer;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--paper);white-space:nowrap;list-style:none}
-.language-menu summary::-webkit-details-marker{display:none}.language-menu summary::after{content:'⌄';margin-left:10px}
+.language-menu summary{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border:1px solid var(--border);border-radius:9px;background:var(--paper);white-space:nowrap;list-style:none}
+.language-menu summary::-webkit-details-marker{display:none}
+.language-icon{display:block;width:20px;height:20px;flex:none}
+.brand-symbol{flex:none;line-height:1}.brand-symbol svg{display:block;width:24px;height:24px}
 .site-header .language-menu nav{position:absolute;right:0;top:calc(100% + 6px);min-width:166px;display:flex;flex-direction:column;gap:0;padding:6px;background:var(--paper);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 25px #29402f20}
 .site-header .language-menu a{display:block;padding:9px 12px;border-radius:7px;border:0}.language-menu a:hover,.language-menu [aria-current]{background:var(--mint)}
 html:lang(en){font-family:system-ui,sans-serif}html:lang(ja){font-family:"Yu Gothic",Meiryo,system-ui,sans-serif}html:lang(ko){font-family:"Malgun Gothic",system-ui,sans-serif;word-break:keep-all;overflow-wrap:anywhere}

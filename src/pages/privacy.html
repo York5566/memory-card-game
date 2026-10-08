@@ -1,0 +1,50 @@
+<article class="prose privacy-policy">
+<p class="eyebrow">資料與隱私</p>
+<h1>隱私權政策</h1>
+<p class="policy-updated"><span>最後更新：</span><time datetime="2026-10-09">2026-10-09</time></p>
+<p>本政策適用於 wwwne1198.party 的翻牌遊戲。以下說明網站管理者如何處理資料、使用哪些服務，以及你如何管理或刪除資料。遊戲不需要註冊帳號。</p>
+<div class="policy-summary"><ul>
+<li>設定、成績與選取的圖片先保存在目前瀏覽器。</li>
+<li>按「產生代碼」才會把設定與圖片保存到雲端。</li>
+<li>正式網站使用 GA4 統計；雲端操作使用 Cloudflare 驗證。</li>
+</ul></div>
+<nav class="policy-contents" aria-label="隱私權政策目錄">
+<a href="#local-data">本機資料</a>
+<a href="#cloud-data">圖片與雲端代碼</a>
+<a href="#analytics">GA4 與 Cookie</a>
+<a href="#providers">驗證與服務供應商</a>
+<a href="#your-controls">管理與刪除資料</a>
+<a href="#contact">聯絡與政策更新</a>
+</nav>
+<h2 id="local-data">本機設定、圖片與成績</h2>
+<p>網站使用 localStorage 保存遊戲設定、手動選擇的語言、成績紀錄與雲端代碼管理憑證，使用 IndexedDB 保存自訂圖片。這些資料用來保留你的選擇與遊戲紀錄，四種語言在同一網站、同一瀏覽器共用資料。</p>
+<p>成績紀錄預設開啟，最多保留 500 筆，依你勾選的欄位保存暱稱、用時、翻牌次數等資料，另保留必要的識別碼與當時規則。本次排行榜只保存在頁面記憶體，重新整理或離開遊戲頁就會清空；歷史成績則可在「成績紀錄」查看或匯出 CSV。</p>
+<p>本機資料沒有固定的自動到期時間，會保留到你刪除、被新紀錄替換，或瀏覽器清除為止。清除網站資料、無痕視窗結束、瀏覽器儲存限制或更換裝置，都可能使資料消失。關閉成績保存只停止新增，不會刪除舊紀錄。</p>
+<h2 id="cloud-data">自訂圖片與雲端代碼</h2>
+<p>選取圖片時，瀏覽器會在裝置上縮放、轉成 WebP、移除原圖中繼資料並壓縮，再保存在本機。僅選圖或玩遊戲不會把這些圖片上傳到雲端服務。</p>
+<p>在「雲端代碼」按「產生代碼」並完成驗證，才會把目前的設定草稿與使用中的自訂圖片傳至 Cloudflare Workers，並由 D1 保存代碼與管理資訊、R2 保存設定及圖片檔。每份最多 15 張圖片、4 MiB。不隨代碼同步遊戲暱稱、排行榜或成績明細；你自行放入標題、圖案名稱或圖片中的資訊仍會隨設定保存。</p>
+<p>12 位數字代碼是分享與讀取方式，不是私人帳號或密碼。知道代碼的人可在完成驗證後取得設定與圖片。請只保存有權使用、適合分享的內容，避免放入私密照片或個人資料。</p>
+<p>新建立的雲端檔保留 30 天；之後每次成功透過代碼讀取，會重新延長為 30 天。30 天未再讀取就會失效，伺服器每小時分批清理到期資料；實際刪除可能晚於失效時間。在本機玩遊戲不會延長雲端期限。</p>
+<p>建立代碼的瀏覽器會保存刪除憑證，可在「此瀏覽器建立的代碼」刪除雲端檔。清除網站資料會一併清除憑證，之後無法用原本的刪除按鈕管理該檔。刪除雲端檔不會移除其他裝置已下載的本機副本。</p>
+<h2 id="analytics">GA4 流量統計與 Cookie</h2>
+<p>正式網站使用 Google Analytics 4（GA4）了解造訪量與使用情況，載入正式頁面時會啟動統計。Google 可能使用 Cookie 或類似技術，處理頁面網址、來源、瀏覽器、裝置、概略位置及互動資訊。網站不會把遊戲暱稱、成績明細或自訂圖片內容主動作為 GA4 事件參數傳送。</p>
+<p>統計資料的保存與處理由 GA4 帳戶設定及 Google 政策管理。刪除 Cookie 不會刪除已收集的統計，無痕模式也不保證停止統計。你可以調整瀏覽器的 Cookie 設定，或使用 Google 提供的 Analytics 停用工具；部分限制也可能影響網站功能。</p>
+<ul class="policy-resources"><li><a href="https://policies.google.com/technologies/partner-sites">Google 如何使用採用其服務的網站或應用程式資料</a></li><li><a href="https://policies.google.com/privacy">Google 隱私權政策</a></li><li><a href="https://tools.google.com/dlpage/gaoptout">Google Analytics 停用瀏覽器外掛程式</a></li></ul>
+<p>目前未啟用 AdSense 廣告。若日後導入廣告服務，會在啟用前更新本政策，說明廣告供應商的資料使用方式，並補上適用的 Cookie 與同意管理。</p>
+<h2 id="providers">Cloudflare 驗證與服務供應商</h2>
+<p>只有執行產生、讀取或刪除雲端代碼時，才會載入 Cloudflare Turnstile 驗證。Cloudflare 會處理 IP 位址、瀏覽器資訊、連線特徵與網站來源等訊號，用於辨識機器人及防止濫用。</p>
+<p>雲端 API 為控制免費容量與流量，會處理請求 IP，產生每日更換的雜湊識別並記錄操作次數；網站的限流資料表不保存原始 IP。較舊的每日計數會由排程分批清理。雲端檔另保存代碼、建立與最後讀取時間、到期時間、檔案大小及必要的管理雜湊。</p>
+<p>靜態頁面由 GitHub Pages 提供，雲端功能使用 Cloudflare Workers、D1 與 R2。服務供應商在提供連線、儲存及安全防護時，可能處理 IP、瀏覽器與請求資訊。資料可能經不同國家或地區的基礎設施處理，供應商的保存與使用方式依各自政策及服務設定。</p>
+<ul class="policy-resources"><li><a href="https://www.cloudflare.com/turnstile-privacy-policy/">Cloudflare Turnstile 隱私權說明</a></li><li><a href="https://www.cloudflare.com/privacypolicy/">Cloudflare 隱私權政策</a></li><li><a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub 隱私權聲明</a></li></ul>
+<h2 id="your-controls">如何管理與刪除資料</h2>
+<ol>
+<li>在「成績紀錄」匯出 CSV 或刪除歷史紀錄；在設定關閉成績保存可停止新增紀錄。</li>
+<li>若要刪除雲端檔，先在建立它的瀏覽器進入「雲端代碼」，使用「此瀏覽器建立的代碼」的刪除功能。</li>
+<li>在瀏覽器清除本網站的網站資料，可移除本機設定、圖片、成績、語言偏好及管理憑證。請先處理需要刪除的雲端檔；清除本機資料不會同步刪除雲端內容。</li>
+</ol>
+<p>你可依適用法令提出資料查詢、更正、刪除或限制處理的要求。請來信說明問題；為避免誤刪他人資料，必要時會確認你與資料的關聯。網站管理者無法直接讀取或刪除只存在你瀏覽器內的資料。</p>
+<h2 id="contact">聯絡方式與政策更新</h2>
+<p>若你透過電子郵件聯絡，網站管理者會使用你提供的信箱、訊息與附件處理問題或資料要求。請避免寄送不必要的私密資訊。相關往來僅在處理需求及必要留存期間保存。</p>
+<p class="policy-contact"><span>隱私權相關問題，請聯絡：</span><a href="mailto:wwwne1198@gmail.com">wwwne1198@gmail.com</a></p>
+<p>網站功能或第三方服務變更時，本政策可能更新，日期會標示於頁首。你可以透過頁尾的「隱私權政策」隨時查看最新版本。</p>
+<a class="button quiet" href="{{LOCALE_BASE}}games/memory/">返回遊戲</a></article>

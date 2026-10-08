@@ -54,3 +54,18 @@ test('只有提供真實驗證碼時，正式首頁輸出 Search Console 驗證�
   assert.ok(!pageMetadata(game, current, siteAddress(current)).meta.includes('google-site-verification'));
   assert.ok(!pageMetadata(home, config, siteAddress(config)).meta.includes('google-site-verification'));
 });
+
+test('隱私權頁保留自身四語網址與分享標籤，不宣告不存在的遊戲主圖', () => {
+  const current = { ...config, domain: 'https://wwwne1198.party', basePath: '/' };
+  for (const [language, prefix] of [['zh-Hant', ''], ['en', 'en/'], ['ja', 'ja/'], ['ko', 'ko/']]) {
+    const output = pageMetadata({ page: 'privacy', route: 'privacy', title: 'Privacy policy', description: 'Data handling and controls' }, current, siteAddress(current), language);
+    assert.equal(output.canonical, 'https://wwwne1198.party/' + prefix + 'privacy/');
+    assert.ok(output.meta.includes('assets/social/' + prefix + 'home.png'));
+    assert.equal((output.meta.match(/<link rel="alternate"/g) || []).length, 5);
+    const graph = JSON.parse(output.meta.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+    assert.equal(graph.length, 2);
+    assert.equal(graph[1]['@type'], 'WebPage');
+    assert.equal(graph[1].inLanguage, language);
+    assert.ok(!graph[1].primaryImageOfPage && !graph[1].mainEntity);
+  }
+});

@@ -49,8 +49,8 @@ test('指定語言網址不受瀏覽器或記憶設定覆蓋，重新載入不�
   const target = browser({ languages: ['ja'] }).redirects[0];
   assert.deepEqual(browser({ url: target, languages: ['ja'] }).redirects, []);
 });
-test('首頁、遊戲、教學與子目錄保留查詢參數及錨點，轉址使用 replace', () => {
-  for (const [route, page] of [['', 'home'], ['games/memory/', 'game'], ['help/', 'help'], ['help/index.html', 'help']]) {
+test('首頁、遊戲、教學、隱私權政策與子目錄保留查詢參數及錨點，轉址使用 replace', () => {
+  for (const [route, page] of [['', 'home'], ['games/memory/', 'game'], ['help/', 'help'], ['help/index.html', 'help'], ['privacy/', 'privacy'], ['privacy/index.html', 'privacy']]) {
     const result = browser({ base: '/nested/', page, url: 'https://example.test/nested/' + route + '?utm_source=line#upload-images', languages: ['ja'] });
     assert.equal(result.redirects[0], 'https://example.test/nested/ja/' + route.replace(/index\.html$/, '') + '?utm_source=line#upload-images');
     assert.deepEqual(result.navigations, []);

@@ -1919,11 +1919,6 @@ export const messages = {
     "ja": "設定には「遊び方」「カード・画像」「画面」「成績」「クラウドコード」の 5 タブがあります。12 種類の表面、裏面、背景、ロゴに内蔵または自分の画像を使えます。絵柄は 2 種類以上選択してください。他の項目やタブは初期設定に戻せます。全体・カード詳細・表面・裏面・ペア完成をプレビューでき、画像編集時は対応する表示に切り替わります。スマホではプレビューが上部に残り、拡大も可能です。大きさ、位置、不透明度、回転、切り抜き、表示方法を調整でき、ロゴ枠の幅・高さと画像の拡大率は独立しています。",
     "ko": "설정에는 게임, 카드·이미지, 화면, 기록, 클라우드 코드의 5개 탭이 있습니다. 앞면 12종, 뒷면, 배경, 로고에 기본 또는 사용자 이미지를 사용할 수 있습니다. 그림은 2종 이상 선택하세요. 다른 항목과 탭은 초기화할 수 있습니다. 전체 화면, 카드 상세, 앞면, 뒷면, 짝 맞춤 상태를 미리 볼 수 있으며 이미지 편집 시 해당 미리보기로 전환합니다. 모바일에서는 미리보기가 위에 유지되며 확대할 수 있습니다. 크기, 위치, 불투명도, 회전, 자르기, 맞춤 방식을 조정하고 로고 캔버스의 너비·높이와 이미지 크기는 각각 설정합니다."
   },
-  "在設定內按 Ctrl+Z（macOS 為 Cmd+Z）可復原整體設定；文字輸入框保留瀏覽器的文字復原。一次滑桿拖曳只算一步。按「儲存並套用」後，面板保持開啟；若正在遊戲，套用設定會結束該局並回到準備畫面。關閉未套用的草稿會先確認是否捨棄。": {
-    "en": "In Settings, Ctrl+Z (Cmd+Z on macOS) undoes changes; text fields keep normal text undo. A slider drag is one step. Save & apply leaves the panel open and ends any active round, returning to the ready screen. Closing an unapplied draft asks whether to discard it.",
-    "ja": "設定内の Ctrl+Z（macOS は Cmd+Z）で変更を戻せます。文字入力欄では通常の文字の取り消しが使えます。スライダー 1 回のドラッグは 1 ステップです。「保存して適用」後もパネルは開いたままですが、進行中のゲームは終了し開始前に戻ります。未適用の下書きを閉じると破棄の確認が表示されます。",
-    "ko": "설정에서 Ctrl+Z (macOS는 Cmd+Z)로 변경을 취소합니다. 텍스트 입력란에서는 일반 텍스트 실행 취소가 유지됩니다. 슬라이더 드래그 한 번이 한 단계입니다. ‘저장하고 적용’ 후 패널은 열린 채 유지되지만 진행 중인 게임은 끝나고 준비 화면으로 돌아갑니다. 적용하지 않은 초안을 닫으면 버릴지 확인합니다."
-  },
   "如何上傳照片，製作自訂翻牌卡牌？": {
     "en": "How to make matching cards with your photos",
     "ja": "写真でオリジナルカードを作るには？",
@@ -2313,5 +2308,255 @@ export const messages = {
     "en": "Your language choice is saved in this browser. Clearing site data resets it, and the next visit uses browser preferences again. You can still switch languages when storage is blocked, but the choice may not be remembered next time.",
     "ja": "言語の選択はこのブラウザーに保存されます。サイトデータを削除すると、次回は再びブラウザーの言語設定に合わせます。保存が禁止されていても切り替えはできますが、次回まで選択が維持されるとは限りません。",
     "ko": "언어 선택은 이 브라우저에 저장됩니다. 사이트 데이터를 삭제하면 다음 방문 시 브라우저의 언어 설정을 다시 따릅니다. 저장이 차단되어도 언어를 바꿀 수 있지만 다음 방문까지 선택이 유지되지 않을 수 있습니다."
+  },
+  "在設定面板中，按 Ctrl+Z（macOS 為 Cmd+Z）可撤銷上一步修改；若正在文字輸入框內，則只復原文字輸入。一次滑桿拖曳只算一步。按「儲存並套用」後，面板保持開啟；若正在遊戲，套用設定會結束該局並回到準備畫面。關閉未套用的草稿會先確認是否捨棄。": {
+    "en": "In the settings panel, Ctrl+Z (Cmd+Z on macOS) undoes the previous setting change. When a text field has focus, it only undoes text input. A slider drag is one step. Save & apply leaves the panel open and ends any active round, returning to the ready screen. Closing an unapplied draft asks whether to discard it.",
+    "ja": "設定パネルで Ctrl+Z（macOS は Cmd+Z）を押すと、直前の設定変更を取り消せます。文字入力欄では、入力した文字だけを元に戻します。スライダー 1 回のドラッグは 1 ステップです。「保存して適用」後もパネルは開いたままですが、進行中のゲームは終了し開始前に戻ります。未適用の下書きを閉じると破棄の確認が表示されます。",
+    "ko": "설정 패널에서 Ctrl+Z (macOS는 Cmd+Z)를 누르면 바로 전 설정 변경을 취소합니다. 텍스트 입력란에 커서가 있으면 입력한 텍스트만 되돌립니다. 슬라이더 드래그 한 번이 한 단계입니다. ‘저장하고 적용’ 후 패널은 열린 채 유지되지만 진행 중인 게임은 끝나고 준비 화면으로 돌아갑니다. 적용하지 않은 초안을 닫으면 버릴지 확인합니다."
+  },
+  "隱私權政策": {
+    "en": "Privacy policy",
+    "ja": "プライバシーポリシー",
+    "ko": "개인정보 처리방침"
+  },
+  "了解翻牌遊戲如何保存本機設定、圖片與成績，以及雲端代碼、30 天期限、GA4 統計、Cookie、Cloudflare 驗證與資料刪除方式。": {
+    "en": "Learn how Memory Card Game stores local settings, images and scores, and how cloud codes, the 30-day expiry, GA4 analytics, cookies, Cloudflare verification and deletion work.",
+    "ja": "神経衰弱ゲームの設定・画像・成績の端末内保存、クラウドコードの30日間の有効期限、GA4、Cookie、Cloudflare認証、データの削除について説明します。",
+    "ko": "카드 짝 맞추기의 로컬 설정·이미지·기록 저장, 클라우드 코드의 30일 만료, GA4 통계, 쿠키, Cloudflare 인증 및 데이터 삭제 방법을 안내합니다."
+  },
+  "資料與隱私": {
+    "en": "Data and privacy",
+    "ja": "データとプライバシー",
+    "ko": "데이터와 개인정보"
+  },
+  "最後更新：": {
+    "en": "Last updated: ",
+    "ja": "最終更新：",
+    "ko": "최종 업데이트: "
+  },
+  "本政策適用於 wwwne1198.party 的翻牌遊戲。以下說明網站管理者如何處理資料、使用哪些服務，以及你如何管理或刪除資料。遊戲不需要註冊帳號。": {
+    "en": "This policy applies to Memory Card Game at wwwne1198.party. It explains how the site operator handles data, which services are used, and how you can manage or delete data. No account registration is required to play.",
+    "ja": "本ポリシーは wwwne1198.party の神経衰弱ゲームに適用されます。サイト運営者によるデータの取り扱い、利用するサービス、データの管理・削除方法を説明します。ゲームにアカウント登録は不要です。",
+    "ko": "이 방침은 wwwne1198.party의 카드 짝 맞추기에 적용됩니다. 사이트 운영자의 데이터 처리, 이용 서비스, 데이터 관리 및 삭제 방법을 설명합니다. 게임에 회원가입은 필요하지 않습니다."
+  },
+  "設定、成績與選取的圖片先保存在目前瀏覽器。": {
+    "en": "Settings, scores and selected images are initially stored in your current browser.",
+    "ja": "設定・成績・選択した画像は、まず現在のブラウザに保存されます。",
+    "ko": "설정, 기록, 선택한 이미지는 먼저 현재 브라우저에 저장됩니다."
+  },
+  "按「產生代碼」才會把設定與圖片保存到雲端。": {
+    "en": "Settings and images are saved to the cloud only when you choose Generate code.",
+    "ja": "「コードを生成」を選んだときに、設定と画像がクラウドに保存されます。",
+    "ko": "‘코드 생성’을 선택할 때 설정과 이미지가 클라우드에 저장됩니다."
+  },
+  "正式網站使用 GA4 統計；雲端操作使用 Cloudflare 驗證。": {
+    "en": "The production site uses GA4 analytics; cloud operations use Cloudflare verification.",
+    "ja": "公開サイトでは GA4 によるアクセス解析、クラウド操作では Cloudflare 認証を使用します。",
+    "ko": "공개 사이트는 GA4 통계를, 클라우드 작업은 Cloudflare 인증을 사용합니다."
+  },
+  "隱私權政策目錄": {
+    "en": "Privacy policy contents",
+    "ja": "プライバシーポリシーの目次",
+    "ko": "개인정보 처리방침 목차"
+  },
+  "本機資料": {
+    "en": "Local data",
+    "ja": "端末内のデータ",
+    "ko": "로컬 데이터"
+  },
+  "圖片與雲端代碼": {
+    "en": "Images and cloud codes",
+    "ja": "画像とクラウドコード",
+    "ko": "이미지와 클라우드 코드"
+  },
+  "GA4 與 Cookie": {
+    "en": "GA4 and cookies",
+    "ja": "GA4 と Cookie",
+    "ko": "GA4 및 쿠키"
+  },
+  "驗證與服務供應商": {
+    "en": "Verification and providers",
+    "ja": "認証とサービス提供者",
+    "ko": "인증 및 서비스 제공업체"
+  },
+  "管理與刪除資料": {
+    "en": "Manage and delete data",
+    "ja": "データの管理と削除",
+    "ko": "데이터 관리 및 삭제"
+  },
+  "聯絡與政策更新": {
+    "en": "Contact and updates",
+    "ja": "お問い合わせと更新",
+    "ko": "문의 및 방침 업데이트"
+  },
+  "本機設定、圖片與成績": {
+    "en": "Local settings, images and scores",
+    "ja": "端末内の設定・画像・成績",
+    "ko": "로컬 설정·이미지·기록"
+  },
+  "網站使用 localStorage 保存遊戲設定、手動選擇的語言、成績紀錄與雲端代碼管理憑證，使用 IndexedDB 保存自訂圖片。這些資料用來保留你的選擇與遊戲紀錄，四種語言在同一網站、同一瀏覽器共用資料。": {
+    "en": "The site uses localStorage for game settings, your manually selected language, saved scores and cloud-code management credentials, and IndexedDB for custom images. These retain your choices and records. All four languages share this data within the same site and browser.",
+    "ja": "サイトは localStorage にゲーム設定、手動で選んだ言語、成績、クラウドコードの管理用認証情報を、IndexedDB にカスタム画像を保存します。選択内容と成績を保持するためのデータです。同じサイト・ブラウザでは4言語で共有されます。",
+    "ko": "사이트는 localStorage에 게임 설정, 직접 선택한 언어, 기록, 클라우드 코드 관리 자격 정보를 저장하고 IndexedDB에 사용자 이미지를 저장합니다. 선택과 기록을 유지하기 위한 데이터이며, 같은 사이트와 브라우저에서는 네 언어가 이를 공유합니다."
+  },
+  "成績紀錄預設開啟，最多保留 500 筆，依你勾選的欄位保存暱稱、用時、翻牌次數等資料，另保留必要的識別碼與當時規則。本次排行榜只保存在頁面記憶體，重新整理或離開遊戲頁就會清空；歷史成績則可在「成績紀錄」查看或匯出 CSV。": {
+    "en": "Score saving is on by default and keeps up to 500 records. Selected fields may include nickname, time and flips, alongside required identifiers and the rules used. The session leaderboard exists only in page memory and is cleared when you reload or leave the game page. Saved scores can be viewed or exported as CSV in Scores.",
+    "ja": "成績の保存は初期状態で有効で、最大500件を保持します。選んだ項目に応じてニックネーム・時間・めくった回数などを、必要な識別子と当時のルールとともに保存します。今回のランキングはページのメモリだけに保持され、再読み込みやゲームページを離れると消えます。保存済みの成績は「成績」で確認・CSV出力できます。",
+    "ko": "기록 저장은 기본으로 켜져 있으며 최대 500건을 보관합니다. 선택한 항목에 따라 별명, 시간, 뒤집은 횟수 등을 필수 식별자 및 당시 규칙과 함께 저장합니다. 현재 순위표는 페이지 메모리에만 있으며 새로고침하거나 게임 페이지를 떠나면 지워집니다. 저장된 기록은 ‘기록’에서 확인하거나 CSV로 내보낼 수 있습니다."
+  },
+  "本機資料沒有固定的自動到期時間，會保留到你刪除、被新紀錄替換，或瀏覽器清除為止。清除網站資料、無痕視窗結束、瀏覽器儲存限制或更換裝置，都可能使資料消失。關閉成績保存只停止新增，不會刪除舊紀錄。": {
+    "en": "Local data has no fixed automatic expiry. It remains until you delete it, newer records replace it, or the browser clears it. Clearing site data, closing private windows, storage limits or switching devices may remove or make it unavailable. Turning off score saving stops new records; it does not delete existing ones.",
+    "ja": "端末内のデータに固定の有効期限はありません。自分で削除する、新しい成績に置き換わる、またはブラウザが消去するまで保持されます。サイトデータの消去、プライベートウィンドウの終了、保存容量の制限、端末の変更で利用できなくなる場合があります。成績の保存を無効にしても、既存の記録は削除されません。",
+    "ko": "로컬 데이터에는 고정된 자동 만료 기간이 없습니다. 직접 삭제하거나 새 기록으로 교체되거나 브라우저가 지울 때까지 유지됩니다. 사이트 데이터 삭제, 시크릿 창 종료, 저장 용량 제한, 기기 변경으로 사용할 수 없게 될 수 있습니다. 기록 저장을 끄면 새 기록만 중단되며 기존 기록은 삭제되지 않습니다."
+  },
+  "自訂圖片與雲端代碼": {
+    "en": "Custom images and cloud codes",
+    "ja": "カスタム画像とクラウドコード",
+    "ko": "사용자 이미지와 클라우드 코드"
+  },
+  "選取圖片時，瀏覽器會在裝置上縮放、轉成 WebP、移除原圖中繼資料並壓縮，再保存在本機。僅選圖或玩遊戲不會把這些圖片上傳到雲端服務。": {
+    "en": "When you select an image, your browser resizes it, converts it to WebP, removes original metadata and compresses it on your device before storing it locally. Selecting images or playing alone does not upload them to the cloud service.",
+    "ja": "画像を選ぶと、ブラウザが端末上で縮小・WebP変換・元画像のメタデータ除去・圧縮を行い、端末内に保存します。画像の選択やゲームのプレイだけでは、クラウドサービスにアップロードされません。",
+    "ko": "이미지를 선택하면 브라우저가 기기에서 크기를 조절하고 WebP로 변환하며 원본 메타데이터를 제거하고 압축한 뒤 로컬에 저장합니다. 이미지 선택이나 게임 플레이만으로 클라우드 서비스에 업로드되지 않습니다."
+  },
+  "在「雲端代碼」按「產生代碼」並完成驗證，才會把目前的設定草稿與使用中的自訂圖片傳至 Cloudflare Workers，並由 D1 保存代碼與管理資訊、R2 保存設定及圖片檔。每份最多 15 張圖片、4 MiB。不隨代碼同步遊戲暱稱、排行榜或成績明細；你自行放入標題、圖案名稱或圖片中的資訊仍會隨設定保存。": {
+    "en": "Choosing Generate code under Cloud codes and completing verification sends the current settings draft and its custom images to Cloudflare Workers. D1 stores code and management information; R2 stores the settings and image file. Each profile allows up to 15 images and 4 MiB. Game nicknames, leaderboards and score records are not synced with codes. Information you put in titles, pattern names or images is included in the saved profile.",
+    "ja": "「クラウドコード」で「コードを生成」を選び認証を完了すると、現在の設定の下書きと使用中のカスタム画像を Cloudflare Workers に送信します。D1 にコードと管理情報、R2 に設定と画像のファイルを保存します。1件につき画像15枚・4 MiBまでです。ゲームのニックネーム・ランキング・成績明細は同期しませんが、タイトル・図柄名・画像に含めた情報は設定とともに保存されます。",
+    "ko": "‘클라우드 코드’에서 ‘코드 생성’을 선택하고 인증을 완료하면 현재 설정 초안과 사용 중인 이미지가 Cloudflare Workers로 전송됩니다. D1은 코드와 관리 정보를, R2는 설정 및 이미지 파일을 저장합니다. 설정당 이미지 15장, 4 MiB까지 가능합니다. 게임 별명, 순위표, 기록 내역은 코드로 동기화되지 않습니다. 제목, 그림 이름, 이미지에 직접 넣은 정보는 저장된 설정에 포함됩니다."
+  },
+  "12 位數字代碼是分享與讀取方式，不是私人帳號或密碼。知道代碼的人可在完成驗證後取得設定與圖片。請只保存有權使用、適合分享的內容，避免放入私密照片或個人資料。": {
+    "en": "The 12-digit code is a sharing and retrieval method, not a private account or password. Anyone who knows it can retrieve the settings and images after verification. Save only content you have permission to use and are comfortable sharing; avoid private photos or personal information.",
+    "ja": "12桁の数字コードは共有・読み込み用であり、非公開アカウントやパスワードではありません。コードを知っている人は認証後に設定と画像を取得できます。利用権があり共有に適した内容だけを保存し、私的な写真や個人情報は避けてください。",
+    "ko": "12자리 숫자 코드는 공유·불러오기 수단이며 비공개 계정이나 비밀번호가 아닙니다. 코드를 아는 사람은 인증 후 설정과 이미지를 가져올 수 있습니다. 사용할 권한이 있고 공유해도 되는 내용만 저장하고 사적인 사진이나 개인정보는 넣지 마세요."
+  },
+  "新建立的雲端檔保留 30 天；之後每次成功透過代碼讀取，會重新延長為 30 天。30 天未再讀取就會失效，伺服器每小時分批清理到期資料；實際刪除可能晚於失效時間。在本機玩遊戲不會延長雲端期限。": {
+    "en": "A new cloud profile lasts 30 days. Each successful retrieval by code extends it for another 30 days. After 30 days without retrieval it expires, and an hourly job deletes expired data in batches; deletion may occur after expiry. Playing locally does not extend the cloud expiry.",
+    "ja": "新しいクラウドデータの有効期間は30日です。コードで正常に読み込むたびに、そこから30日間に延長されます。30日間読み込みがなければ失効し、毎時の処理で期限切れデータを順次削除します。実際の削除は失効時刻より後になる場合があります。端末内で遊ぶだけでは期限は延長されません。",
+    "ko": "새 클라우드 설정의 유효기간은 30일입니다. 코드로 정상적으로 불러올 때마다 다시 30일로 연장됩니다. 30일 동안 불러오지 않으면 만료되며 매시간 작업이 만료 데이터를 나누어 삭제합니다. 실제 삭제는 만료 시점보다 늦을 수 있습니다. 로컬에서 플레이해도 클라우드 기간은 연장되지 않습니다."
+  },
+  "建立代碼的瀏覽器會保存刪除憑證，可在「此瀏覽器建立的代碼」刪除雲端檔。清除網站資料會一併清除憑證，之後無法用原本的刪除按鈕管理該檔。刪除雲端檔不會移除其他裝置已下載的本機副本。": {
+    "en": "The browser that creates a code stores a deletion credential. You can delete its cloud profile under Codes created in this browser. Clearing site data also removes the credential, so that deletion control will no longer manage the profile. Cloud deletion does not remove local copies already downloaded on other devices.",
+    "ja": "コードを作成したブラウザは削除用の認証情報を保存し、「このブラウザで作成したコード」からクラウドデータを削除できます。サイトデータを消すと認証情報も失われ、その削除ボタンでは管理できなくなります。クラウドから削除しても、他の端末にダウンロード済みのコピーは消えません。",
+    "ko": "코드를 생성한 브라우저는 삭제 자격 정보를 저장하며 ‘이 브라우저에서 생성한 코드’에서 클라우드 설정을 삭제할 수 있습니다. 사이트 데이터를 지우면 자격 정보도 없어져 해당 삭제 버튼으로 관리할 수 없게 됩니다. 클라우드에서 삭제해도 다른 기기에 이미 다운로드된 로컬 사본은 지워지지 않습니다."
+  },
+  "GA4 流量統計與 Cookie": {
+    "en": "GA4 analytics and cookies",
+    "ja": "GA4 アクセス解析と Cookie",
+    "ko": "GA4 방문 통계 및 쿠키"
+  },
+  "正式網站使用 Google Analytics 4（GA4）了解造訪量與使用情況，載入正式頁面時會啟動統計。Google 可能使用 Cookie 或類似技術，處理頁面網址、來源、瀏覽器、裝置、概略位置及互動資訊。網站不會把遊戲暱稱、成績明細或自訂圖片內容主動作為 GA4 事件參數傳送。": {
+    "en": "The production site uses Google Analytics 4 (GA4) to understand visits and usage. Analytics starts when a production page loads. Google may use cookies or similar technologies to process page URLs, referrers, browser, device, approximate location and interaction information. The site does not intentionally send game nicknames, score details or custom image contents as GA4 event parameters.",
+    "ja": "公開サイトでは Google Analytics 4（GA4）で訪問数と利用状況を把握し、公開ページの読み込み時に解析を開始します。Google は Cookie などを用い、ページURL、参照元、ブラウザ、端末、おおよその位置、操作情報を処理する場合があります。サイトはゲームのニックネーム、成績明細、カスタム画像の内容を GA4 のイベントパラメータとして意図的に送信しません。",
+    "ko": "공개 사이트는 Google Analytics 4(GA4)로 방문과 이용 현황을 파악하며 공개 페이지를 불러올 때 통계 수집을 시작합니다. Google은 쿠키 또는 유사 기술로 페이지 URL, 유입 경로, 브라우저, 기기, 대략적인 위치, 상호작용 정보를 처리할 수 있습니다. 사이트는 게임 별명, 기록 내역, 사용자 이미지 내용을 GA4 이벤트 매개변수로 의도적으로 전송하지 않습니다."
+  },
+  "統計資料的保存與處理由 GA4 帳戶設定及 Google 政策管理。刪除 Cookie 不會刪除已收集的統計，無痕模式也不保證停止統計。你可以調整瀏覽器的 Cookie 設定，或使用 Google 提供的 Analytics 停用工具；部分限制也可能影響網站功能。": {
+    "en": "Analytics retention and processing depend on GA4 account settings and Google policies. Deleting cookies does not delete previously collected analytics, and private browsing does not guarantee that analytics stops. You can adjust browser cookie settings or use Google’s Analytics opt-out tool; some restrictions may also affect site features.",
+    "ja": "解析データの保持と処理は GA4 アカウントの設定および Google のポリシーに従います。Cookie を削除しても収集済みの解析データは消えず、プライベートブラウジングでも解析が止まるとは限りません。ブラウザの Cookie 設定や Google の Analytics オプトアウトツールを利用できます。一部の制限はサイトの機能にも影響する場合があります。",
+    "ko": "통계 데이터 보관과 처리는 GA4 계정 설정 및 Google 정책에 따릅니다. 쿠키를 삭제해도 이미 수집된 통계는 지워지지 않으며 시크릿 모드도 통계 중단을 보장하지 않습니다. 브라우저 쿠키 설정을 조정하거나 Google의 Analytics 차단 도구를 사용할 수 있습니다. 일부 제한은 사이트 기능에도 영향을 줄 수 있습니다."
+  },
+  "Google 如何使用採用其服務的網站或應用程式資料": {
+    "en": "How Google uses information from sites or apps that use its services",
+    "ja": "Google のサービスを使用するサイトやアプリからの情報の取り扱い",
+    "ko": "Google 서비스를 사용하는 사이트 또는 앱의 정보 이용 방식"
+  },
+  "Google 隱私權政策": {
+    "en": "Google Privacy Policy",
+    "ja": "Google プライバシーポリシー",
+    "ko": "Google 개인정보처리방침"
+  },
+  "Google Analytics 停用瀏覽器外掛程式": {
+    "en": "Google Analytics opt-out browser add-on",
+    "ja": "Google Analytics オプトアウト アドオン",
+    "ko": "Google Analytics 차단 브라우저 부가기능"
+  },
+  "目前未啟用 AdSense 廣告。若日後導入廣告服務，會在啟用前更新本政策，說明廣告供應商的資料使用方式，並補上適用的 Cookie 與同意管理。": {
+    "en": "AdSense ads are currently disabled. If advertising services are introduced, this policy will be updated before activation to explain the providers’ data use and add applicable cookie and consent management.",
+    "ja": "現在 AdSense 広告は無効です。広告サービスを導入する場合は、開始前に本ポリシーを更新し、提供者のデータ利用と適用される Cookie・同意管理について説明します。",
+    "ko": "현재 AdSense 광고는 비활성화되어 있습니다. 광고 서비스를 도입하면 활성화 전에 이 방침을 업데이트하여 제공업체의 데이터 이용과 적용되는 쿠키·동의 관리를 안내합니다."
+  },
+  "Cloudflare 驗證與服務供應商": {
+    "en": "Cloudflare verification and service providers",
+    "ja": "Cloudflare 認証とサービス提供者",
+    "ko": "Cloudflare 인증 및 서비스 제공업체"
+  },
+  "只有執行產生、讀取或刪除雲端代碼時，才會載入 Cloudflare Turnstile 驗證。Cloudflare 會處理 IP 位址、瀏覽器資訊、連線特徵與網站來源等訊號，用於辨識機器人及防止濫用。": {
+    "en": "Cloudflare Turnstile verification loads only when you generate, retrieve or delete a cloud code. Cloudflare processes signals such as IP address, browser information, connection characteristics and site origin to identify bots and prevent abuse.",
+    "ja": "Cloudflare Turnstile 認証は、クラウドコードの生成・読み込み・削除時だけ読み込まれます。Cloudflare は IP アドレス、ブラウザ情報、接続の特徴、サイトのオリジンなどの信号を処理し、ボットの判別と不正利用の防止に用います。",
+    "ko": "Cloudflare Turnstile 인증은 클라우드 코드 생성·불러오기·삭제 시에만 로드됩니다. Cloudflare는 IP 주소, 브라우저 정보, 연결 특성, 사이트 출처 등의 신호로 봇을 식별하고 악용을 방지합니다."
+  },
+  "雲端 API 為控制免費容量與流量，會處理請求 IP，產生每日更換的雜湊識別並記錄操作次數；網站的限流資料表不保存原始 IP。較舊的每日計數會由排程分批清理。雲端檔另保存代碼、建立與最後讀取時間、到期時間、檔案大小及必要的管理雜湊。": {
+    "en": "To control capacity and traffic, the cloud API processes the request IP, creates a daily-changing hashed identifier and counts operations. The site’s rate-limit table does not store raw IP addresses. Older daily counters are removed in scheduled batches. Cloud profiles also retain codes, creation and last-retrieval times, expiry, file size and required management hashes.",
+    "ja": "容量と通信量の制御のため、クラウド API はリクエストの IP を処理して日ごとに変わるハッシュ識別子を生成し、操作回数を記録します。サイトの制限用テーブルに元の IP は保存しません。古い日次カウンターは定期処理で順次削除します。クラウドデータにはコード、作成・最終読み込み・失効の時刻、ファイルサイズ、必要な管理用ハッシュも保存します。",
+    "ko": "용량과 트래픽 관리를 위해 클라우드 API는 요청 IP를 처리하여 매일 바뀌는 해시 식별자를 만들고 작업 횟수를 기록합니다. 사이트의 사용량 제한 테이블에는 원본 IP를 저장하지 않습니다. 오래된 일별 횟수는 예약 작업으로 나누어 삭제합니다. 클라우드 설정에는 코드, 생성·마지막 불러오기·만료 시각, 파일 크기, 필요한 관리 해시도 저장합니다."
+  },
+  "靜態頁面由 GitHub Pages 提供，雲端功能使用 Cloudflare Workers、D1 與 R2。服務供應商在提供連線、儲存及安全防護時，可能處理 IP、瀏覽器與請求資訊。資料可能經不同國家或地區的基礎設施處理，供應商的保存與使用方式依各自政策及服務設定。": {
+    "en": "GitHub Pages serves the static pages, and cloud features use Cloudflare Workers, D1 and R2. Providers may process IP, browser and request information to deliver connections, storage and security. Data may be processed through infrastructure in different countries or regions; provider retention and use follow their policies and service settings.",
+    "ja": "静的ページは GitHub Pages が配信し、クラウド機能は Cloudflare Workers・D1・R2 を利用します。提供者は接続、保存、安全対策のために IP、ブラウザ、リクエスト情報を処理する場合があります。データは異なる国・地域の設備で処理される場合があり、提供者による保持と利用は各社のポリシーおよびサービス設定に従います。",
+    "ko": "정적 페이지는 GitHub Pages가 제공하며 클라우드 기능은 Cloudflare Workers, D1, R2를 이용합니다. 제공업체는 연결, 저장, 보안 제공을 위해 IP, 브라우저, 요청 정보를 처리할 수 있습니다. 데이터가 여러 국가나 지역의 인프라에서 처리될 수 있으며 제공업체의 보관과 이용은 각 정책 및 서비스 설정에 따릅니다."
+  },
+  "Cloudflare Turnstile 隱私權說明": {
+    "en": "Cloudflare Turnstile Privacy Addendum",
+    "ja": "Cloudflare Turnstile プライバシー補足条項",
+    "ko": "Cloudflare Turnstile 개인정보 보호 부록"
+  },
+  "Cloudflare 隱私權政策": {
+    "en": "Cloudflare Privacy Policy",
+    "ja": "Cloudflare プライバシーポリシー",
+    "ko": "Cloudflare 개인정보처리방침"
+  },
+  "GitHub 隱私權聲明": {
+    "en": "GitHub Privacy Statement",
+    "ja": "GitHub プライバシーステートメント",
+    "ko": "GitHub 개인정보 보호정책"
+  },
+  "如何管理與刪除資料": {
+    "en": "How to manage and delete data",
+    "ja": "データの管理・削除方法",
+    "ko": "데이터 관리 및 삭제 방법"
+  },
+  "在「成績紀錄」匯出 CSV 或刪除歷史紀錄；在設定關閉成績保存可停止新增紀錄。": {
+    "en": "In Scores, export a CSV or delete saved records. Turn off score saving in Settings to stop adding records.",
+    "ja": "「成績」で CSV 出力や履歴の削除ができます。設定で成績保存を無効にすると、新しい記録の追加が止まります。",
+    "ko": "‘기록’에서 CSV를 내보내거나 저장된 기록을 삭제하세요. 설정에서 기록 저장을 끄면 새 기록 추가를 중단할 수 있습니다."
+  },
+  "若要刪除雲端檔，先在建立它的瀏覽器進入「雲端代碼」，使用「此瀏覽器建立的代碼」的刪除功能。": {
+    "en": "To delete a cloud profile, first open Cloud codes in the browser that created it and use the deletion control under Codes created in this browser.",
+    "ja": "クラウドデータを削除するには、作成したブラウザで「クラウドコード」を開き、「このブラウザで作成したコード」の削除機能を使ってください。",
+    "ko": "클라우드 설정을 삭제하려면 먼저 생성한 브라우저에서 ‘클라우드 코드’를 열고 ‘이 브라우저에서 생성한 코드’의 삭제 기능을 사용하세요."
+  },
+  "在瀏覽器清除本網站的網站資料，可移除本機設定、圖片、成績、語言偏好及管理憑證。請先處理需要刪除的雲端檔；清除本機資料不會同步刪除雲端內容。": {
+    "en": "Clear this site’s data in your browser to remove local settings, images, scores, language preference and management credentials. Delete any cloud profiles you want removed first; clearing local data does not delete cloud content.",
+    "ja": "ブラウザでこのサイトのデータを消去すると、端末内の設定・画像・成績・言語設定・管理用認証情報を削除できます。削除したいクラウドデータは先に処理してください。端末内の消去ではクラウドの内容は削除されません。",
+    "ko": "브라우저에서 이 사이트의 데이터를 지우면 로컬 설정, 이미지, 기록, 언어 설정, 관리 자격 정보가 제거됩니다. 삭제할 클라우드 설정은 먼저 처리하세요. 로컬 데이터 삭제로 클라우드 내용이 함께 삭제되지는 않습니다."
+  },
+  "你可依適用法令提出資料查詢、更正、刪除或限制處理的要求。請來信說明問題；為避免誤刪他人資料，必要時會確認你與資料的關聯。網站管理者無法直接讀取或刪除只存在你瀏覽器內的資料。": {
+    "en": "You may request access, correction, deletion or restriction of processing under applicable law. Email us with the issue; where necessary, we will verify your connection to the data to avoid deleting someone else’s information. The site operator cannot directly access or delete data stored only in your browser.",
+    "ja": "適用される法令に基づき、データの照会・訂正・削除・処理制限を求めることができます。問題をメールでお知らせください。他人のデータを誤って削除しないよう、必要に応じてデータとの関係を確認します。運営者は、ブラウザ内だけにあるデータを直接閲覧・削除できません。",
+    "ko": "적용 법률에 따라 데이터 열람, 정정, 삭제, 처리 제한을 요청할 수 있습니다. 문제를 이메일로 알려주세요. 다른 사람의 데이터를 잘못 삭제하지 않도록 필요한 경우 데이터와의 관련성을 확인합니다. 운영자는 브라우저에만 저장된 데이터를 직접 읽거나 삭제할 수 없습니다."
+  },
+  "聯絡方式與政策更新": {
+    "en": "Contact and policy updates",
+    "ja": "お問い合わせとポリシーの更新",
+    "ko": "문의 및 방침 업데이트"
+  },
+  "若你透過電子郵件聯絡，網站管理者會使用你提供的信箱、訊息與附件處理問題或資料要求。請避免寄送不必要的私密資訊。相關往來僅在處理需求及必要留存期間保存。": {
+    "en": "If you contact us by email, the site operator uses your email address, message and attachments to handle the issue or data request. Avoid sending unnecessary private information. Correspondence is retained for handling the request and any necessary retention period.",
+    "ja": "メールでお問い合わせいただいた場合、運営者は送信元アドレス、本文、添付資料を問題やデータに関する依頼への対応に使います。不要な私的情報は送らないでください。やり取りは対応および必要な保管期間に限り保持します。",
+    "ko": "이메일로 문의하면 운영자는 이메일 주소, 메시지, 첨부파일을 문제나 데이터 요청 처리에 이용합니다. 불필요한 사적 정보는 보내지 마세요. 관련 연락 내용은 요청 처리 및 필요한 보관 기간 동안만 보관합니다."
+  },
+  "隱私權相關問題，請聯絡：": {
+    "en": "For privacy questions, contact: ",
+    "ja": "プライバシーに関するお問い合わせ：",
+    "ko": "개인정보 관련 문의: "
+  },
+  "網站功能或第三方服務變更時，本政策可能更新，日期會標示於頁首。你可以透過頁尾的「隱私權政策」隨時查看最新版本。": {
+    "en": "This policy may be updated when site features or third-party services change. The date appears at the top. You can always find the latest version through Privacy policy in the footer.",
+    "ja": "サイトの機能や外部サービスの変更に伴い、本ポリシーを更新する場合があります。更新日はページ上部に表示します。フッターの「プライバシーポリシー」から最新の内容をいつでも確認できます。",
+    "ko": "사이트 기능이나 외부 서비스가 바뀌면 이 방침이 업데이트될 수 있습니다. 날짜는 페이지 상단에 표시됩니다. 페이지 하단의 ‘개인정보 처리방침’에서 최신 내용을 언제든 확인할 수 있습니다."
+  },
+  "返回遊戲": {
+    "en": "Back to game",
+    "ja": "ゲームに戻る",
+    "ko": "게임으로 돌아가기"
   }
 };

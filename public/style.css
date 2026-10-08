@@ -90,3 +90,6 @@ dialog{border:1px solid var(--border);border-radius:18px;padding:26px;background
 @keyframes fullscreen-hint-out{from{opacity:1}to{opacity:0}}
 @media(max-width:540px){#fullscreen-zoom-hint{padding:8px 16px;font-size:.9375rem}}
 @media(prefers-reduced-motion:reduce){#fullscreen-zoom-hint[data-state=closing]{opacity:0}}
+
+/* Privacy information follows the existing document and footer layout. */
+.site-footer .privacy-link{align-self:flex-start;text-decoration:underline;text-underline-offset:3px;line-height:1.7;flex:none}.privacy-policy{max-width:800px}.privacy-policy h1{margin-bottom:10px}.policy-updated{color:var(--muted);font-size:.8125rem}.policy-summary{background:var(--mint);border:1px solid var(--border);border-radius:16px;padding:18px 24px;margin:24px 0}.policy-summary ul{margin:0;padding-left:20px}.privacy-policy li{line-height:1.9;margin:8px 0}.policy-contents{display:flex;flex-wrap:wrap;gap:10px 18px;padding:8px 0 18px;border-bottom:1px solid var(--border);font-size:.875rem}.privacy-policy h2{scroll-margin-top:24px}.policy-resources{padding-left:22px}.policy-contact{display:flex;flex-wrap:wrap;gap:4px}.privacy-policy a{overflow-wrap:anywhere}@media(max-width:540px){.policy-summary{padding:14px 18px}.policy-contents{gap:9px 14px}.privacy-policy li{font-size:.9375rem}}

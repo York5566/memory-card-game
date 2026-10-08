@@ -21,6 +21,7 @@ export async function build({ preview = false } = {}) {
     ['home', '', '首頁', config.description],
     ['game', 'games/memory', '上傳照片，自訂記憶配對卡牌', '上傳自己的照片或圖片，免費製作線上記憶配對卡牌。可替換 12 種圖案、卡背、背景與 LOGO，調整縮放、位置、旋轉及裁切，選擇 2 至 12 對卡牌與限時挑戰。成績預設保存在目前瀏覽器。'],
     ['help', 'help', '圖片上傳與玩法設定教學', '學習如何上傳 PNG、JPG、WebP 圖片，自訂翻牌遊戲的配對圖案、卡背、背景與 LOGO，調整圖片構圖、使用數字代碼載入設定，以及查看成績紀錄與匯出 CSV。'],
+    ['privacy', 'privacy', '隱私權政策', '了解翻牌遊戲如何保存本機設定、圖片與成績，以及雲端代碼、30 天期限、GA4 統計、Cookie、Cloudflare 驗證與資料刪除方式。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const language of Object.keys(LOCALES)) for (const [page, route, sourceTitle, sourceDescription] of routes) {
@@ -39,17 +40,18 @@ export async function build({ preview = false } = {}) {
   }
   await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud })};\n`);
   if (domain) {
-    const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([, route]) => route !== null).map(([, route]) => {
+    const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([, route]) => route !== null).map(([page, route]) => {
       const path = route ? route + '/' : '';
       const alternates = [...Object.keys(LOCALES), 'x-default'].map(id => `<xhtml:link rel="alternate" hreflang="${id}" href="${escape(domain + localeBase(base, id === 'x-default' ? 'zh-Hant' : id) + path)}"/>`).join('');
-      return `<url><loc>${escape(domain + localeBase(base, language) + path)}</loc>${alternates}<image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image></url>`;
+      const image = page === 'privacy' ? '' : `<image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image>`;
+      return `<url><loc>${escape(domain + localeBase(base, language) + path)}</loc>${alternates}${image}</url>`;
     })).join('');
     await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`);
     await writeFile(join(output, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${domain}${base}sitemap.xml\n`);
     if (base === '/' && new URL(domain).hostname === 'wwwne1198.party') {
       await writeFile(join(output, 'CNAME'), 'wwwne1198.party\n');
       // 保留搬到自訂網域後曾公開的舊子目錄網址，不將未知網址導回首頁。
-      for (const [, route, title] of routes.filter(([, route]) => route !== null)) {
+      for (const [, route, title] of routes.filter(([page, route]) => route !== null && page !== 'privacy')) {
         const target = `${domain}/${route ? route + '/' : ''}`;
         const dest = join(output, 'memory-card-game', route, 'index.html');
         await mkdir(dirname(dest), { recursive: true });

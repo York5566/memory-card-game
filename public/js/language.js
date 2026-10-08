@@ -38,14 +38,14 @@
     return languages.some(language => typeof language === 'string' && language) ? 'en' : 'zh-Hant';
   }
   function automaticDestination() {
-    if (!['home', 'game', 'help'].includes(page)) return null;
+    if (!['home', 'game', 'help', 'privacy'].includes(page)) return null;
     const here = new URL(window.location.href);
     if (!base.startsWith('/') || !base.endsWith('/') || !here.pathname.startsWith(base)) return null;
     const relative = here.pathname.slice(base.length);
     // Explicit English/Japanese/Korean URLs override both saved and browser preferences.
     if (['en/', 'ja/', 'ko/'].some(prefix => relative.startsWith(prefix))) return null;
     const route = relative.replace(/index\.html$/, '');
-    if (!['', 'games/memory/', 'help/'].includes(route)) return null;
+    if (!['', 'games/memory/', 'help/', 'privacy/'].includes(route)) return null;
     const explicit = here.searchParams.get('lang');
     let language;
     if (valid(explicit)) language = explicit;

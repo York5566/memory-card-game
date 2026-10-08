@@ -16,7 +16,7 @@ test('所有翻譯有英日韓版本，動態變數數量與順序索引完整',
 });
 
 test('可爬取的正文、圖片替代文字與導覽都有翻譯，不只標題', () => {
-  for (const name of ['layout.html', ...['home','game','help','404'].map(p => 'pages/'+p+'.html')]) {
+  for (const name of ['layout.html', ...['home','game','help','privacy','404'].map(p => 'pages/'+p+'.html')]) {
     const source = readFileSync(new URL('../src/'+name,import.meta.url),'utf8');
     for (const part of source.split(/(<[^>]*>)/g)) {
       const strings = part.startsWith('<') ? [...part.matchAll(/\b(?:alt|title|aria-label|placeholder)="([^"]*)"/g)].map(m=>m[1]) : [part];

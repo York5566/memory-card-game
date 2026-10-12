@@ -51,7 +51,7 @@ export function pageMetadata({ page, route, title, description }, config, { base
       { '@type': 'ImageObject', '@id': canonical + '#image', url: searchImage, contentUrl: searchImage, width: SEARCH_PREVIEW.width, height: SEARCH_PREVIEW.height, caption: tr(SEARCH_PREVIEW.caption) },
     ];
     if (page === 'privacy') { delete graph[1].primaryImageOfPage; graph.pop(); }
-    if (page === 'game') graph[1].mainEntity = { '@type': 'WebApplication', name, url: canonical, image: searchImage, applicationCategory: 'GameApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: language, isAccessibleForFree: true, description, featureList: ['上傳照片或圖片，自訂 12 種配對圖案', '自訂卡背、背景與 LOGO', '圖片縮放、位置、旋轉、透明度與裁切調整', '2 至 12 對卡牌、限時或不限時挑戰', '本機成績紀錄與 CSV 匯出'].map(tr) };
+    if (page === 'game') graph[1].mainEntity = { '@type': 'WebApplication', name, url: canonical, image: searchImage, applicationCategory: 'GameApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: language, isAccessibleForFree: true, description, featureList: ['上傳照片或圖片，自訂 12 種配對圖案', '自訂卡背、背景與 LOGO', '圖片縮放、位置、旋轉、透明度與裁切調整', '2 至 12 對卡牌、限時或不限時挑戰', '本機成績紀錄與 CSV 匯出', '自訂圖片，邀請朋友線上 PK'].map(tr) };
     const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replaceAll('<', '\\u003c');
     tags.push(`<script type="application/ld+json">${json}</script>`);
   }

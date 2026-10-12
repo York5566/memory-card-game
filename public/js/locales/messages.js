@@ -1,4 +1,6 @@
+import { pkMessages } from './pk-messages.js';
 export const messages = {
+  ...pkMessages,
   "部分自訂圖片不在此瀏覽器，已暫用內建圖片。請重新上傳，或使用數字代碼載入。": {
     "en": "Some custom images are missing on this browser. Built-in images are shown instead. Upload them again or load a cloud code.",
     "ja": "このブラウザーに一部の画像がないため、内蔵画像を表示しています。再アップロードするか、数字コードで読み込んでください。",

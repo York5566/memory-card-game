@@ -5,6 +5,7 @@ import { toast, confirmAction, navigateLanguage } from './site.js';
 import { createSounds } from './audio.js';
 import { loadImages } from './images.js';
 import { createFullscreenHint } from './fullscreen.js';
+import { initPK } from './pk.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
 let storage;
@@ -21,8 +22,9 @@ let activeNickname = t('玩家');
 let resultDate = 0;
 let soundOn = config.sound;
 let starting = false, startRequest = 0;
+let pk;
 document.addEventListener('languagechange-request', async event => {
-  if (!starting && !['playing', 'preview', 'paused'].includes(game.state) && !sessionRows.length) return;
+  if (!pk?.active && !starting && !['playing', 'preview', 'paused'].includes(game.state) && !sessionRows.length) return;
   event.preventDefault();
   const resume = game.pause(); render();
   if (await confirmAction(t('切換語言？'), t('切換語言會重新載入此頁，結束目前遊戲並清空本次排行榜。已保存的設定、圖片與成績紀錄會保留。'), t('切換語言'))) navigateLanguage(event.detail.href, event.detail.language);
@@ -111,7 +113,7 @@ $('#restart').onclick = async () => {
 };
 $('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if (soundOn) void sounds.prepare(); render(); };
 $('#rank-group').onchange = updateRankList;
-const playPanel = $('.play-panel');
+const playPanel = $('.game-layout .play-panel');
 const zoomNotice = $('#fullscreen-zoom-hint');
 const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === playPanel || playPanel.classList.contains('expanded-view'), () => {
   zoomNotice.innerHTML = localizeMarkup('<kbd>CTRL</kbd><span>+滾輪可以調整畫面大小</span>');
@@ -120,7 +122,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && gam
 window.addEventListener('pagehide', () => { sessionRows = []; fullscreenHint.cancel(); });
 window.addEventListener('pageshow', event => { if (event.persisted) { sessionRows = []; renderRanking(); } });
 $('#fullscreen').onclick = async () => {
-  const panel = $('.play-panel');
+  const panel = playPanel;
   if (document.fullscreenElement) { await document.exitFullscreen().catch(() => {}); return; }
   if (panel.classList.contains('expanded-view')) { panel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); return; }
   try { if (!panel.requestFullscreen) throw Error(); await panel.requestFullscreen(); }
@@ -130,7 +132,7 @@ document.addEventListener('fullscreenchange', () => {
   $('#fullscreen').setAttribute('aria-label', document.fullscreenElement ? t('退出全螢幕') : t('全螢幕'));
   if (document.fullscreenElement === playPanel) fullscreenHint.schedule(); else fullscreenHint.cancel();
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { $('.play-panel').classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { playPanel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); } });
 // Secondary panels are loaded only when opened; primary game is immediately playable.
 $('#settings-open').onclick = async () => {
   game.pause(); render();
@@ -143,4 +145,12 @@ $('#records-open').onclick = async () => {
   openRecords(records, () => { if (store.clearRecords()) { records = []; return true; } return false; });
 };
 makeStage(); renderRanking(); render();
+pk = initPK({ getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound,
+  setActive(active) {
+    if (active) { startRequest++; starting = false; game.pause(); }
+    $('.game-layout').hidden = active;
+    $('#settings-open').disabled = active; $('#records-open').disabled = active; $('#pk-open').disabled = active;
+    render();
+  },
+});
 setInterval(render, 40);

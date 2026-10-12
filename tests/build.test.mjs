@@ -76,7 +76,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       const sitemap = await read('sitemap.xml');
       for (const prefix of ['', 'en/', 'ja/', 'ko/']) {
         const policy = await read(prefix + 'privacy/index.html');
-        assert.match(policy, /<time datetime="2026-10-09">2026-10-09<\/time>/);
+        assert.match(policy, /<time datetime="2026-10-10">2026-10-10<\/time>/);
         assert.ok(policy.includes('https://policies.google.com/technologies/partner-sites'));
         assert.ok(policy.includes('https://www.cloudflare.com/turnstile-privacy-policy/'));
         assert.ok(policy.includes('mailto:wwwne1198@gmail.com'));

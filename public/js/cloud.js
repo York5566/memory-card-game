@@ -21,7 +21,7 @@ function loadTurnstile() {
   });
   return scriptPromise;
 }
-async function challenge(host, action) {
+export async function challenge(host, action) {
   if (!cloudReady()) throw new Error(t('雲端代碼功能尚未啟用；目前仍可在此瀏覽器使用自訂圖片。'));
   await loadTurnstile();
   host.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -49,8 +49,13 @@ export async function saveCloud(config, host) {
   } catch { throw new Error(t('瀏覽器無法保存管理憑證，請允許本機儲存後再產生代碼。')); }
   const token = await challenge(host, 'save');
   const response = await call('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Turnstile-Token': token, 'X-Request-Id': pending.requestId, 'X-Owner-Token': pending.owner }, body: bytes });
-  const receipt = { ...await response.json(), owner: pending.owner };
+  const receipt = { ...await response.json(), owner: pending.owner, digest };
   remember(receipt); localStorage.removeItem(pendingKey); return receipt;
+}
+export async function shareCloud(config, host) {
+  const digest = await sha256(await encodeProfile(config, getImage));
+  const saved = receipts().find(row => row.digest === digest && row.expiresAt > Date.now() + 3600000);
+  return saved || saveCloud(config, host);
 }
 export async function loadCloud(value, host) {
   if (!validCode(value)) throw new Error(t('請輸入完整的 12 位數字代碼。'));

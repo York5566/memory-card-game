@@ -1,4 +1,6 @@
 import { decodeProfile, readLimited, LIMITS, sha256, normalizeCode, validCode } from '../public/js/profile-format.js';
+import { handlePK } from './pk.js';
+export { PKArena } from './pk.js';
 
 const DAY = 86400000;
 export const QUOTA = Object.freeze({ bytes: 512 * 1024 * 1024, profiles: 1000, requests: 6000, saves: 100, loads: 2000, deletes: 1000, ipSaves: 5, ipLoads: 60, ipDeletes: 30 });
@@ -114,6 +116,7 @@ export async function cleanup(env, now = Date.now()) {
 export function createWorker({ verify = verifyTurnstile, now = () => Date.now() } = {}) {
   return {
     async fetch(request, env) {
+      if (new URL(request.url).pathname.startsWith('/api/pk/')) return handlePK(request, env, { verify, ipKey });
       const origin = request.headers.get('Origin'), allowed = (env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim());
       let response;
       try {

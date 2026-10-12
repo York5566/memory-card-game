@@ -81,15 +81,39 @@ dialog{border:1px solid var(--border);border-radius:18px;padding:26px;background
 #turnstile-host{max-width:100%;overflow:auto} .settings-dialog[aria-busy=true]{cursor:progress}
 
 /* Overlay only: the original fullscreen padding and game layout stay unchanged. */
-#fullscreen-zoom-hint{position:fixed;top:108px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;justify-content:center;gap:7px;max-width:calc(100vw - 32px);width:max-content;padding:8px 40px;font-family:system-ui,"Microsoft JhengHei",sans-serif;font-size:1rem;font-weight:400;line-height:1.5;text-align:center;border-radius:8px;background:#282c32;color:#fff;pointer-events:none;opacity:1}
-#fullscreen-zoom-hint kbd{flex:none;font:inherit;border:1px solid #fff;border-radius:2px;padding:4px 5px;line-height:1.25}
-#fullscreen-zoom-hint span{overflow-wrap:anywhere;min-width:0}
-#fullscreen-zoom-hint[data-state=visible]{animation:fullscreen-hint-in .35s ease-out both}
-#fullscreen-zoom-hint[data-state=closing]{animation:fullscreen-hint-out .7s ease-out both}
+:is(#fullscreen-zoom-hint,#pk-zoom-hint){position:fixed;top:108px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;align-items:center;justify-content:center;gap:7px;max-width:calc(100vw - 32px);width:max-content;padding:8px 40px;font-family:system-ui,"Microsoft JhengHei",sans-serif;font-size:1rem;font-weight:400;line-height:1.5;text-align:center;border-radius:8px;background:#282c32;color:#fff;pointer-events:none;opacity:1}
+:is(#fullscreen-zoom-hint,#pk-zoom-hint) kbd{flex:none;font:inherit;border:1px solid #fff;border-radius:2px;padding:4px 5px;line-height:1.25}
+:is(#fullscreen-zoom-hint,#pk-zoom-hint) span{overflow-wrap:anywhere;min-width:0}
+:is(#fullscreen-zoom-hint,#pk-zoom-hint)[data-state=visible]{animation:fullscreen-hint-in .35s ease-out both}
+:is(#fullscreen-zoom-hint,#pk-zoom-hint)[data-state=closing]{animation:fullscreen-hint-out .7s ease-out both}
 @keyframes fullscreen-hint-in{from{opacity:0}to{opacity:1}}
 @keyframes fullscreen-hint-out{from{opacity:1}to{opacity:0}}
-@media(max-width:540px){#fullscreen-zoom-hint{padding:8px 16px;font-size:.9375rem}}
-@media(prefers-reduced-motion:reduce){#fullscreen-zoom-hint[data-state=closing]{opacity:0}}
+@media(max-width:540px){:is(#fullscreen-zoom-hint,#pk-zoom-hint){padding:8px 16px;font-size:.9375rem}}
+@media(prefers-reduced-motion:reduce){:is(#fullscreen-zoom-hint,#pk-zoom-hint)[data-state=closing]{opacity:0}}
 
 /* Privacy information follows the existing document and footer layout. */
 .site-footer .privacy-link{align-self:flex-start;text-decoration:underline;text-underline-offset:3px;line-height:1.7;flex:none}.privacy-policy{max-width:800px}.privacy-policy h1{margin-bottom:10px}.policy-updated{color:var(--muted);font-size:.8125rem}.policy-summary{background:var(--mint);border:1px solid var(--border);border-radius:16px;padding:18px 24px;margin:24px 0}.policy-summary ul{margin:0;padding-left:20px}.privacy-policy li{line-height:1.9;margin:8px 0}.policy-contents{display:flex;flex-wrap:wrap;gap:10px 18px;padding:8px 0 18px;border-bottom:1px solid var(--border);font-size:.875rem}.privacy-policy h2{scroll-margin-top:24px}.policy-resources{padding-left:22px}.policy-contact{display:flex;flex-wrap:wrap;gap:4px}.privacy-policy a{overflow-wrap:anywhere}@media(max-width:540px){.policy-summary{padding:14px 18px}.policy-contents{gap:9px 14px}.privacy-policy li{font-size:.9375rem}}
+
+/* PK uses the existing card artwork, with a separate turn/score display. */
+.pk-panel { margin-bottom: 2rem; padding: clamp(16px, 3vw, 32px); }
+.pk-top,.pk-top-actions,.pk-actions,.pk-link-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.pk-top { justify-content:space-between; margin-bottom:16px; }
+.pk-top h2 { margin:0; }
+.pk-top .eyebrow { margin:0 0 6px; }
+.pk-panel input { max-width:100%; }
+#pk-name { display:block; width: min(100%,360px); margin:8px 0; }
+.pk-actions { margin:18px 0; }
+.pk-status { padding:14px 18px; border-radius:12px; background:#e4efe6; color:#244b3a; font-weight:700; min-height:3em; }
+.pk-rule-summary { color:#526d5f; font-size:.92rem; line-height:1.6; }
+.pk-link-row { flex-wrap:nowrap; margin:8px 0; }
+.pk-link-row input { flex:1; min-width:0; }
+.pk-link-row button { flex-shrink:0; }
+.pk-scoreboard { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; margin:18px 0; }
+.pk-scoreboard>div { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; border:2px solid #dce6dc; border-radius:14px; background:#fafcf7; min-width:0; }
+.pk-scoreboard span { overflow-wrap:anywhere; }
+.pk-scoreboard strong { font-size:1.8rem; color:#315d48; }
+.pk-scoreboard .is-turn { border-color:#4f8366; background:#eaf4e8; }
+.pk-footnote { margin:18px 0 0; }
+.pk-panel:fullscreen { overflow:auto; height:100dvh; box-sizing:border-box; background:var(--paper,#f7f8f1); }
+.pk-panel:fullscreen .stage { flex:none; }
+@media(max-width:600px) { .pk-scoreboard { gap:8px; } .pk-scoreboard>div { padding:10px; gap:6px; flex-direction:column; text-align:center; } .pk-top-actions { gap:6px; } .pk-actions .button { flex:1; } }

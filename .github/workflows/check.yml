@@ -14,6 +14,8 @@ jobs:
           node-version: '22'
           package-manager-cache: false
       - run: node --test tests/*.test.mjs cloudflare/tests/*.test.mjs
+      - run: npm ci --prefix cloudflare
+      - run: node cloudflare/tests/pk-runtime.mjs
       - run: node scripts/build.mjs
       - run: node scripts/check.mjs
       - uses: actions/upload-artifact@v7

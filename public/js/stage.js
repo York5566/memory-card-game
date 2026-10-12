@@ -1,5 +1,5 @@
 import { t, msg, html, locale } from './i18n.js';
-import { ASSETS, PRODUCTS, defaults, get } from './core.js';
+import { ASSETS, PRODUCTS, defaults, get, transform } from './core.js';
 import { imageURL } from './images.js';
 export const productName = (config, id) => config.products.find(p => p.id === id)?.label || t(PRODUCTS.find(p => p.id === id)?.name || '') || t('自訂圖案');
 export const escapeHTML = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -13,7 +13,7 @@ function imageLayer(path, layer, className = '') {
   return `<div class="art-layer ${className}" style="opacity:${layer.opacity / 100};transform:translate(${layer.x}%,${layer.y}%) rotate(${layer.rotation}deg) scale(${layer.zoom / 100});clip-path:inset(${layer.cropTop}% ${layer.cropRight}% ${layer.cropBottom}% ${layer.cropLeft}%)"><img src="${escapeHTML(url)}" alt="" draggable="false" style="object-fit:${fit}"></div>`;
 }
 export function createCard(c, id, index = 0) {
-  const p = PRODUCTS.find(p => p.id === id), setting = c.products.find(p => p.id === id);
+  const p = PRODUCTS.find(p => p.id === id), setting = c.products.find(p => p.id === id) || { image: transform() };
   const back = ASSETS.back.find(a => a.id === c.back.asset);
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'card'; button.dataset.index = index;
@@ -21,7 +21,7 @@ export function createCard(c, id, index = 0) {
   button.style.minHeight = '54px';
   button.style.setProperty('--card-radius', `${c.radius}px`);
   button.style.setProperty('--match-color', c.matchColor);
-  button.innerHTML = `<span class="card-turn"><span class="card-face card-back" style="background:${c.backColor}">${imageLayer(back?.path, c.back)}</span><span class="card-face card-front" style="background:${c.cardColor}"><span class="product-art">${imageLayer(p.path, setting.image)}</span>${c.showLabels ? `<span class="product-label">${escapeHTML(productName(c, id))}</span>` : ''}<span class="match-tick" aria-hidden="true">✓</span></span></span>`;
+  button.innerHTML = `<span class="card-turn"><span class="card-face card-back" style="background:${c.backColor}">${imageLayer(back?.path, c.back)}</span><span class="card-face card-front" style="background:${c.cardColor}"><span class="product-art">${imageLayer(p?.path, setting.image)}</span>${c.showLabels ? `<span class="product-label">${escapeHTML(productName(c, id))}</span>` : ''}<span class="match-tick" aria-hidden="true">✓</span></span></span>`;
   button.setAttribute('aria-label', msg`第 ${index + 1} 張，尚未翻開`);
   return button;
 }
@@ -53,6 +53,13 @@ export function createStage(container, config, cards, onFlip, preview = false) {
   const observer = new ResizeObserver(resize); observer.observe(container); resize();
   return {
     buttons,
+    setCards(next) {
+      next.forEach((id, i) => {
+        if (id === cards[i]) return;
+        buttons[i].querySelector('.card-front').replaceWith(createCard(c, id, i).querySelector('.card-front'));
+      });
+      cards = [...next];
+    },
     update(game) {
       buttons.forEach((button, i) => {
         const revealed = game.isRevealed(i), matched = game.matched.has(i);

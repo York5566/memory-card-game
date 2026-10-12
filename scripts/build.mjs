@@ -11,6 +11,8 @@ if (dirname(output) !== root || !output.endsWith('dist')) throw Error('不安全
 export async function build({ preview = false } = {}) {
   const { base, domain } = siteAddress({ ...config, domain: preview ? '' : config.domain });
   const cloud = { ...config.cloud, preview, origin: domain };
+  const localPK = preview && /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(process.env.PK_LOCAL_API || '') ? process.env.PK_LOCAL_API : '';
+  const pk = { apiURL: localPK || config.cloud.apiURL, local: Boolean(localPK), available: !preview || Boolean(localPK) };
   if (cloud.apiURL) { const url = new URL(cloud.apiURL); if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.pathname !== '/') throw Error('雲端 API 必須是 HTTPS 網域根網址'); }
   if (preview) cloud.siteKey = ''; // Local previews never upload to the production account.
   await rm(output, { recursive: true, force: true });
@@ -19,7 +21,7 @@ export async function build({ preview = false } = {}) {
   const template = await readFile(join(root, 'src/layout.html'), 'utf8');
   const routes = [
     ['home', '', '首頁', config.description],
-    ['game', 'games/memory', '上傳照片，自訂記憶配對卡牌', '上傳自己的照片或圖片，免費製作線上記憶配對卡牌。可替換 12 種圖案、卡背、背景與 LOGO，調整縮放、位置、旋轉及裁切，選擇 2 至 12 對卡牌與限時挑戰。成績預設保存在目前瀏覽器。'],
+    ['game', 'games/memory', '上傳照片、自訂卡牌與好友 PK', '上傳照片免費製作記憶配對卡牌，自訂圖案、卡背、背景與 LOGO。支援 2 至 12 對卡牌、圖片構圖調整、好友邀請連結與線上 PK 配對，手機與電腦皆可遊玩。'],
     ['help', 'help', '圖片上傳與玩法設定教學', '學習如何上傳 PNG、JPG、WebP 圖片，自訂翻牌遊戲的配對圖案、卡背、背景與 LOGO，調整圖片構圖、使用數字代碼載入設定，以及查看成績紀錄與匯出 CSV。'],
     ['privacy', 'privacy', '隱私權政策', '了解翻牌遊戲如何保存本機設定、圖片與成績，以及雲端代碼、30 天期限、GA4 統計、Cookie、Cloudflare 驗證與資料刪除方式。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
@@ -38,7 +40,7 @@ export async function build({ preview = false } = {}) {
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, html);
   }
-  await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud })};\n`);
+  await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud, pk })};\n`);
   if (domain) {
     const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([, route]) => route !== null).map(([page, route]) => {
       const path = route ? route + '/' : '';

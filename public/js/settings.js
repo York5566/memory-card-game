@@ -114,7 +114,7 @@ export function openSettings(applied, apply) {
   }
   function uploadField(path, label) {
     const custom = get(history.value, path)?.upload;
-    return html`<div class="upload-panel"><strong>${label}</strong><p class="field-note">PNG、JPG、WebP，原圖最多 10 MiB；自動壓縮至 256 KiB。圖片先保存在此瀏覽器，產生雲端代碼時才上傳。</p><label class="upload-label">選擇圖片<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="${path}"></label><div class="upload-status"><span data-upload-state="${path}">${custom ? t('使用自訂圖片') : t('使用內建圖片')}</span><button class="button small" data-remove-image="${path}" ${custom ? '' : 'hidden'}>移除自訂圖片</button></div></div>`;
+    return html`<div class="upload-panel"><strong>${label}</strong><p class="field-note">PNG、JPG、WebP，原圖最多 10 MiB；自動壓縮至 256 KiB。圖片先保存在此瀏覽器，產生雲端代碼或使用自訂圖片參與 PK 時上傳。</p><label class="upload-label">選擇圖片<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="${path}"></label><div class="upload-status"><span data-upload-state="${path}">${custom ? t('使用自訂圖片') : t('使用內建圖片')}</span><button class="button small" data-remove-image="${path}" ${custom ? '' : 'hidden'}>移除自訂圖片</button></div></div>`;
   }
   function productFields() { return uploadField(`products.${product}.image`, t('替換這個圖案')) + field(['label', t('圖案名稱'), 'text', 30], `products.${product}.`) + TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join(''); }
   function library() {
@@ -122,12 +122,12 @@ export function openSettings(applied, apply) {
   }
   function renderCloud(host) {
     const ready = cloudReady();
-    host.innerHTML = html`<h3>把設定帶到另一台裝置</h3><p>產生 12 位數字代碼，保存目前草稿、構圖與自訂圖片。另一台裝置輸入代碼後，按「儲存並套用」即可使用。</p>${ready ? '' : localizeMarkup('<p class="cloud-notice">此預覽未連接雲端，或雲端功能尚未啟用。本機圖片上傳與設定仍可正常使用。</p>')}<div class="cloud-card"><h4>1. 保存目前草稿</h4><p>每份最多 15 張圖片、4 MiB。只傳送設定與圖片，不傳送暱稱、排行榜或成績紀錄。</p><p>持有代碼的人都能讀取圖片與設定，請勿放入私密內容。最後一次透過代碼讀取起，30 天未使用自動刪除；只在本機玩遊戲不會延長期限。</p><button class="button primary" id="cloud-save" ${ready ? '' : 'disabled'}>產生代碼</button><output id="cloud-result" class="cloud-code" aria-live="polite">${esc(formatCode(lastCode))}</output></div><div class="cloud-card"><h4>2. 載入雲端設定</h4><label for="cloud-code-input">12 位數字代碼</label><input id="cloud-code-input" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="1234 5678 9012"><button class="button" id="cloud-load" ${ready ? '' : 'disabled'}>載入到草稿</button><p>載入會替換目前草稿，可用「復原」回到先前設定。成功載入後圖片會保存在此裝置，不必每局重新下載。</p></div><div id="turnstile-host"></div><p class="hint">每個網路每日最多產生 5 組、讀取 60 次；達到全站配額時，雲端功能暫停，本機遊戲仍可繼續。清除瀏覽器資料會移除本機圖片與刪除憑證。</p><details class="details-block"><summary>此瀏覽器建立的代碼（${receipts().length}）</summary><div id="cloud-receipts"></div></details>`;
+    host.innerHTML = html`<h3>把設定帶到另一台裝置</h3><p>產生 12 位數字代碼，保存目前草稿、構圖與自訂圖片。另一台裝置輸入代碼後，按「儲存並套用」即可使用。</p>${ready ? '' : localizeMarkup('<p class="cloud-notice">此預覽未連接雲端，或雲端功能尚未啟用。本機圖片上傳與設定仍可正常使用。</p>')}<div class="cloud-card"><h4>1. 保存目前草稿</h4><p>每份最多 15 張圖片、4 MiB。只傳送設定與圖片，不傳送暱稱、排行榜或成績紀錄。</p><p>持有代碼的人都能讀取圖片與設定，請勿放入私密內容。成功讀取或用於建立 PK／參與配對後，30 天未使用自動刪除；單人遊戲不會延長期限。</p><button class="button primary" id="cloud-save" ${ready ? '' : 'disabled'}>產生代碼</button><output id="cloud-result" class="cloud-code" aria-live="polite">${esc(formatCode(lastCode))}</output></div><div class="cloud-card"><h4>2. 載入雲端設定</h4><label for="cloud-code-input">12 位數字代碼</label><input id="cloud-code-input" type="text" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="1234 5678 9012"><button class="button" id="cloud-load" ${ready ? '' : 'disabled'}>載入到草稿</button><p>載入會替換目前草稿，可用「復原」回到先前設定。成功載入後圖片會保存在此裝置，不必每局重新下載。</p></div><div id="turnstile-host"></div><p class="hint">每個網路每日最多產生 5 組、讀取 60 次；達到全站配額時，雲端功能暫停，本機遊戲仍可繼續。清除瀏覽器資料會移除本機圖片與刪除憑證。</p><details class="details-block"><summary>此瀏覽器建立的代碼（${receipts().length}）</summary><div id="cloud-receipts"></div></details>`;
     const challengeHost = host.querySelector('#turnstile-host');
     host.querySelector('#cloud-save').onclick = () => operation(t('正在保存草稿，請完成下方驗證…'), async () => {
       history.commit(); const result = await saveCloud(history.value, challengeHost); lastCode = result.code;
       host.querySelector('#cloud-result').textContent = formatCode(result.code); drawReceipts();
-      status(msg`已保存，代碼 ${formatCode(result.code)}。30 天未透過代碼讀取將自動刪除。`);
+      status(msg`已保存，代碼 ${formatCode(result.code)}。30 天未使用將自動刪除。`);
     });
     host.querySelector('#cloud-load').onclick = () => operation(t('正在載入設定，請完成下方驗證…'), async () => {
       const next = await loadCloud(host.querySelector('#cloud-code-input').value, challengeHost); history.replace(next); status(t('雲端設定已載入草稿。請檢查預覽，再按「儲存並套用」。'));

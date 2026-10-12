@@ -8,6 +8,7 @@
     "check": "wrangler deploy --dry-run",
     "test": "node --test tests/*.test.mjs",
     "test:runtime": "node tests/runtime.mjs",
+    "test:pk": "node tests/pk-runtime.mjs",
     "migrate": "wrangler d1 migrations apply memory-card-game --remote",
     "deploy": "wrangler deploy"
   },

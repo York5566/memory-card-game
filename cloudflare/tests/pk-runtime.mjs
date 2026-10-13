@@ -46,6 +46,27 @@ try {
   c.send({type:'leave'});await d.next(x=>x.type==='room'&&x.view.state==='ended');
   console.log('PASS atomic matchmaking uses first player settings');
 
+  const r=await player('Replay host'),q=await player('Replay guest');
+  r.send({type:'create',source:{config:{...config,timed:true,limitSeconds:5}}});const replay=await room(r);
+  q.send({type:'join',id:replay.id});await room(q);r.send({type:'ready'});q.send({type:'ready'});
+  await r.next(x=>x.type==='room'&&x.view.state==='playing');
+  const result=await r.next(x=>x.type==='room'&&x.view.state==='ended');await q.next(x=>x.type==='room'&&x.view.state==='ended');
+  assert.equal(result.view.canRematch,true);r.send({type:'rematch',round:1});
+  const voted=await r.next(x=>x.type==='room'&&x.view.rematch[0]);assert.equal(voted.view.state,'ended');
+  const notice=await q.next(x=>x.type==='room'&&x.view.rematch[0]);assert.equal(notice.view.rematch[1],false);
+  q.send({type:'rematch',round:1});
+  const replayR=await r.next(x=>x.type==='room'&&x.view.round===2),replayQ=await q.next(x=>x.type==='room'&&x.view.round===2);
+  assert.equal(replayR.id,replay.id);assert.equal(replayQ.id,replay.id);assert.equal(replayR.view.state,'playing');
+  assert.deepEqual(replayR.view.scores,[0,0]);assert.deepEqual(replayR.view.players,replayQ.view.players);assert.ok(replayR.view.cards.every(x=>x===null));
+  r.send({type:'rematch',round:1});const stale=await r.next(x=>x.type==='room'&&x.view.round===2);assert.equal(stale.view.state,'playing');
+  await r.next(x=>x.type==='room'&&x.view.round===2&&x.view.state==='ended');await q.next(x=>x.type==='room'&&x.view.round===2&&x.view.state==='ended');
+  q.ws.close(1000,'network');const away=await r.next(x=>x.type==='room'&&x.view.round===2&&!x.view.connected[1]);assert.equal(away.view.canRematch,false);
+  const resumedQ=await socket(q.session);await room(resumedQ);await r.next(x=>x.type==='room'&&x.view.round===2&&x.view.canRematch);
+  resumedQ.send({type:'leave'});const left=await r.next(x=>x.type==='room'&&x.view.round===2&&!x.view.canRematch);assert.equal(left.view.connected[1],false);
+  r.send({type:'rematch',round:2});assert.equal((await r.next(x=>x.type==='room'&&x.view.round===2)).view.state,'ended');
+  r.send({type:'leave'});
+  console.log('PASS two-party rematch, same room, reset scores, stale votes, result reconnect and departed opponent');
+
   const bytes=await readFile(new URL('../../tests/fixtures/alpha.webp',import.meta.url));const id=await sha256(bytes), custom=structuredClone(config);custom.back.upload=id;
   const packed=await encodeProfile(custom,()=>new Blob([bytes]));
   const save=await mf.dispatchFetch('https://api.local/api/settings',{method:'POST',headers:{Origin:origin,'X-Turnstile-Token':'save','X-Request-Id':crypto.randomUUID(),'X-Owner-Token':'e'.repeat(64),'Content-Type':'application/octet-stream'},body:packed});
@@ -64,8 +85,9 @@ try {
   const reconnectSession=h.session;h.ws.close(1000,'network');
   h={...await socket(reconnectSession),session:reconnectSession};
   assert.equal((await h.next(x=>x.type==='queue')).until,waiting.until,'queue reconnect keeps the original deadline');
-  console.log('Waiting for real 25-second queue deadline…');
-  const fallback=await new Promise((resolve,reject)=>{const limit=setTimeout(()=>reject(Error('fallback timeout')),30000);const check=setInterval(()=>{const index=h.messages.findIndex(x=>x.type==='fallback');if(index>=0){clearTimeout(limit);clearInterval(check);resolve(h.messages.splice(index,1)[0]);}},50);});
+  assert.ok(waiting.until-waiting.since>=15000&&waiting.until-waiting.since<=30000);
+  console.log('Waiting for random 15–30-second queue deadline…');
+  const fallback=await new Promise((resolve,reject)=>{const limit=setTimeout(()=>reject(Error('fallback timeout')),35000);const check=setInterval(()=>{const index=h.messages.findIndex(x=>x.type==='fallback');if(index>=0){clearTimeout(limit);clearInterval(check);resolve(h.messages.splice(index,1)[0]);}},50);});
   assert.equal(fallback.type,'fallback');h.send({type:'fallback-ack'});await h.next(x=>x.type==='released');
   const i=await player('Ivy');i.send({type:'queue',source:{config}});await i.next(x=>x.type==='queue');i.send({type:'leave'});
   assert.ok(!h.messages.some(x=>x.type==='room'));assert.ok(!g.messages.some(x=>x.type==='fallback'));

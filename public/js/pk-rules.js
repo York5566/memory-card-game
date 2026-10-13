@@ -1,6 +1,7 @@
 import { sanitize, shuffle } from './core.js';
 
-export const PK = Object.freeze({ waitMs: 25000, lobbyMs: 180000, reconnectMs: 30000, turnMs: 20000, maxGameMs: 600000, resultMs: 60000 });
+export const PK = Object.freeze({ waitMinMs: 15000, waitMaxMs: 30000, lobbyMs: 180000, reconnectMs: 30000, turnMs: 20000, maxGameMs: 600000, resultMs: 60000 });
+export const queueWait = (random = Math.random) => PK.waitMinMs + Math.floor(Math.min(.999999999, Math.max(0, random())) * (PK.waitMaxMs - PK.waitMinMs + 1));
 export const nickname = value => String(value || '').replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, 24) || 'Player';
 
 export function makeRoom(config, player, now, random = Math.random) {
@@ -9,7 +10,7 @@ export function makeRoom(config, player, now, random = Math.random) {
   const pool = shuffle(clean.products.filter(p => p.enabled), random).slice(0, clean.pairs);
   return { config: clean, players: [player, null], ready: [false, false], connected: [true, false], away: [0, 0],
     cards: shuffle(pool.flatMap(p => [p.id, p.id]), random), matched: [], open: [], scores: [0, 0], misses: [0, 0],
-    state: 'lobby', turn: random() < .5 ? 0 : 1, createdAt: now, expiresAt: now + PK.lobbyMs, rev: 0,
+    round: 1, rematch: [false, false], rematchClosed: false, state: 'lobby', turn: random() < .5 ? 0 : 1, createdAt: now, expiresAt: now + PK.lobbyMs, rev: 0,
     flips: 0, winner: null, reason: '', settleAt: 0, turnEnd: 0, startedAt: 0, endAt: 0 };
 }
 export function finishRoom(room, now, reason, winner) {
@@ -18,6 +19,23 @@ export function finishRoom(room, now, reason, winner) {
   room.winner = winner === undefined ? (room.scores[0] === room.scores[1] ? null : room.scores[0] > room.scores[1] ? 0 : 1) : winner;
   room.expiresAt = now + PK.resultMs; room.endedAt = now; room.rev++;
   return true;
+}
+export function canRematch(room, now) {
+  return room.state === 'ended' && now < room.expiresAt && !room.rematchClosed &&
+    room.players.every(Boolean) && room.connected.every(Boolean) && ['complete','time','idle'].includes(room.reason);
+}
+// Each vote belongs to one round. Old/repeated messages cannot start another game.
+export function requestRematch(room, seat, now, round, random = Math.random) {
+  if (![0,1].includes(seat) || round !== (room.round || 1) || !canRematch(room, now)) return 'ignored';
+  room.rematch ||= [false, false];
+  if (room.rematch[seat]) return 'ignored';
+  room.rematch[seat] = true; room.rev++;
+  if (!room.rematch.every(Boolean)) return 'waiting';
+  const players = room.players, rev = room.rev, nextRound = (room.round || 1) + 1;
+  Object.assign(room, makeRoom(room.config, players[0], now, random), { players, connected: [true,true], round: nextRound, rev });
+  delete room.endedAt;
+  readyRoom(room, 0, now); readyRoom(room, 1, now);
+  return 'started';
 }
 export function advanceRoom(room, now) {
   if (room.state === 'ended') return false;
@@ -70,7 +88,7 @@ export function flipRoom(room, seat, index, now, rev) {
 }
 export function roomView(room, seat, now) {
   const revealAll = room.state === 'preview' || room.state === 'ended';
-  return { state: room.state, seat, config: room.config, players: room.players.map(p => p ? { name: p.name } : null),
+  return { round: room.round || 1, rematch: room.rematch || [false,false], canRematch: canRematch(room, now), state: room.state, seat, config: room.config, players: room.players.map(p => p ? { name: p.name } : null),
     ready: room.ready, connected: room.connected, scores: room.scores, turn: room.turn, rev: room.rev, flips: room.flips,
     cards: room.cards.map((id, i) => revealAll || room.open.includes(i) || room.matched.includes(i) ? id : null),
     matched: room.matched, open: room.open, settleAt: room.settleAt, turnEnd: room.turnEnd, startedAt: room.startedAt,

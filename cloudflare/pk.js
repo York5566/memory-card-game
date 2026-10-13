@@ -1,8 +1,11 @@
 import { sanitize } from '../public/js/core.js';
 import { imageIds, readLimited, decodeProfile, LIMITS, sha256 } from '../public/js/profile-format.js';
-import { PK, nickname, makeRoom, advanceRoom, readyRoom, flipRoom, finishRoom, roomView, nextDeadline } from '../public/js/pk-rules.js';
+import { PK, queueWait, requestRematch, canRematch, nickname, makeRoom, advanceRoom, readyRoom, flipRoom, finishRoom, roomView, nextDeadline } from '../public/js/pk-rules.js';
 
 export const PK_QUOTA = Object.freeze({ sessions: 400, rooms: 200, actions: 12000, activeRooms: 20, activeSessions: 64, perIP: 30, assets: 3, messages: 900 });
+const random = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+// Preserve queued deadlines when upgrading the previous Worker version.
+const queueDeadline = s => s.queueUntil || s.queueAt + 25000;
 const DAY = 86400000, TTL = 20 * 60000;
 const hash = s => sha256(new TextEncoder().encode(s));
 const token = () => [...crypto.getRandomValues(new Uint8Array(24))].map(n => n.toString(16).padStart(2, '0')).join('');
@@ -76,7 +79,7 @@ export class PKArena {
   }
   async schedule() {
     const deadlines = [...this.rooms.values()].map(nextDeadline);
-    for (const s of this.sessions.values()) { deadlines.push(s.expires); if (s.queueAt) deadlines.push(s.queueAt + PK.waitMs); }
+    for (const s of this.sessions.values()) { deadlines.push(s.expires); if (s.queueAt) deadlines.push(queueDeadline(s)); }
     if (deadlines.length) {
       const time = Math.max(Date.now() + 50, Math.min(...deadlines));
       const previous = await this.ctx.storage.getAlarm();
@@ -100,7 +103,7 @@ export class PKArena {
         for (const ws of this.sockets(sid)) ws.close(1000, 'expired');
         this.sessions.delete(key); await this.ctx.storage.delete(key); continue;
       }
-      if (s.queueAt && now >= s.queueAt + PK.waitMs) {
+      if (s.queueAt && now >= queueDeadline(s)) {
         s.queueAt = 0; s.fallback = true; await this.putSession(sid, s);
         this.send(sid, { type: 'fallback' });
       }
@@ -110,8 +113,9 @@ export class PKArena {
     s.queueAt = 0; s.fallback = false; s.released = true;
     if (s.room) {
       const room = this.rooms.get('r:' + s.room);
-      if (room && room.state !== 'ended') {
+      if (room) {
         const seat = room.players.findIndex(p => p?.sid === sid);
+        room.connected[seat] = false; room.rematchClosed = true; room.rev++;
         finishRoom(room, now, 'left', room.players[1 - seat] ? 1 - seat : null);
         await this.putRoom(s.room, room); this.broadcast(s.room);
       }
@@ -152,7 +156,7 @@ export class PKArena {
               room.connected[seat] = true; room.away[seat] = 0; room.rev++;
               await this.putRoom(s.room, room); this.broadcast(s.room);
             }
-          } else this.send(sid, s.fallback ? { type: 'fallback' } : s.queueAt ? { type: 'queue', until: s.queueAt + PK.waitMs, now } : { type: 'idle' });
+          } else this.send(sid, s.fallback ? { type: 'fallback' } : s.queueAt ? { type: 'queue', since: s.queueAt, until: queueDeadline(s), now } : { type: 'idle' });
           await this.schedule();
           return new Response(null, { status: 101, webSocket: client, headers: { 'Sec-WebSocket-Protocol': 'memory-pk' } });
         }
@@ -225,22 +229,33 @@ export class PKArena {
             s.source = await this.source(data.source);
             if (data.type === 'create') await this.createRoom(sid, s, null, null, now);
             else {
-              const found = [...this.sessions].find(([key, other]) => key !== 's:' + sid && other.queueAt && now < other.queueAt + PK.waitMs && other.expires > now && this.sockets(key.slice(2)).length);
+              const found = [...this.sessions].find(([key, other]) => key !== 's:' + sid && other.queueAt && now < queueDeadline(other) && other.expires > now && this.sockets(key.slice(2)).length);
               if (found) await this.createRoom(found[0].slice(2), found[1], sid, s, now);
-              else { s.queueAt = now; this.send(sid, { type: 'queue', until: now + PK.waitMs, now }); }
+              else { s.queueAt = now; s.queueUntil = now + queueWait(random); this.send(sid, { type: 'queue', since: now, until: s.queueUntil, now }); }
             }
           }
         } else if (data.type === 'leave') { await this.leave(sid, s, now); this.send(sid, { type: 'idle' }); }
         else if (data.type === 'fallback-ack') { if (!s.fallback || s.queueAt || s.room) fail('invalid'); s.fallback = false; s.source = null; s.released = true; this.send(sid, { type: 'released' }); }
-        else if (['ready', 'flip'].includes(data.type)) {
+        else if (['ready', 'flip', 'rematch'].includes(data.type)) {
           const room = this.rooms.get('r:' + s.room); if (!room) fail('missing');
           const seat = room.players.findIndex(p => p?.sid === sid);
           const sound = data.type === 'flip' ? flipRoom(room, seat, data.index, now, data.rev) : undefined;
           if (data.type === 'ready') readyRoom(room, seat, now);
+          if (data.type === 'rematch') {
+            if (canRematch(room, now) && data.round === (room.round || 1) && !room.rematch?.[seat]) {
+              if (this.ledger.rooms >= PK_QUOTA.rooms || (this.ledger.actions || 0) >= PK_QUOTA.actions * .75) fail('capacity');
+              // Keep the 20-minute session cap. Never start a round that cannot finish within it.
+              const required = room.config.previewSeconds * 1000 + (room.config.timed ? room.config.limitSeconds * 1000 : PK.maxGameMs) + PK.resultMs;
+              if (room.players.some(p => (this.sessions.get('s:' + p.sid)?.expires || 0) <= now + required)) fail('renew');
+            }
+            if (requestRematch(room, seat, now, data.round, random) === 'started') {
+              this.ledger.rooms++; await this.ctx.storage.put('ledger', this.ledger);
+            }
+          }
           await this.putRoom(s.room, room); this.broadcast(s.room, sound);
         } else fail('invalid');
       } catch (error) {
-        this.send(sid, { type: 'error', error: ['busy','missing','rate','images','capacity','auth','invalid'].includes(error.message) ? error.message : 'unavailable' });
+        this.send(sid, { type: 'error', error: ['busy','missing','rate','images','capacity','auth','invalid','renew'].includes(error.message) ? error.message : 'unavailable' });
       }
       await this.putSession(sid, s); await this.schedule();
     });
@@ -251,7 +266,7 @@ export class PKArena {
       if (!s || this.sockets(sid).some(other => other !== ws)) return;
       if (s.room) {
         const room = this.rooms.get('r:' + s.room);
-        if (room && room.state !== 'ended') {
+        if (room) {
           const seat = room.players.findIndex(p => p?.sid === sid); room.connected[seat] = false; room.away[seat] = Date.now(); room.rev++;
           await this.putRoom(s.room, room); this.broadcast(s.room);
         }

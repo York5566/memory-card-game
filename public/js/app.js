@@ -134,18 +134,19 @@ document.addEventListener('fullscreenchange', () => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { playPanel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); } });
 // Secondary panels are loaded only when opened; primary game is immediately playable.
-$('#settings-open').onclick = async () => {
+async function showSettings(onApply = () => {}) {
   game.pause(); render();
   const { openSettings } = await import('./settings.js');
-  openSettings(config, next => { config = next; soundOn = config.sound; sounds.setEnabled(soundOn); void sounds.prepare(); const saved = store.saveSettings(config); newRound(); renderRanking(); return saved; });
-};
+  openSettings(config, next => { config = next; soundOn = config.sound; sounds.setEnabled(soundOn); void sounds.prepare(); const saved = store.saveSettings(config); newRound(); renderRanking(); onApply(); return saved; });
+}
+$('#settings-open').onclick = () => showSettings();
 $('#records-open').onclick = async () => {
   game.pause(); render();
   const { openRecords } = await import('./records.js');
   openRecords(records, () => { if (store.clearRecords()) { records = []; return true; } return false; });
 };
 makeStage(); renderRanking(); render();
-pk = initPK({ getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound,
+pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound,
   setActive(active) {
     if (active) { startRequest++; starting = false; game.pause(); }
     $('.game-layout').hidden = active;

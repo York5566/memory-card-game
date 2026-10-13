@@ -21,8 +21,8 @@ export async function build({ preview = false } = {}) {
   const template = await readFile(join(root, 'src/layout.html'), 'utf8');
   const routes = [
     ['home', '', '首頁', config.description],
-    ['game', 'games/memory', '上傳照片、自訂卡牌與好友 PK', '上傳照片免費製作記憶配對卡牌，自訂圖案、卡背、背景與 LOGO。支援 2 至 12 對卡牌、圖片構圖調整、好友邀請連結與線上 PK 配對，手機與電腦皆可遊玩。'],
-    ['help', 'help', '圖片上傳與玩法設定教學', '學習如何上傳 PNG、JPG、WebP 圖片，自訂翻牌遊戲的配對圖案、卡背、背景與 LOGO，調整圖片構圖、使用數字代碼載入設定，以及查看成績紀錄與匯出 CSV。'],
+    ['game', 'games/memory', '上傳圖片翻牌，線上配對與好友對戰', '上傳照片免費製作記憶配對卡牌，自訂圖案、卡背、背景與 LOGO。支援 2 至 12 對卡牌、圖片構圖調整、好友邀請連結與線上 PK 配對，手機與電腦皆可遊玩。'],
+    ['help', 'help', '圖片上傳與玩法設定教學', '了解翻牌遊戲的線上配對、好友邀請、雙人 PK 規則與再戰方式。學習上傳圖片、自訂卡牌與背景、調整構圖、使用雲端代碼，以及查看成績紀錄。'],
     ['privacy', 'privacy', '隱私權政策', '了解翻牌遊戲如何保存本機設定、圖片與成績，以及雲端代碼、30 天期限、GA4 統計、Cookie、Cloudflare 驗證與資料刪除方式。'],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];

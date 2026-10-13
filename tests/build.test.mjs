@@ -72,6 +72,20 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.ok(graph[1].mainEntity.featureList.some(feature => feature.includes('上傳照片')));
       assert.match(gameHTML, /成績紀錄預設開啟/);
     });
+    await t.test('首頁四語配對說明可爬取，PK 入口沿用遊戲 canonical 並排除房間網址', async () => {
+      const sitemap = await read('sitemap.xml');
+      for (const [prefix,word] of [['','線上配對'],['en/','online'],['ja/','オンライン'],['ko/','온라인']]) {
+        const home = await read(prefix + 'index.html'), game = await read(prefix + 'games/memory/index.html');
+        assert.ok(home.includes('id="online-pk-title"'));
+        assert.ok(home.includes('href="/' + prefix + 'games/memory/?mode=pk"'));
+        assert.ok(home.match(/<title>(.*?)<\/title>/s)[1].toLowerCase().includes(word));
+        assert.ok(home.match(/<meta name="description" content="([^"]+)"/)[1].toLowerCase().includes(word));
+        assert.ok(home.match(/<meta property="og:description" content="([^"]+)"/)[1].toLowerCase().includes(word));
+        assert.ok(game.includes('rel="canonical" href="https://wwwne1198.party/' + prefix + 'games/memory/"'));
+        assert.ok(home.includes('href="/' + prefix + 'help/#pk"'));
+      }
+      assert.ok(!sitemap.includes('?mode=pk')); assert.ok(!sitemap.includes('#pk='));
+    });
     await t.test('四語政策頁與所有頁尾互相連結，目錄可使用且不誤標遊戲圖片', async () => {
       const sitemap = await read('sitemap.xml');
       for (const prefix of ['', 'en/', 'ja/', 'ko/']) {

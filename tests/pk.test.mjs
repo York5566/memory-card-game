@@ -59,3 +59,37 @@ test('local opponent learns only revealed observations, never receives the hidde
   assert.equal(bot.memory.size,1);assert.equal(bot.memory.get(0),room.cards[0]);assert.notEqual(bot.choose(view),0);
   for(let i=0;i<100;i++) {const choice=bot.choose(view);assert.ok(!view.open.includes(choice));assert.ok(!view.matched.includes(choice));}
 });
+
+// Replay requires two current-round votes and never reuses scores or revealed cards.
+test('rematch retains the opponents and images but resets game state only after both votes', async () => {
+  const {finishRoom,requestRematch,canRematch}=await import('../public/js/pk-rules.js');
+  const room=start({previewSeconds:3});room.assetKey='existing-pack';room.scores=[2,0];room.flips=9;room.open=[1];room.matched=[0,2];
+  finishRoom(room,2000,'complete',0);const players=structuredClone(room.players),config=structuredClone(room.config),oldRev=room.rev;
+  assert.equal(requestRematch(room,0,2010,1),'waiting');assert.equal(room.state,'ended');assert.deepEqual(room.scores,[2,0]);
+  assert.equal(requestRematch(room,0,2011,1),'ignored');
+  assert.equal(requestRematch(room,1,2012,1,()=>.9),'started');assert.equal(room.round,2);assert.equal(room.state,'preview');
+  assert.deepEqual(room.scores,[0,0]);assert.deepEqual(room.open,[]);assert.deepEqual(room.matched,[]);assert.equal(room.flips,0);
+  assert.deepEqual(room.players,players);assert.deepEqual(room.config,config);assert.equal(room.assetKey,'existing-pack');assert.ok(room.rev>oldRev);
+  assert.deepEqual(room.rematch,[false,false]);assert.equal(room.turn,1);assert.equal(room.startedAt,5012);
+  assert.equal(flipRoom(room,1,0,5012,oldRev),'ignored');assert.equal(requestRematch(room,1,5013,1),'ignored');
+  finishRoom(room,6000,'time');assert.equal(canRematch(room,6001),true);
+  assert.equal(requestRematch(room,0,6001,1),'ignored','old-round votes rejected after another result');
+});
+test('rematch blocks departed, disconnected, expired and invalid players', async () => {
+  const {finishRoom,requestRematch}=await import('../public/js/pk-rules.js');
+  for(const block of ['left','disconnect','expired','closed','offline','deadline']) {
+    const room=start();finishRoom(room,2000,['left','disconnect','expired'].includes(block)?block:'complete');
+    if(block==='closed')room.rematchClosed=true;if(block==='offline')room.connected[1]=false;
+    assert.equal(requestRematch(room,0,block==='deadline'?room.expiresAt:2010,1),'ignored',block);
+  }
+  const room=start();assert.equal(requestRematch(room,0,1010,1),'ignored');finishRoom(room,2000,'complete');
+  for(const seat of [-1,2,NaN])assert.equal(requestRematch(room,seat,2010,1),'ignored');
+  room.connected[1]=false;assert.equal(requestRematch(room,0,2010,1),'ignored');
+  room.connected[1]=true;assert.equal(requestRematch(room,0,2020,1),'waiting');
+});
+test('fallback random deadline stays within 15–30 seconds, including both endpoints', async () => {
+  const {queueWait}=await import('../public/js/pk-rules.js');
+  assert.equal(queueWait(()=>0),15000);assert.equal(queueWait(()=>1),30000);
+  for(let n=0;n<=1000;n++){const ms=queueWait(()=>n/1000);assert.ok(ms>=15000&&ms<=30000);assert.ok(Number.isInteger(ms));}
+  assert.ok(new Set(Array.from({length:100},()=>queueWait())).size>80);
+});

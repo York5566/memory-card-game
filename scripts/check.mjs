@@ -91,7 +91,7 @@ for (const path of all) {
     for (const match of html.matchAll(/(?:src|href)="([^"#]+)"/g)) {
       const url = match[1]; if (/^https?:|^data:|^mailto:/.test(url)) continue;
       if (!url.startsWith(base)) throw Error('資產或內部連結不在部署根路徑：' + url);
-      const rel = url.split('#')[0].slice(base.length);
+      const rel = new URL(url, 'https://local.invalid').pathname.slice(base.length);
       await access(resolve(dir, 'dist', rel.endsWith('/') || rel === '' ? rel + 'index.html' : rel)); checked++;
     }
   }

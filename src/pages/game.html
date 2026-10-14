@@ -4,12 +4,11 @@
 <section id="pk-panel" class="play-panel pk-panel" aria-label="雙人 PK" hidden></section>
 <div class="game-layout">
   <section class="play-panel" aria-label="遊戲區">
-    <div class="play-toolbar"><span id="rules-label" class="pill">6 對 / 12 張・不限時</span><button id="fullscreen" class="icon-button" aria-label="全螢幕" title="全螢幕">⛶</button></div>
+    <div class="play-toolbar"><span id="rules-label" class="pill">6 對 / 12 張・不限時</span><div class="zoom-controls" aria-label="牌面大小"><button class="button small" id="solo-zoom-out" aria-label="縮小卡牌">−</button><button class="button small" id="solo-zoom-reset" aria-label="重設卡牌大小" title="重設卡牌大小">100%</button><button class="button small" id="solo-zoom-in" aria-label="放大卡牌">＋</button></div><button id="fullscreen" class="icon-button" aria-label="全螢幕" title="全螢幕">⛶</button></div>
     <div class="stats" aria-label="遊戲進度"><div><span>挑戰用時</span><strong id="elapsed">00:00<span>.000</span></strong></div><div><span>翻牌次數</span><strong id="flips">0</strong></div><div><span>完成配對</span><strong id="matched">0 <small>/ 6</small></strong></div></div>
     <div class="game-controls"><button id="start" class="button primary">開始遊戲</button><button id="pause" class="button" disabled>暫停</button><button id="restart" class="button quiet" hidden>重新開始</button><button id="sound" class="icon-button" aria-label="關閉音效" title="關閉音效">♫</button></div>
     <div id="game-stage" class="stage"></div>
     <p id="game-status" class="game-status" role="status">準備好了嗎？開始後先看看所有圖案。</p>
-    <div id="fullscreen-zoom-hint" role="status" aria-atomic="true" hidden></div>
   </section>
   <aside class="side-panel">
     <section class="player-box"><p class="eyebrow">這一局的玩家</p><label for="nickname">暱稱 <span class="muted">（選填）</span></label><input id="nickname" type="text" maxlength="40" placeholder="想用什麼名字玩？" autocomplete="off"><p class="hint">單人遊戲的暱稱保留在本機；進行 PK 時會分享對戰暱稱給對手。</p></section>
@@ -17,7 +16,7 @@
     <div class="small-guide"><span class="guide-icon" aria-hidden="true">✦</span><div><h3>配對方式</h3><p>一次翻開兩張牌。找到一對，就留下來；不同的圖案會再蓋上。</p></div></div>
   </aside>
 </div>
-<section class="below-game pk-guide"><h2>自訂圖片，邀請朋友線上 PK</h2><p>先調整配對數、圖片與畫面，再按「雙人 PK」建立邀請連結。朋友點開後，兩人可使用同一份牌面輪流配對，也可以按「開始配對」尋找對手。配對成功可繼續翻牌，得分較高者獲勝。</p><p>隨機配對採先進入配對者的設定；雙方確認牌面與規則並準備好後才開始。PK 成績與單人排行榜分開。</p></section>
+<section class="below-game pk-guide"><h2>自訂圖片，邀請朋友線上 PK</h2><p>先調整配對數、圖片與畫面，再按「雙人 PK」建立邀請連結。朋友點開後，兩人可使用同一份牌面輪流配對，也可以按「線上配對」尋找對手。配對成功可繼續翻牌，得分較高者獲勝。</p><p>隨機配對採先進入配對者的設定；雙方確認牌面與規則並準備好後才開始。PK 成績與單人排行榜分開。</p></section>
 <section class="below-game" aria-labelledby="custom-images-title"><h2 id="custom-images-title">上傳自己的圖片，製作記憶配對卡牌</h2><figure class="page-illustration"><img src="{{BASE}}assets/previews/memory-card-game.png" width="1200" height="900" alt="六張翻牌卡牌，隨行杯、相機與運動鞋各成一對" loading="lazy" decoding="async"><figcaption>內建圖案的配對示意；可在設定換成自己的照片或圖片。</figcaption></figure><p>按右上角「設定」，在「卡牌與圖庫」選擇要替換的圖案，上傳 PNG、JPG 或 WebP 照片，再調整圖案名稱、縮放、位置、旋轉與裁切。12 種配對圖案和卡背皆可自訂；背景與 LOGO 則在「畫面」更換。</p><p>即時預覽確認效果後，按「儲存並套用」開始玩。圖片先保存在此瀏覽器；成績紀錄預設開啟，也可在設定中關閉。</p><a href="{{LOCALE_BASE}}help/#upload-images">查看自訂圖片與照片上傳教學</a></section>
 <section class="below-game"><h2>怎麼玩？</h2><div class="steps"><p><b>01</b><strong>先看一眼</strong>記住開局預覽中的圖案位置。</p><p><b>02</b><strong>翻開兩張</strong>找出一樣的圖案，配成一對。</p><p><b>03</b><strong>收集所有配對</strong>完成後再挑戰一次，看看進步了多少。</p></div><a href="{{LOCALE_BASE}}help/">查看完整使用說明</a><div data-ad-placement="help"></div></section>
 <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title"></dialog>

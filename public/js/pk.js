@@ -2,7 +2,7 @@ import { locale, t, msg, localizeMarkup } from './i18n.js';
 import site from './site-config.js';
 import { sanitize } from './core.js';
 import { createStage } from './stage.js';
-import { createFullscreenHint } from './fullscreen.js';
+import { roomEvents } from './pk-presentation.js';
 import { toast, confirmAction } from './site.js';
 import { challenge, shareCloud } from './cloud.js';
 import { imageIds, encodeProfile, decodeProfile, readLimited, LIMITS, sha256 } from './profile-format.js';
@@ -22,27 +22,54 @@ const internationalNames = ['MintFox','Mochi','StarBerry','LunaLeaf','PeachSky',
 
 export function initPK({ getConfig, getName, setActive, prepare, playSound, openSettings }) {
   const panel = document.querySelector('#pk-panel');
-  panel.innerHTML = localizeMarkup(`<div class="pk-top"><div><p class="eyebrow">一起挑戰記憶力</p><h2>雙人 PK</h2></div><div class="pk-top-actions"><button class="button" id="pk-music" aria-pressed="true">♫ 背景音樂：開</button><button class="icon-button" id="pk-fullscreen" aria-label="全螢幕">⛶</button><button class="button quiet" id="pk-exit">返回單人遊戲</button></div></div>
-    <div id="pk-setup"><p>沿用目前設定，邀請朋友或尋找對手。每次輪流翻兩張，配對成功可繼續，配對最多者獲勝。</p><label for="pk-name">對戰暱稱</label><input id="pk-name" maxlength="24" autocomplete="nickname" placeholder="輸入對戰時顯示的名字"><p class="hint">暱稱、此局設定及圖片會分享給對手。自訂圖片會先保存到雲端。</p><p id="pk-config" class="pk-rule-summary"></p>
-    <div class="pk-actions"><button class="button primary" id="pk-settings">⚙ 調整設定</button><button class="button primary" id="pk-create">建立邀請房間</button><button class="button primary" id="pk-match">開始配對</button><button class="button primary" id="pk-join" hidden>加入邀請房間</button></div></div>
+  panel.innerHTML = localizeMarkup(`<div class="pk-top"><h2>雙人 PK</h2><div class="pk-top-actions"><button class="button small" id="pk-music" aria-pressed="true">♫ 背景音樂：開</button><button class="icon-button" id="pk-fullscreen" aria-label="全螢幕">⛶</button><button class="button" id="pk-exit">返回單人遊戲</button></div></div>
+    <ol class="pk-steps" aria-label="對戰步驟"><li><b>1</b>選擇玩法</li><li><b>2</b>雙方準備</li><li><b>3</b>輪流翻牌</li></ol>
+    <div id="pk-setup"><h3 id="pk-setup-title">想和誰一起玩？</h3><p class="muted" id="pk-setup-help">邀請朋友，或讓系統幫你找對手。兩人準備好就開始。</p>
+      <div class="pk-setup-fields"><div><label for="pk-name">對戰暱稱（選填）</label><input id="pk-name" maxlength="24" autocomplete="nickname" placeholder="輸入對戰時顯示的名字"></div><div class="pk-config-box"><p id="pk-config"></p><button class="button small" id="pk-settings">⚙ 調整設定</button></div></div>
+      <div class="pk-choices"><button class="pk-choice" id="pk-create"><span aria-hidden="true">↗</span><strong>邀請朋友</strong><small>建立房間，複製連結給朋友。</small></button><button class="pk-choice" id="pk-match"><span aria-hidden="true">⚡</span><strong>線上配對</strong><small>自動尋找對手，配對後一起準備。</small></button><button class="button primary" id="pk-join" hidden>加入邀請房間</button></div>
+      <p class="hint">暱稱與本局圖片會分享給對手；自訂圖片會先保存到雲端。</p>
+    </div>
     <div id="pk-challenge"></div><p id="pk-status" class="pk-status" role="status" aria-live="polite"></p><p id="pk-error" class="notice warning" role="alert" hidden></p>
-    <div id="pk-invite" hidden><label for="pk-link">邀請連結</label><div class="pk-link-row"><input id="pk-link" readonly><button class="button" id="pk-copy">複製連結</button></div><p class="hint">請保持這個頁面開啟。房間等待時間為 3 分鐘，兩人都準備後開始。</p></div>
-    <div id="pk-result" class="pk-result" hidden><span class="pk-result-symbol" aria-hidden="true"></span><div><strong id="pk-result-title"></strong><p id="pk-result-note"></p></div><div class="pk-result-particles" aria-hidden="true"></div></div><p id="pk-rematch-note" class="hint" role="status" hidden></p><div id="pk-match-area" hidden><div class="pk-scoreboard"><div id="pk-player-0"><span></span><strong>0</strong></div><b aria-hidden="true">VS</b><div id="pk-player-1"><span></span><strong>0</strong></div></div><p id="pk-rules" class="pk-rule-summary"></p><div class="pk-actions"><button id="pk-ready" class="button primary">我準備好了</button><button id="pk-again" class="button primary" hidden>再來一場</button><button id="pk-leave" class="button">離開房間</button></div><div id="pk-stage" class="stage"></div></div>
-    <button class="button" id="pk-cancel" hidden>取消配對</button><p class="hint pk-footnote">每回合最多 20 秒；連續兩回合未操作視為離開。每局最多 10 分鐘。對戰不加入單人排行榜。</p><p class="hint">準備畫面可調整設定；房間建立或進入配對後，本局設定即鎖定。配對採先進入者的設定，雙方確認並準備後才開始。結束後 60 秒內，雙方按「再來一場」即可用同樣設定重新洗牌對戰。</p>`);
+    <div id="pk-search" hidden><span class="pk-search-orbit" aria-hidden="true">✦</span><h3>正在尋找你的對手</h3><p>配對成功會有提示音，請保持頁面開啟。</p><button class="button" id="pk-cancel" hidden>取消配對</button></div>
+    <div id="pk-invite" hidden><h3>下一步：把連結傳給朋友</h3><div class="pk-link-row"><input id="pk-link" aria-label="邀請連結" readonly><button class="button primary" id="pk-copy">複製連結</button></div><p class="hint">朋友加入後，兩人都按「我準備好了」就開始。房間保留 3 分鐘。</p></div>
+    <div id="pk-match-area" hidden>
+      <div class="pk-scoreboard"><div id="pk-player-0" data-player="0"><b class="pk-seat">A</b><div><span></span><small></small></div><strong>0</strong></div><b class="pk-vs" aria-hidden="true">VS</b><div id="pk-player-1" data-player="1"><b class="pk-seat">B</b><div><span></span><small></small></div><strong>0</strong></div></div>
+      <div class="pk-board-tools"><div id="pk-turn" role="status"><strong id="pk-turn-title"></strong><span id="pk-turn-detail" aria-live="off"></span></div><div class="zoom-controls" aria-label="牌面大小"><button class="button small" id="pk-zoom-out" aria-label="縮小卡牌">−</button><button class="button small" id="pk-zoom-fit" title="適合畫面">100%</button><button class="button small" id="pk-zoom-in" aria-label="放大卡牌">＋</button></div><button id="pk-leave" class="button small">離開房間</button></div>
+      <div class="pk-turn-meter" aria-hidden="true"><i id="pk-turn-meter"></i></div>
+      <div id="pk-arena" class="pk-arena">
+        <div id="pk-stage" class="stage"></div>
+        <div id="pk-ready-layer" class="pk-board-layer"><div class="pk-ready-card"><span class="pk-layer-icon" aria-hidden="true">⚡</span><h3>對手已就位</h3><p id="pk-rules"></p><p>確認規則，兩人都準備好就開始。</p><button id="pk-ready" class="button primary">我準備好了</button><p id="pk-ready-note" class="hint"></p></div></div>
+        <div id="pk-flash" class="pk-flash" hidden aria-hidden="true"><strong></strong><span></span></div>
+        <div id="pk-result" class="pk-board-layer" hidden><div class="pk-result"><span class="pk-result-symbol" aria-hidden="true"></span><h3 id="pk-result-title"></h3><p id="pk-result-note"></p><strong id="pk-result-score"></strong><p id="pk-event" class="pk-event" role="alert" hidden></p><p id="pk-rematch-note" class="hint" role="status"></p><div class="pk-actions"><button id="pk-again" class="button primary">再來一場</button><button id="pk-result-back" class="button">返回準備畫面</button></div><div class="pk-result-particles" aria-hidden="true"></div></div></div>
+      </div>
+      <p class="pk-color-key hint">A 藍色・B 橘色；卡牌角標代表最後翻牌者，打勾代表配對得分。</p>
+    </div>
+    <details class="pk-how"><summary>第一次玩？看簡單規則</summary><p>輪到你時翻兩張，相同就得分並繼續；不同就換人。每回合 20 秒，連續兩回合未操作會結束。</p><p>邀請使用房主設定；配對使用先進入者設定。兩人確認後才開始，單人設定不會被對手覆蓋。</p><p>結束後 60 秒內，雙方按「再來一場」可與原對手重新對戰。對手離開時，可返回準備畫面重新配對。</p></details>`);
   const music = createPKMusic();
   let musicOn = getConfig().sound, musicPreference = false;
   try { const saved = localStorage.getItem('memory-pk-music'); if (saved !== null) { musicOn = saved === 'true'; musicPreference = true; } } catch {}
   const sound = name => { if (name === 'win') return; music.duck(); playSound(name); };
   const $ = id => panel.querySelector('#pk-' + id);
-  const zoomNotice = document.createElement('div'); zoomNotice.id = 'pk-zoom-hint'; zoomNotice.hidden = true;
-  zoomNotice.setAttribute('role', 'status'); panel.append(zoomNotice);
-  const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === panel,
-    () => { zoomNotice.innerHTML = localizeMarkup('<kbd>CTRL</kbd><span>+滾輪可以調整畫面大小</span>'); });
   document.addEventListener('fullscreenchange', () => {
-    const full = document.fullscreenElement === panel;
-    $('fullscreen').setAttribute('aria-label', t(full ? '退出全螢幕' : '全螢幕'));
-    if (full) fullscreenHint.schedule(); else fullscreenHint.cancel();
+    $('fullscreen').setAttribute('aria-label', t(document.fullscreenElement === panel ? '退出全螢幕' : '全螢幕'));
   });
+  let zoom = 1, flashTimer, presentationView = null;
+  const cue = name => { if (getConfig().sound) music.cue(name); };
+  function phase(value) {
+    panel.dataset.phase = value;
+    $('search').hidden = !['queue','connecting','handoff'].includes(value);
+    panel.querySelectorAll('.pk-steps li').forEach((el,i) => { if (i === (value === 'setup' ? 0 : ['playing','preview','ended'].includes(value) ? 2 : 1)) el.setAttribute('aria-current','step'); else el.removeAttribute('aria-current'); });
+  }
+  function flash(title, note, owner = '', duration = 1400) {
+    clearTimeout(flashTimer); $('flash').querySelector('strong').textContent = title; $('flash').querySelector('span').textContent = note;
+    $('flash').dataset.player = owner; $('flash').hidden = false;
+    flashTimer = setTimeout(() => { $('flash').hidden = true; }, duration);
+  }
+  function updateZoom(value) {
+    zoom = Math.max(.6, Math.min(2, Math.round(value * 10) / 10)); stage?.setZoom(zoom);
+    $('zoom-fit').textContent = Math.round(zoom * 100) + '%'; $('zoom-fit').setAttribute('aria-label', t('適合畫面'));
+    $('zoom-out').disabled = zoom <= .6; $('zoom-in').disabled = zoom >= 2;
+  }
   let active = false, pending = false, session = null, ws = null, connected = false, intentional = false, retries = 0, heartbeat, heartbeatAt = 0;
   let timer, reconnectTimer, generation = 0, sourceConfig, inviteId = '', roomId = '', view = null, stage = null, stageId = '', assetsReady = false, loadingAssets = '', skew = 0;
   let resultKey = '', rematchPending = false, botRematchDue = 0, queueSince = 0;
@@ -55,10 +82,12 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   function stopSocket() { intentional = true; clearInterval(heartbeat); clearTimeout(reconnectTimer); ws?.close(1000, 'leave'); ws = null; connected = false; }
   function resetUI() {
     view = null; roomId = ''; assetsReady = false; loadingAssets = ''; localRoom = null; opponent = null; stage?.destroy(); stage = null; stageId = ''; flipPending = false;
-    music.stop(); resultKey = ''; rematchPending = false; botRematchDue = 0; $('result').hidden = true; $('rematch-note').hidden = true;
+    music.stop(); phase('setup'); presentationView = null; clearTimeout(flashTimer); $('flash').hidden = true; $('event').hidden = true; resultKey = ''; rematchPending = false; botRematchDue = 0; $('result').hidden = true; $('rematch-note').hidden = true;
     refreshConfig();
     mode = 'setup'; $('setup').hidden = false; $('match-area').hidden = true; $('invite').hidden = true; $('cancel').hidden = true; $('error').hidden = true; busy(false);
-    $('settings').hidden = Boolean(inviteId);
+    $('settings').hidden = Boolean(inviteId); panel.querySelector('.pk-config-box').hidden = Boolean(inviteId);
+    $('setup-title').textContent = t(inviteId ? '朋友邀請你來對戰' : '想和誰一起玩？');
+    $('setup-help').textContent = t(inviteId ? '加入後確認朋友的規則，再按準備就能玩。' : '邀請朋友，或讓系統幫你找對手。兩人準備好就開始。');
     $('create').hidden = $('match').hidden = Boolean(inviteId); $('join').hidden = !inviteId;
     status(inviteId ? t('收到 PK 邀請，輸入暱稱後加入。') : t('可在此調整設定，再選擇邀請朋友或線上配對。'));
   }
@@ -68,7 +97,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     if (active) return;
     active = true; setActive(true); panel.hidden = false; sourceConfig = sanitize(getConfig()); inviteId = readInvitation();
     $('name').value = getName() || ''; $('config').textContent = msg`目前設定：${sourceConfig.pairs} 對卡牌，預覽 ${sourceConfig.previewSeconds} 秒。`;
-    resetUI(); panel.scrollIntoView({ block: 'start', behavior: 'smooth' }); $('name').focus(); timer = setInterval(tick, 200);
+    resetUI(); panel.scrollIntoView({ block: 'start', behavior: 'smooth' }); panel.tabIndex = -1; panel.focus({preventScroll:true}); timer = setInterval(tick, 200);
   }
   async function request(path, options = {}, requireSession = true) {
     const response = await fetch(api + path, { ...options, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(20000), headers: { ...(requireSession ? { Authorization: 'Bearer ' + session.token } : {}), ...options.headers } });
@@ -116,7 +145,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     localReceipt = { ...await response.json(), digest }; return { code: localReceipt.code };
   }
   async function begin(type) {
-    if (pending) return; busy(true); $('error').hidden = true;
+    if (pending) return; busy(true); $('error').hidden = true; phase('connecting'); $('setup').hidden = true; $('cancel').hidden = false;
     if (ws) { send({ type: 'leave' }); stopSocket(); persist(null); }
     const attempt = ++generation;
     try {
@@ -131,14 +160,14 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
       if (attempt !== generation) return;
       persist(session);
       await connect(); if (attempt !== generation) { stopSocket(); return; }
-      mode = type === 'queue' ? 'queue' : 'connecting'; music.setPhase('waiting'); $('setup').hidden = true; $('cancel').hidden = false;
+      mode = type === 'queue' ? 'queue' : 'connecting'; phase(mode); music.setPhase('waiting'); $('setup').hidden = true; $('cancel').hidden = false;
       if (!send({ type, source, id: inviteId })) throw Error(errorText('unavailable'));
-    } catch (error) { if (attempt !== generation) return; mode = 'setup'; $('setup').hidden = false; stopSocket(); persist(null); music.stop(); showError(error.message || errorText('unavailable')); busy(false); }
+    } catch (error) { if (attempt !== generation) return; mode = 'setup'; phase(mode); $('setup').hidden = false; stopSocket(); persist(null); music.stop(); showError(error.message || errorText('unavailable')); busy(false); }
   }
   async function receive(data) {
     if (!active) return;
-    if (data.type === 'error') { flipPending = false; rematchPending = false; if (view) renderRoom(); showError(errorText(data.error)); busy(false); if (!view) { send({ type: 'leave' }); stopSocket(); persist(null); $('setup').hidden = false; $('cancel').hidden = true; mode = 'setup'; music.stop(); } return; }
-    if (data.type === 'queue') { mode = 'queue'; queueUntil = data.until; queueSince = data.since || data.now; music.setPhase('waiting'); skew = data.now - Date.now(); $('setup').hidden = true; $('cancel').hidden = false; tick(); return; }
+    if (data.type === 'error') { flipPending = false; rematchPending = false; if (view) renderRoom(); showError(errorText(data.error)); busy(false); if (!view) { send({ type: 'leave' }); stopSocket(); persist(null); $('setup').hidden = false; $('cancel').hidden = true; mode = 'setup'; phase(mode); music.stop(); } return; }
+    if (data.type === 'queue') { mode = 'queue'; phase(mode); queueUntil = data.until; queueSince = data.since || data.now; music.setPhase('waiting'); skew = data.now - Date.now(); $('setup').hidden = true; $('cancel').hidden = false; tick(); return; }
     if (data.type === 'fallback') { send({ type: 'fallback-ack' }); mode = 'handoff'; return; }
     if (data.type === 'released') {
       if (mode !== 'handoff') return;
@@ -176,26 +205,54 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   }
   function acceptView(next) {
     if (view?.round !== next.round) { botDue = 0; botRematchDue = 0; botSeen = -1; if (localRoom) opponent = new MemoryOpponent(); }
+    const events = roomEvents(presentationView, next);
+    presentationView = {...next, connected:[...next.connected], rematch:[...(next.rematch || [])], players:[...next.players]};
     rematchPending = false; view = next;
     if (localRoom && botSeen !== next.rev) { opponent.observe(next); botSeen = next.rev; }
     renderRoom();
+    if (events.includes('found')) cue('found');
+    if (events.includes('start')) { cue('start'); flash(t('對戰開始！'), t(next.state === 'preview' ? '先記住卡牌的位置' : next.turn === next.seat ? '你的回合' : '對手的回合'), String(next.turn)); }
+    else if (events.includes('your-turn') || events.includes('their-turn')) { if (next.turn === next.seat) cue('turn'); flash(t(next.turn === next.seat ? '你的回合' : '對手的回合'), t(next.turn === next.seat ? '翻開兩張卡牌' : '看看對手翻到什麼'), String(next.turn)); }
+    if (events.includes('left') || events.includes('rematch')) {
+      cue(events.includes('left') ? 'notice' : 'rematch');
+      $('event').hidden = false; $('event').textContent = t(events.includes('left') ? '對手已離開房間' : '對手想再來一場！按下按鈕接受邀請。');
+      $('result').classList.toggle('has-invitation', events.includes('rematch'));
+    }
+    if (events.includes('offline') && view.state !== 'ended') flash(t('對手暫時離線'), t('等待重新連線，最多 30 秒。'), '', 30000);
+    if (view.connected.every(Boolean) && $('flash').querySelector('strong').textContent === t('對手暫時離線')) { clearTimeout(flashTimer); $('flash').hidden = true; }
   }
   function renderRoom() {
     if (!view) return;
+    phase(view.state);
     $('setup').hidden = true; $('cancel').hidden = true; $('match-area').hidden = false;
     $('invite').hidden = view.state !== 'lobby' || Boolean(view.players[1]) || Boolean(localRoom);
     if (!$('invite').hidden) { const link = new URL(location.href); link.search = ''; link.hash = 'pk=' + roomId; $('link').value = link.href; }
     music.setPhase(view.state === 'ended' ? 'off' : view.state === 'lobby' ? 'waiting' : 'playing');
     const key = roomId + ':' + view.round;
-    if (!stage || stageId !== key) { stage?.destroy(); stage = createStage($('stage'), view.config, [...view.cards], flip); stageId = key; }
+    if (!stage || stageId !== key) { stage?.destroy(); stage = createStage($('stage'), view.config, [...view.cards], flip, false, {duel:true}); stageId = key; stage.setZoom(zoom); }
     stage.setCards(view.cards);
     stage.update({ state: view.state === 'preview' ? 'preview' : assetsReady && view.state === 'playing' && (localRoom || connected) && view.turn === view.seat && view.connected.every(Boolean) && !flipPending ? 'playing' : 'ready',
       matched: new Set(view.matched), open: view.open, isRevealed: i => Boolean(view.cards[i]) });
+    stage.buttons.forEach((button, index) => {
+      const owner = view.cardOwners?.[index];
+      if (owner === 0 || owner === 1) {
+        button.dataset.player = owner;
+        let badge = button.querySelector('.pk-card-owner');
+        if (!badge) { badge = document.createElement('span'); badge.className = 'pk-card-owner'; badge.setAttribute('aria-hidden','true'); button.append(badge); }
+        badge.textContent = (owner === 0 ? 'A' : 'B') + (view.matched.includes(index) ? ' ✓' : '');
+        button.setAttribute('aria-label', button.getAttribute('aria-label') + ' · ' + (owner === 0 ? 'A' : 'B') + ' · ' + view.players[owner].name);
+      } else { delete button.dataset.player; button.querySelector('.pk-card-owner')?.remove(); }
+    });
     for (let i = 0; i < 2; i++) {
       const el = $('player-' + i); el.querySelector('span').textContent = view.players[i] ? view.players[i].name + (i === view.seat ? t('（你）') : '') : t('等待對手');
+      el.querySelector('small').textContent = t(view.state === 'lobby' ? view.ready[i] ? '已準備' : '尚未準備' : i === view.seat ? '你的配對得分' : '對手配對得分');
       el.querySelector('strong').textContent = view.scores[i]; el.classList.toggle('is-turn', view.state === 'playing' && view.turn === i);
     }
     $('rules').textContent = msg`${view.config.pairs} 對卡牌・預覽 ${view.config.previewSeconds} 秒・${view.config.timed ? msg`限時 ${view.config.limitSeconds} 秒` : t('每局最多 10 分鐘')}・配對成功繼續翻牌`;
+    $('ready-layer').hidden = view.state !== 'lobby' || !view.players[1];
+    $('arena').hidden = view.state === 'lobby' && !view.players[1];
+    $('ready-note').textContent = t(view.ready[view.seat] ? '已通知對手你準備好了，請稍候。' : '你準備好，就可以開始了。');
+    $('leave').hidden = view.state === 'ended';
     $('ready').hidden = view.state !== 'lobby'; $('ready').disabled = !assetsReady || (!localRoom && !connected) || !view.players[1] || view.ready[view.seat] || !view.connected.every(Boolean);
     $('ready').textContent = view.ready[view.seat] ? t('已準備，等待對手') : t('我準備好了');
     $('again').hidden = view.state !== 'ended';
@@ -209,47 +266,48 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     if (localRoom) { const effect = flipRoom(localRoom, 0, index, Date.now(), localRoom.rev); if (effect !== 'ignored') sound(effect); acceptView(roomView(localRoom, 0, Date.now())); }
     else if (send({ type: 'flip', index, rev: view.rev })) { flipPending = true; renderRoom(); }
   }
+  function turnStatus(title, detail = '', owner = '', seconds = 20) {
+    if ($('turn-title').textContent !== title) $('turn-title').textContent = title;
+    $('turn-detail').textContent = detail; $('turn').dataset.player = owner;
+    $('turn-meter').style.width = Math.max(0,Math.min(100,seconds/20*100)) + '%';
+    panel.classList.toggle('pk-urgent', view?.state === 'playing' && seconds <= 5 && view.turn === view.seat);
+  }
   function tickStatus() {
     const now = Date.now() + skew;
     if (mode === 'queue') { status(msg`正在尋找對手…已等待 ${Math.max(0, Math.floor((now - queueSince) / 1000))} 秒`); return; }
     if (!view) return;
-    if (!localRoom && !connected) { status(t('連線中斷，正在重新連線…')); return; }
+    if (!localRoom && !connected) { turnStatus(t('連線中斷，正在重新連線…')); status(t('連線中斷，正在重新連線…')); return; }
     if (view.state === 'ended') {
-      const result = view.winner === null ? t('平手！') : view.winner === view.seat ? t('你贏了！') : t('這次由對手獲勝。');
-      const reason = ['left','disconnect','idle'].includes(view.reason) ? t('有玩家離開或逾時，對戰已結束。') : view.reason === 'expired' ? t('房間等待時間已結束。') : t('對戰結束。');
-      status(`${result} ${view.scores[0]} : ${view.scores[1]} · ${reason}`);
+      turnStatus(t('對戰結束。')); status('');
       const remaining = Math.max(0, Math.ceil((view.expiresAt - now) / 1000));
-      $('again').disabled = rematchPending || !view.canRematch || !remaining || view.rematch?.[view.seat];
+      $('again').disabled = rematchPending || !view.canRematch || !remaining || view.rematch?.[view.seat] || (!localRoom && !connected);
       $('rematch-note').textContent = !remaining ? t('再戰時間已結束，請返回準備畫面。') : !view.canRematch ? t('對手已離開或暫時離線，現在無法再戰。可離開房間重新配對。') : view.rematch?.[view.seat] ? msg`等待對手同意再戰…剩餘 ${remaining} 秒` : view.rematch?.[1 - view.seat] ? msg`對手邀請你再戰！剩餘 ${remaining} 秒` : msg`想和同一位對手再比一場？雙方在 ${remaining} 秒內按「再來一場」即可。`;
       return;
     }
-    if (!assetsReady) { status(t('正在載入此局牌面…')); return; }
-    if (view.state === 'lobby') { status(!view.players[1] ? t('房間已建立，分享連結邀請朋友加入。') : t('對手已加入，請確認此局設定後按「我準備好了」。')); return; }
-    if (!view.connected.every(Boolean)) { status(t('對手暫時離線，保留 30 秒重新連線時間。')); return; }
-    if (view.state === 'preview') { status(msg`記住牌面！${Math.max(0, Math.ceil((view.startedAt - now) / 1000))} 秒後開始。`); return; }
-    if (view.settleAt) { status(t('這兩張不一樣，接著換另一位玩家。')); return; }
-    status(msg`${view.turn === view.seat ? t('輪到你了') : t('對手正在翻牌')} · 本回合剩餘 ${Math.max(0, Math.ceil((view.turnEnd - now) / 1000))} 秒`);
+    if (!assetsReady) { turnStatus(t('正在載入此局牌面…')); return; }
+    if (view.state === 'lobby') { status(!view.players[1] ? t('房間已建立，分享連結邀請朋友加入。') : ''); turnStatus(t(view.players[1] ? '確認規則，準備開戰' : '等待朋友加入')); return; }
+    if (!view.connected.every(Boolean)) { turnStatus(t('對手暫時離線'), t('等待重新連線，最多 30 秒。')); return; }
+    if (view.state === 'preview') { turnStatus(t('記住牌面！'), msg`${Math.max(0, Math.ceil((view.startedAt - now) / 1000))} 秒後開始`); return; }
+    if (view.settleAt) { turnStatus(t('沒有配對，準備換人'), '', String(view.turn)); return; }
+    const seconds = Math.max(0, Math.ceil((view.turnEnd - now) / 1000));
+    turnStatus(t(view.turn === view.seat ? '你的回合' : '對手的回合'), msg`剩餘 ${seconds} 秒`, String(view.turn), seconds);
   }
   function renderResult() {
-    const ended = view.state === 'ended'; $('result').hidden = !ended || !view.players.every(Boolean); $('rematch-note').hidden = !ended;
-    if (!ended || !view.players.every(Boolean)) { resultKey = ''; return; }
+    const ended = view.state === 'ended'; $('result').hidden = !ended; $('rematch-note').hidden = !ended;
+    if (!ended) { resultKey = ''; $('event').hidden = true; return; }
     const key = roomId + ':' + view.round;
     if (resultKey === key) return;
-    resultKey = key;
+    resultKey = key; clearTimeout(flashTimer); $('flash').hidden = true; $('event').hidden = true; $('result').classList.remove('has-invitation');
+    $('result-score').textContent = view.scores[view.seat] + ' : ' + view.scores[1 - view.seat];
     const outcome = view.winner === null ? 'draw' : view.winner === view.seat ? 'win' : 'loss';
-    $('result').dataset.outcome = outcome;
+    $('result').dataset.outcome = outcome; $('result').querySelector('.pk-result').dataset.outcome = outcome;
     $('result').querySelector('.pk-result-symbol').textContent = outcome === 'win' ? '★' : outcome === 'draw' ? '∞' : '☾';
-    $('result-title').textContent = t(outcome === 'win' ? '獲勝！' : outcome === 'draw' ? '平手！' : '敗北');
-    $('result-note').textContent = t(outcome === 'win' ? '漂亮的記憶力，這一場由你拿下！' : outcome === 'draw' ? '勢均力敵，再比一場吧！' : '差一點，下次再挑戰！');
+    $('result-title').textContent = t(!view.players.every(Boolean) ? '房間已結束' : outcome === 'win' ? '獲勝！' : outcome === 'draw' ? '平手！' : '敗北');
+    $('result-note').textContent = t(!view.players.every(Boolean) ? '房間等待時間已結束。' : outcome === 'win' ? '漂亮的記憶力，這一場由你拿下！' : outcome === 'draw' ? '勢均力敵，再比一場吧！' : '差一點，下次再挑戰！');
     const particles = $('result').querySelector('.pk-result-particles'); particles.replaceChildren();
     for (let i = 0; i < 16; i++) { const p = document.createElement('i'); p.style.setProperty('--i', i); particles.append(p); }
     if (outcome === 'win') { music.duck(); playSound('win'); }
-    // Card clicks can scroll a small screen below the result banner. Bring the result into view once.
-    requestAnimationFrame(() => {
-      if (resultKey !== key || $('result').hidden) return;
-      const bounds = $('result').getBoundingClientRect();
-      if (bounds.top < 0 || bounds.bottom > innerHeight) $('result').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
-    });
+
   }
   function tick() {
     if (localRoom) {
@@ -273,10 +331,12 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     if (view && view.state !== 'ended' && view.players[1] && !await confirmAction(t('離開這場 PK？'), t('離開後這場對戰會結束。'), t('離開房間'))) return false;
     generation++; send({ type: 'leave' }); stopSocket(); session = null; persist(null); inviteId = '';
     if (readInvitation()) history.replaceState(null, '', location.pathname + location.search);
-    resetUI(); if (closePanel) { if (document.fullscreenElement === panel) await document.exitFullscreen().catch(() => {}); fullscreenHint.cancel(); active = false; clearInterval(timer); panel.hidden = true; setActive(false); document.querySelector('#pk-open').focus(); }
+    resetUI(); if (closePanel) { if (document.fullscreenElement === panel) await document.exitFullscreen().catch(() => {}); active = false; clearInterval(timer); panel.hidden = true; setActive(false); document.querySelector('#pk-open').focus(); }
     return true;
   }
   $('create').onclick = () => begin('create'); $('match').onclick = () => begin('queue'); $('join').onclick = () => begin('join');
+  $('zoom-out').onclick = () => updateZoom(zoom - .2); $('zoom-in').onclick = () => updateZoom(zoom + .2); $('zoom-fit').onclick = () => updateZoom(1);
+  $('result-back').onclick = () => leave();
   $('cancel').onclick = () => leave(); $('leave').onclick = () => leave(); $('exit').onclick = () => leave(true);
   $('again').onclick = () => {
     if (!view?.canRematch || rematchPending || view.rematch?.[view.seat]) return;
@@ -307,7 +367,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   window.addEventListener('pagehide', () => { music.stop(); stopSocket(); });
   document.querySelector('#pk-open').onclick = open;
   const previous = readSession();
-  if (previous) { open(); session = previous; mode = 'connecting'; busy(true); $('setup').hidden = true; $('cancel').hidden = false; status(t('正在恢復 PK 連線…')); void connect().then(() => { if (mode === 'connecting') { mode = 'setup'; busy(false); $('setup').hidden = false; } }).catch(() => { showError(errorText('auth')); persist(null); resetUI(); }); }
+  if (previous) { open(); session = previous; mode = 'connecting'; busy(true); $('setup').hidden = true; $('cancel').hidden = false; phase('connecting'); status(t('正在恢復 PK 連線…')); void connect().then(() => { if (mode === 'connecting') { mode = 'setup'; busy(false); $('setup').hidden = false; } }).catch(() => { showError(errorText('auth')); persist(null); resetUI(); }); }
   else if (readInvitation() || new URLSearchParams(location.search).get('mode') === 'pk') open();
   return { get active() { return active; } };
 }

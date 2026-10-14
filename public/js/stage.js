@@ -1,6 +1,7 @@
 import { t, msg, html, locale } from './i18n.js';
 import { ASSETS, PRODUCTS, defaults, get, transform } from './core.js';
 import { imageURL } from './images.js';
+import { fitPKBoard } from './pk-presentation.js';
 export const productName = (config, id) => config.products.find(p => p.id === id)?.label || t(PRODUCTS.find(p => p.id === id)?.name || '') || t('自訂圖案');
 export const escapeHTML = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
 export const assetURL = path => document.body.dataset.base + (locale !== 'zh-Hant' && /^assets\/(back-mint|back-peach|logo)\.svg$/.test(path) ? path.replace('assets/', `assets/locales/${locale}/`) : path);
@@ -25,7 +26,7 @@ export function createCard(c, id, index = 0) {
   button.setAttribute('aria-label', msg`第 ${index + 1} 張，尚未翻開`);
   return button;
 }
-export function createStage(container, config, cards, onFlip, preview = false) {
+export function createStage(container, config, cards, onFlip, preview = false, options = {}) {
   const c = config;
   const bg = ASSETS.background.find(a => a.id === c.background.asset);
   const logo = ASSETS.logo.find(a => a.id === c.logo.asset);
@@ -41,7 +42,26 @@ export function createStage(container, config, cards, onFlip, preview = false) {
     if (preview) button.tabIndex = -1; else button.addEventListener('click', () => onFlip(index));
     grid.append(button); return button;
   });
+  let zoom = 1;
+  if (options.duel) {
+    container.classList.add('pk-card-stage');
+    const customHeading = c.headerText !== stock.headerText || c.title.text !== stock.title.text || c.title.subtitle !== stock.title.subtitle || c.logo.asset !== 'none' || c.logo.upload;
+    container.querySelector('.stage-heading').hidden = !customHeading;
+    container.querySelector('.stage-eyebrow').hidden = c.headerText === stock.headerText;
+    container.querySelector('.stage-copy h2').hidden = c.title.text === stock.title.text;
+    container.querySelector('.stage-subtitle').hidden = c.title.subtitle === stock.title.subtitle;
+  }
   const resize = () => {
+    if (options.duel) {
+      const heading = container.querySelector('.stage-heading');
+      const availableHeight = Math.max(80, container.clientHeight - (heading.hidden ? 0 : heading.offsetHeight + 12) - 32);
+      container.querySelector('.board-wrap').style.minHeight = availableHeight + 'px';
+      const layout = fitPKBoard({width: container.clientWidth - 32, height: availableHeight, count: cards.length, ratio: c.ratioW / c.ratioH, gap: c.gap, zoom, columns: c.columns});
+      grid.style.width = layout.width + 'px'; grid.style.maxWidth = 'none';
+      grid.style.gridTemplateColumns = 'repeat(' + layout.columns + ', ' + layout.cardWidth + 'px)';
+      for (const button of buttons) { button.style.height = layout.cardHeight + 'px'; button.style.maxHeight = 'none'; }
+      return;
+    }
     const width = container.clientWidth;
     let columns = c.columns || (width < 450 ? 3 : width < 650 ? 4 : 6);
     const maxColumns = Math.max(2, Math.floor((width - 40) / 66));
@@ -53,6 +73,7 @@ export function createStage(container, config, cards, onFlip, preview = false) {
   const observer = new ResizeObserver(resize); observer.observe(container); resize();
   return {
     buttons,
+    setZoom(value) { zoom = value; if (!options.duel) { grid.style.width = c.boardScale * zoom + '%'; grid.style.maxWidth = 'calc(var(--card-base-max, 630px) * ' + zoom + ')'; for (const button of buttons) button.style.maxHeight = 300 * zoom + 'px'; } resize(); },
     setCards(next) {
       next.forEach((id, i) => {
         if (id === cards[i]) return;

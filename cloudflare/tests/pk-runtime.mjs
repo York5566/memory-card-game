@@ -32,10 +32,10 @@ try {
   const turn=av.view.turn, current=turn===0?a:b, other=turn===0?b:a;
   other.send({type:'flip',index:0,rev:av.view.rev});await other.next(x=>x.type==='room'&&x.view.state==='playing');
   current.send({type:'flip',index:0,rev:av.view.rev});const flipped=await current.next(x=>x.type==='room'&&x.view.open.length===1);
-  assert.equal(flipped.view.cards.filter(Boolean).length,1);assert.equal(flipped.view.flips,1);
-  const mirror=await other.next(x=>x.type==='room'&&x.view.open.length===1);assert.deepEqual(flipped.view.cards,mirror.view.cards);
+  assert.equal(flipped.view.cards.filter(Boolean).length,1);assert.equal(flipped.view.flips,1);assert.equal(flipped.view.cardOwners[0],turn);assert.equal(flipped.view.cardOwners.filter(x=>x!==null).length,1);
+  const mirror=await other.next(x=>x.type==='room'&&x.view.open.length===1);assert.deepEqual(flipped.view.cards,mirror.view.cards);assert.deepEqual(flipped.view.cardOwners,mirror.view.cardOwners);
   current.ws.close(1000,'network');const disconnected=await other.next(x=>x.type==='room'&&!x.view.connected[turn]);assert.equal(disconnected.view.state,'playing');
-  const reconnected=await socket(current.session);const restored=await room(reconnected);assert.equal(restored.view.flips,1);assert.ok(restored.view.connected.every(Boolean));
+  const reconnected=await socket(current.session);const restored=await room(reconnected);assert.equal(restored.view.flips,1);assert.equal(restored.view.cardOwners[0],turn);assert.ok(restored.view.connected.every(Boolean));
   reconnected.send({type:'leave'});const ended=await other.next(x=>x.type==='room'&&x.view.state==='ended');assert.equal(ended.view.winner,1-turn);
   console.log('PASS invite, shared settings, hidden deck, ready, wrong-turn rejection, flip sync, reconnect, leave result');
 
@@ -57,12 +57,12 @@ try {
   q.send({type:'rematch',round:1});
   const replayR=await r.next(x=>x.type==='room'&&x.view.round===2),replayQ=await q.next(x=>x.type==='room'&&x.view.round===2);
   assert.equal(replayR.id,replay.id);assert.equal(replayQ.id,replay.id);assert.equal(replayR.view.state,'playing');
-  assert.deepEqual(replayR.view.scores,[0,0]);assert.deepEqual(replayR.view.players,replayQ.view.players);assert.ok(replayR.view.cards.every(x=>x===null));
+  assert.deepEqual(replayR.view.scores,[0,0]);assert.ok(replayR.view.cardOwners.every(x=>x===null));assert.deepEqual(replayR.view.players,replayQ.view.players);assert.ok(replayR.view.cards.every(x=>x===null));
   r.send({type:'rematch',round:1});const stale=await r.next(x=>x.type==='room'&&x.view.round===2);assert.equal(stale.view.state,'playing');
   await r.next(x=>x.type==='room'&&x.view.round===2&&x.view.state==='ended');await q.next(x=>x.type==='room'&&x.view.round===2&&x.view.state==='ended');
   q.ws.close(1000,'network');const away=await r.next(x=>x.type==='room'&&x.view.round===2&&!x.view.connected[1]);assert.equal(away.view.canRematch,false);
   const resumedQ=await socket(q.session);await room(resumedQ);await r.next(x=>x.type==='room'&&x.view.round===2&&x.view.canRematch);
-  resumedQ.send({type:'leave'});const left=await r.next(x=>x.type==='room'&&x.view.round===2&&!x.view.canRematch);assert.equal(left.view.connected[1],false);
+  resumedQ.send({type:'leave'});const left=await r.next(x=>x.type==='room'&&x.view.round===2&&!x.view.canRematch);assert.equal(left.view.connected[1],false);assert.equal(left.view.rematchClosed,true);
   r.send({type:'rematch',round:2});assert.equal((await r.next(x=>x.type==='room'&&x.view.round===2)).view.state,'ended');
   r.send({type:'leave'});
   console.log('PASS two-party rematch, same room, reset scores, stale votes, result reconnect and departed opponent');

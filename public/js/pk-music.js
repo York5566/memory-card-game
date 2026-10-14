@@ -1,26 +1,49 @@
-// Original, locally synthesized music: no media downloads or third-party tracks.
-// A sparse pentatonic marimba/bass loop leaves room for the brighter card effects.
+// Original local arcade-pop loop: bouncy major-key plucks, bass, kick and soft shakers.
+// Deterministic synthesis avoids media downloads and additional cloud traffic.
+function addTone(data, sampleRate, midi, at, duration, volume, bright = true) {
+  const hz = 440 * 2 ** ((midi - 69) / 12), n = Math.floor(duration * sampleRate);
+  for (let i = 0; i < n; i++) {
+    const time = i / sampleRate;
+    const envelope = Math.min(1,time/.008) * Math.exp(-time/(bright?.11:.18)) * Math.min(1,(duration-time)/.035);
+    const wave = Math.sin(2*Math.PI*hz*time) + (bright ? .22*Math.sin(4*Math.PI*hz*time) : 0);
+    const offset = Math.floor(at*sampleRate)+i;
+    if(offset < data.length) data[offset] += wave * envelope * volume;
+  }
+}
 export function composeLoop(sampleRate = 22050) {
-  const beat = 60 / 96, length = 32 * beat, data = new Float32Array(Math.ceil(length * sampleRate));
-  const melody = [64,null,67,69,null,67,62,null,60,null,64,67,null,64,62,null,62,null,67,69,null,72,69,null,67,null,64,62,null,60,null,null];
-  function note(midi, at, duration, volume, woody) {
-    const hz = 440 * 2 ** ((midi - 69) / 12);
-    for (let i = 0, n = Math.floor(duration * sampleRate); i < n; i++) {
-      const t = i / sampleRate, env = Math.min(1, t / .012) * Math.exp(-t / (woody ? .19 : .38)) * Math.min(1, (duration - t) / .06);
-      const wave = Math.sin(2 * Math.PI * hz * t) + (woody ? .16 * Math.sin(2 * Math.PI * hz * 2 * t) : 0);
-      data[(Math.floor(at * sampleRate) + i) % data.length] += wave * env * volume;
+  const beat = 60 / 126, data = new Float32Array(Math.ceil(32 * beat * sampleRate));
+  const tune=[64,67,72,null,69,67,64,67, 65,69,72,69,67,null,64,null,
+    64,67,71,74,72,71,67,null, 62,67,69,67,64,62,60,null];
+  const roots=[48,53,45,43];
+  for(let bar=0;bar<8;bar++) {
+    const root=roots[bar%4];
+    for(let step=0;step<8;step++) {
+      const midi=tune[(bar*8+step)%tune.length], at=(bar*4+step*.5)*beat;
+      if(midi!==null)addTone(data,sampleRate,midi,at,.25,step%2?.14:.19);
+      if(step%2===0)addTone(data,sampleRate,root+(step===4?7:0),at,.3,.19,false);
+      // Quiet deterministic percussion, kept below the card effects.
+      for(let i=0,n=Math.floor(.09*sampleRate);i<n;i++) {
+        const time=i/sampleRate, offset=Math.floor(at*sampleRate)+i;
+        const shaker=Math.sin(i*12.9898+step*78.233)*Math.exp(-time*80)*.025;
+        const kick=step%4===0?Math.sin(2*Math.PI*(85*time-220*time*time))*Math.exp(-time*35)*.14:0;
+        if(offset<data.length)data[offset]+=shaker+kick;
+      }
     }
   }
-  melody.forEach((midi, i) => { if (midi !== null) note(midi, i * beat, .7, .18, true); });
-  [48,45,41,43].forEach((root, bar) => {
-    note(root, bar * 8 * beat, 1.25, .17, false);
-    note(root + 7, (bar * 8 + 4) * beat, 1.1, .12, false);
-  });
+  data[0]=0;data[data.length-1]=0;
+  return data;
+}
+export function composeCue(name, sampleRate=22050) {
+  const patterns={found:[[72,0],[76,.14],[79,.28]],start:[[72,0],[72,.2],[84,.4],[79,.4]],turn:[[79,0],[84,.12]],rematch:[[76,0],[79,.12],[76,.3],[79,.42]],notice:[[74,0],[69,.22]]};
+  const notes=patterns[name]; if(!notes)return null;
+  const data=new Float32Array(Math.ceil(.95*sampleRate));
+  for(const [note,at] of notes)addTone(data,sampleRate,note,at,.4,.35);
   return data;
 }
 export function createPKMusic({ Context = globalThis.AudioContext || globalThis.webkitAudioContext } = {}) {
   let context, gain, buffer, source, phase = 'off', enabled = true, visible = true, failed = false;
-  const volume = () => phase === 'playing' ? .10 : .13;
+  const cues = new Set(), cueBuffers = new Map();
+  const volume = () => phase === 'playing' ? .16 : .20;
   function stop() { if (source) { source.stop(); source.disconnect(); source = null; } }
   function sync() {
     if (!enabled || !visible || phase === 'off' || !context || context.state !== 'running') { stop(); return; }
@@ -34,7 +57,7 @@ export function createPKMusic({ Context = globalThis.AudioContext || globalThis.
   return {
     // Called synchronously from a click so Chrome can unlock the context.
     async unlock() {
-      if (!enabled || !Context) return false;
+      if (!Context) return false;
       try {
         if (!context || context.state === 'closed') {
           context = new Context({ latencyHint: 'playback' }); gain = context.createGain(); gain.connect(context.destination);
@@ -52,7 +75,18 @@ export function createPKMusic({ Context = globalThis.AudioContext || globalThis.
       gain.gain.cancelScheduledValues(now); gain.gain.setTargetAtTime(.025, now, .025);
       gain.gain.setTargetAtTime(volume(), now + .3, .18);
     },
+    cue(name) {
+      if (!context || context.state !== 'running' || !visible) return false;
+      if (!cueBuffers.has(name)) {
+        const samples=composeCue(name); if(!samples)return false;
+        const decoded=context.createBuffer(1,samples.length,22050);decoded.copyToChannel(samples,0);cueBuffers.set(name,decoded);
+      }
+      this.duck();
+      const voice=context.createBufferSource(), volume=context.createGain();
+      voice.buffer=cueBuffers.get(name);volume.gain.value=.25;voice.connect(volume);volume.connect(context.destination);cues.add(voice);
+      voice.onended=()=>{cues.delete(voice);voice.disconnect();volume.disconnect();};voice.start();return true;
+    },
     get failed() { return failed; },
-    stop() { phase = 'off'; stop(); },
+    stop() { phase = 'off'; stop(); for(const voice of cues)voice.stop(); cues.clear(); },
   };
 }

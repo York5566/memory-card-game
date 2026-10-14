@@ -4,7 +4,6 @@ import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction, navigateLanguage } from './site.js';
 import { createSounds } from './audio.js';
 import { loadImages } from './images.js';
-import { createFullscreenHint } from './fullscreen.js';
 import { initPK } from './pk.js';
 const $ = selector => document.querySelector(selector);
 function warning(message) { $('#storage-warning').hidden = false; $('#storage-warning').textContent = message; }
@@ -16,7 +15,7 @@ if ((await loadImages(config)).length) warning(t('部分自訂圖片不在此瀏
 let records = store.records();
 let sessionRows = []; // Intentionally memory-only; never persisted or restored from history.
 let game = new Game(config);
-let stage;
+let stage, soloZoom = 1;
 let handledResult = null;
 let activeNickname = t('玩家');
 let resultDate = 0;
@@ -39,6 +38,7 @@ function makeStage() {
     if (action !== 'ignored') playSound({ flip: 'flip', match: 'match', miss: 'miss', won: 'win' }[action]);
     render();
   });
+  stage.setZoom(soloZoom);
   $('#game-stage .resume-overlay').onclick = () => { game.resume(); render(); };
 }
 function clockText(ms) { const s = Math.floor(ms / 1000); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}<span>.${String(ms % 1000).padStart(3, '0')}</span>`; }
@@ -114,25 +114,28 @@ $('#restart').onclick = async () => {
 $('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if (soundOn) void sounds.prepare(); render(); };
 $('#rank-group').onchange = updateRankList;
 const playPanel = $('.game-layout .play-panel');
-const zoomNotice = $('#fullscreen-zoom-hint');
-const fullscreenHint = createFullscreenHint(zoomNotice, () => document.fullscreenElement === playPanel || playPanel.classList.contains('expanded-view'), () => {
-  zoomNotice.innerHTML = localizeMarkup('<kbd>CTRL</kbd><span>+滾輪可以調整畫面大小</span>');
-});
+function zoomSolo(value) {
+  soloZoom = Math.max(.6, Math.min(2, Math.round(value * 10) / 10)); stage.setZoom(soloZoom);
+  $('#solo-zoom-reset').textContent = Math.round(soloZoom * 100) + '%';
+  $('#solo-zoom-out').disabled = soloZoom <= .6; $('#solo-zoom-in').disabled = soloZoom >= 2;
+}
+$('#solo-zoom-out').onclick = () => zoomSolo(soloZoom - .2);
+$('#solo-zoom-in').onclick = () => zoomSolo(soloZoom + .2);
+$('#solo-zoom-reset').onclick = () => zoomSolo(1);
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.pause()) render(); });
-window.addEventListener('pagehide', () => { sessionRows = []; fullscreenHint.cancel(); });
+window.addEventListener('pagehide', () => { sessionRows = []; });
 window.addEventListener('pageshow', event => { if (event.persisted) { sessionRows = []; renderRanking(); } });
 $('#fullscreen').onclick = async () => {
   const panel = playPanel;
   if (document.fullscreenElement) { await document.exitFullscreen().catch(() => {}); return; }
-  if (panel.classList.contains('expanded-view')) { panel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); return; }
+  if (panel.classList.contains('expanded-view')) { panel.classList.remove('expanded-view'); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); return; }
   try { if (!panel.requestFullscreen) throw Error(); await panel.requestFullscreen(); }
-  catch { panel.classList.add('expanded-view'); fullscreenHint.schedule(); $('#fullscreen').setAttribute('aria-label', t('退出放大遊戲檢視')); toast(t('此瀏覽器不支援全螢幕，已切換放大遊戲檢視。再按一次或按 Esc 即可退出。')); }
+  catch { panel.classList.add('expanded-view'); $('#fullscreen').setAttribute('aria-label', t('退出放大遊戲檢視')); toast(t('此瀏覽器不支援全螢幕，已切換放大遊戲檢視。再按一次或按 Esc 即可退出。')); }
 };
 document.addEventListener('fullscreenchange', () => {
   $('#fullscreen').setAttribute('aria-label', document.fullscreenElement ? t('退出全螢幕') : t('全螢幕'));
-  if (document.fullscreenElement === playPanel) fullscreenHint.schedule(); else fullscreenHint.cancel();
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { playPanel.classList.remove('expanded-view'); fullscreenHint.cancel(); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('dialog[open]')) { playPanel.classList.remove('expanded-view'); $('#fullscreen').setAttribute('aria-label', t('全螢幕')); } });
 // Secondary panels are loaded only when opened; primary game is immediately playable.
 async function showSettings(onApply = () => {}) {
   game.pause(); render();
@@ -148,6 +151,7 @@ $('#records-open').onclick = async () => {
 makeStage(); renderRanking(); render();
 pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound,
   setActive(active) {
+    document.body.classList.toggle('pk-active', active);
     if (active) { startRequest++; starting = false; game.pause(); }
     $('.game-layout').hidden = active;
     $('#settings-open').disabled = active; $('#records-open').disabled = active; $('#pk-open').disabled = active;

@@ -9,7 +9,7 @@ export function makeRoom(config, player, now, random = Math.random) {
   clean.limitSeconds = Math.min(600, clean.limitSeconds);
   const pool = shuffle(clean.products.filter(p => p.enabled), random).slice(0, clean.pairs);
   return { config: clean, players: [player, null], ready: [false, false], connected: [true, false], away: [0, 0],
-    cards: shuffle(pool.flatMap(p => [p.id, p.id]), random), matched: [], open: [], scores: [0, 0], misses: [0, 0],
+    cards: shuffle(pool.flatMap(p => [p.id, p.id]), random), cardOwners: Array(clean.pairs * 2).fill(null), matched: [], open: [], scores: [0, 0], misses: [0, 0],
     round: 1, rematch: [false, false], rematchClosed: false, state: 'lobby', turn: random() < .5 ? 0 : 1, createdAt: now, expiresAt: now + PK.lobbyMs, rev: 0,
     flips: 0, winner: null, reason: '', settleAt: 0, turnEnd: 0, startedAt: 0, endAt: 0 };
 }
@@ -76,6 +76,8 @@ export function flipRoom(room, seat, index, now, rev) {
   advanceRoom(room, now);
   if (room.state !== 'playing' || room.turn !== seat || rev !== room.rev || !room.connected.every(Boolean) ||
       room.settleAt || !Number.isInteger(index) || index < 0 || index >= room.cards.length || room.open.includes(index) || room.matched.includes(index)) return 'ignored';
+  room.cardOwners ||= Array(room.cards.length).fill(null);
+  room.cardOwners[index] = seat;
   room.open.push(index); room.flips++; room.misses[seat] = 0; room.rev++;
   if (room.open.length === 1) return 'flip';
   if (room.cards[room.open[0]] === room.cards[index]) {
@@ -88,7 +90,7 @@ export function flipRoom(room, seat, index, now, rev) {
 }
 export function roomView(room, seat, now) {
   const revealAll = room.state === 'preview' || room.state === 'ended';
-  return { round: room.round || 1, rematch: room.rematch || [false,false], canRematch: canRematch(room, now), state: room.state, seat, config: room.config, players: room.players.map(p => p ? { name: p.name } : null),
+  return { round: room.round || 1, rematch: room.rematch || [false,false], canRematch: canRematch(room, now), rematchClosed: Boolean(room.rematchClosed), cardOwners: [...(room.cardOwners || Array(room.cards.length).fill(null))], state: room.state, seat, config: room.config, players: room.players.map(p => p ? { name: p.name } : null),
     ready: room.ready, connected: room.connected, scores: room.scores, turn: room.turn, rev: room.rev, flips: room.flips,
     cards: room.cards.map((id, i) => revealAll || room.open.includes(i) || room.matched.includes(i) ? id : null),
     matched: room.matched, open: room.open, settleAt: room.settleAt, turnEnd: room.turnEnd, startedAt: room.startedAt,

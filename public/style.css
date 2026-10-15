@@ -117,7 +117,7 @@ body.pk-active main{max-width:1440px;padding-top:16px}body.pk-active .page-headi
 /* A bounded board viewport prevents resize / scrollbar feedback at breakpoints. */
 html{scrollbar-gutter:stable}
 .game-heading{align-items:flex-start;margin-bottom:16px}.game-heading h1{font-size:clamp(1.6rem,3vw,2rem)}
-.game-mode-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.mode-current{padding:9px 18px;background:#e3eee5;border:1px solid #b8cebd;border-radius:10px;font-weight:700}.game-mode-nav .hint{margin:0}
+.game-mode-nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.game-mode-nav .hint{margin:0}
 body.pk-active .game-mode-nav{display:none}
 .pk-panel[data-phase=lobby]:has(#pk-invite:not([hidden])) #pk-status{display:none}
 .game-layout{display:block}.solo-panel{padding:18px}.solo-title,.solo-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.solo-title h2{margin:0;font-size:1.15rem}.solo-tools{gap:8px}.solo-panel .play-toolbar{margin-bottom:8px;gap:12px}.solo-panel .solo-settings-hint{margin:0 0 16px;font-size:.82rem}

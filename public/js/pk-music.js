@@ -40,13 +40,15 @@ export function composeCue(name, sampleRate=22050) {
   for(const [note,at] of notes)addTone(data,sampleRate,note,at,.4,.35);
   return data;
 }
-export function createPKMusic({ Context = globalThis.AudioContext || globalThis.webkitAudioContext } = {}) {
-  let context, gain, buffer, source, phase = 'off', enabled = true, visible = true, failed = false;
+// Shared by solo and PK. A hidden tab is still allowed to play music and cues.
+export function createGameMusic({ Context = globalThis.AudioContext || globalThis.webkitAudioContext } = {}) {
+  let context, gain, buffer, source, phase = 'off', enabled = true, failed = false;
   const cues = new Set(), cueBuffers = new Map();
   const volume = () => phase === 'playing' ? .16 : .20;
   function stop() { if (source) { source.stop(); source.disconnect(); source = null; } }
+  function stopCues() { for (const voice of cues) voice.stop(); cues.clear(); }
   function sync() {
-    if (!enabled || !visible || phase === 'off' || !context || context.state !== 'running') { stop(); return; }
+    if (!enabled || phase === 'off' || !context || context.state !== 'running') { stop(); return; }
     if (!source) {
       source = context.createBufferSource(); source.buffer = buffer; source.loop = true;
       source.connect(gain); gain.gain.setValueAtTime(0, context.currentTime); source.start();
@@ -67,8 +69,7 @@ export function createPKMusic({ Context = globalThis.AudioContext || globalThis.
       } catch { failed = true; stop(); return false; }
     },
     setPhase(value) { if (phase !== value) { phase = value; sync(); } },
-    setEnabled(value) { enabled = Boolean(value); sync(); },
-    setVisible(value) { visible = Boolean(value); sync(); },
+    setEnabled(value) { enabled = Boolean(value); if (!enabled) stopCues(); sync(); },
     duck() {
       if (!source) return;
       const now = context.currentTime;
@@ -76,7 +77,7 @@ export function createPKMusic({ Context = globalThis.AudioContext || globalThis.
       gain.gain.setTargetAtTime(volume(), now + .3, .18);
     },
     cue(name) {
-      if (!context || context.state !== 'running' || !visible) return false;
+      if (!enabled || !context || context.state !== 'running') return false;
       if (!cueBuffers.has(name)) {
         const samples=composeCue(name); if(!samples)return false;
         const decoded=context.createBuffer(1,samples.length,22050);decoded.copyToChannel(samples,0);cueBuffers.set(name,decoded);
@@ -87,6 +88,7 @@ export function createPKMusic({ Context = globalThis.AudioContext || globalThis.
       voice.onended=()=>{cues.delete(voice);voice.disconnect();volume.disconnect();};voice.start();return true;
     },
     get failed() { return failed; },
-    stop() { phase = 'off'; stop(); for(const voice of cues)voice.stop(); cues.clear(); },
+    stop() { phase = 'off'; stop(); stopCues(); },
   };
 }
+export { createGameMusic as createPKMusic };

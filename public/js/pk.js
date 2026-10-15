@@ -20,9 +20,9 @@ function persist(s) { try { s ? sessionStorage.setItem(KEY, JSON.stringify(s)) :
 const randomToken = () => [...crypto.getRandomValues(new Uint8Array(32))].map(v => v.toString(16).padStart(2, '0')).join('');
 const internationalNames = ['MintFox','Mochi','StarBerry','LunaLeaf','PeachSky','MapleCat','CloudOtter','Cocoa','SunnyKoala','BlueFinch','Amber','Nori','Yuzu','Olive','PandaPop','Nova','KiwiBird','Sora','Mango','Ripple','LemonTea','Poppy','SnowBean','Clover'];
 
-export function initPK({ getConfig, getName, setActive, prepare, playSound, openSettings }) {
+export function initPK({ getConfig, getName, setActive, prepare, playSound, openSettings, toggleSound }) {
   const panel = document.querySelector('#pk-panel');
-  panel.innerHTML = localizeMarkup(`<div class="pk-top"><h2>雙人 PK</h2><div class="pk-top-actions"><button class="button small" id="pk-music" aria-pressed="true">♫ 背景音樂：開</button><button class="icon-button" id="pk-fullscreen" aria-label="全螢幕">⛶</button><button class="button" id="pk-exit">返回單人遊戲</button></div></div>
+  panel.innerHTML = localizeMarkup(`<div class="pk-top"><h2>雙人 PK</h2><div class="pk-top-actions"><button class="button small" id="pk-music" aria-pressed="true" title="控制背景音樂、翻牌音效與提示音">♫ 聲音：開</button><button class="icon-button" id="pk-fullscreen" aria-label="全螢幕">⛶</button><button class="button" id="pk-exit">返回單人遊戲</button></div></div>
     <ol class="pk-steps" aria-label="對戰步驟"><li><b>1</b>選擇玩法</li><li><b>2</b>雙方準備</li><li><b>3</b>輪流翻牌</li></ol>
     <div id="pk-setup"><h3 id="pk-setup-title">想和誰一起玩？</h3><p class="muted" id="pk-setup-help">邀請朋友，或讓系統幫你找對手。兩人準備好就開始。</p>
       <div class="pk-setup-fields"><div><label for="pk-name">對戰暱稱（選填）</label><input id="pk-name" maxlength="24" autocomplete="nickname" placeholder="輸入對戰時顯示的名字"></div><div class="pk-config-box"><p id="pk-config"></p><button class="button small" id="pk-settings">⚙ 調整設定</button></div></div>
@@ -46,8 +46,6 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     </div>
     <details class="pk-how"><summary>第一次玩？看簡單規則</summary><p>輪到你時翻兩張，相同就得分並繼續；不同就換人。每回合 20 秒，連續兩回合未操作會結束。</p><p>邀請使用房主設定；配對使用先進入者設定。兩人確認後才開始，單人設定不會被對手覆蓋。</p><p>結束後 60 秒內，雙方按「再來一場」可與原對手重新對戰。對手離開時，可返回準備畫面重新配對。</p></details>`);
   const music = createPKMusic();
-  let musicOn = getConfig().sound, musicPreference = false;
-  try { const saved = localStorage.getItem('memory-pk-music'); if (saved !== null) { musicOn = saved === 'true'; musicPreference = true; } } catch {}
   const sound = name => { if (name === 'win') return; music.duck(); playSound(name); };
   const $ = id => panel.querySelector('#pk-' + id);
   document.addEventListener('fullscreenchange', () => {
@@ -352,19 +350,18 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   };
   $('settings').onclick = () => {
     if (mode !== 'setup' || pending || inviteId) return;
-    void openSettings(() => { refreshConfig(); if (!musicPreference) { musicOn = getConfig().sound; updateMusic(); } });
+    void openSettings(() => { refreshConfig(); updateMusic(); });
   };
   function updateMusic() {
+    const musicOn = getConfig().sound;
     music.setEnabled(musicOn); $('music').setAttribute('aria-pressed', String(musicOn));
-    $('music').textContent = t(musicOn ? '♫ 背景音樂：開' : '♫ 背景音樂：關');
+    $('music').textContent = t(musicOn ? '♫ 聲音：開' : '♪ 聲音：關');
   }
   $('music').onclick = () => {
-    musicOn = !musicOn; musicPreference = true; updateMusic();
-    try { localStorage.setItem('memory-pk-music', String(musicOn)); } catch {}
-    if (musicOn) void music.unlock().then(ok => { if (!ok) toast(t('無法播放背景音樂，遊戲仍可繼續。')); });
+    toggleSound(); updateMusic();
+    if (getConfig().sound) { void prepare(); void music.unlock().then(ok => { if (!ok) toast(t('無法播放背景音樂，遊戲仍可繼續。')); }); }
   };
-  updateMusic(); music.setVisible(!document.hidden);
-  document.addEventListener('visibilitychange', () => music.setVisible(!document.hidden));
+  updateMusic();
   $('ready').onclick = async () => { void music.unlock(); await prepare(); if (localRoom) { readyRoom(localRoom, 0, Date.now()); acceptView(roomView(localRoom, 0, Date.now())); } else send({ type: 'ready' }); };
   $('copy').onclick = async () => { try { await navigator.clipboard.writeText($('link').value); toast(t('邀請連結已複製')); } catch { $('link').focus(); $('link').select(); toast(t('請複製上方的邀請連結。')); } };
   $('fullscreen').onclick = async () => { if (document.fullscreenElement) await document.exitFullscreen(); else await panel.requestFullscreen?.().catch(() => toast(t('此瀏覽器不支援全螢幕。'))); };
@@ -373,5 +370,5 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   const previous = readSession();
   if (previous) { open(); session = previous; mode = 'connecting'; busy(true); $('setup').hidden = true; $('cancel').hidden = false; phase('connecting'); status(t('正在恢復 PK 連線…')); void connect().then(() => { if (mode === 'connecting') { mode = 'setup'; busy(false); $('setup').hidden = false; } }).catch(() => { showError(errorText('auth')); persist(null); resetUI(); }); }
   else if (readInvitation() || new URLSearchParams(location.search).get('mode') === 'pk') open();
-  return { get active() { return active; } };
+  return { get active() { return active; }, syncSound: updateMusic };
 }

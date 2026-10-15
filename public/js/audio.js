@@ -5,6 +5,7 @@ const NAMES = ['flip', 'match', 'miss', 'win'];
 export function createSounds(base, { Context = globalThis.AudioContext || globalThis.webkitAudioContext, fetchAudio = globalThis.fetch, onError = () => {} } = {}) {
   let context, warmup, warming = false, enabled = true, generation = 0, warned = false;
   const bytes = new Map(), buffers = new Map();
+  const voices = new Set();
   const load = name => {
     if (!bytes.has(name)) bytes.set(name, Promise.resolve().then(async () => {
       const controller = new AbortController();
@@ -57,7 +58,7 @@ export function createSounds(base, { Context = globalThis.AudioContext || global
   }
   return {
     prepare,
-    setEnabled(value) { enabled = Boolean(value); generation++; },
+    setEnabled(value) { enabled = Boolean(value); generation++; if (!enabled) { for (const source of voices) source.stop(); voices.clear(); } },
     async play(name) {
       if (!enabled || !NAMES.includes(name)) return false;
       const requested = generation;
@@ -68,7 +69,8 @@ export function createSounds(base, { Context = globalThis.AudioContext || global
         const source = context.createBufferSource(), gain = context.createGain();
         source.buffer = decoded; gain.gain.value = .24;
         source.connect(gain); gain.connect(context.destination);
-        source.onended = () => { source.disconnect(); gain.disconnect(); };
+        voices.add(source);
+        source.onended = () => { voices.delete(source); source.disconnect(); gain.disconnect(); };
         source.start(); warned = false; return true;
       } catch {
         if (!warned && enabled) { warned = true; onError(); }

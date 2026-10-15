@@ -3,6 +3,7 @@ import { Game, LocalStore, ruleKey, ruleSnapshot, groupLabel, rankRows, historic
 import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction, navigateLanguage } from './site.js';
 import { createSounds } from './audio.js';
+import { createGameMusic } from './pk-music.js';
 import { loadImages } from './images.js';
 import { initPK } from './pk.js';
 const $ = selector => document.querySelector(selector);
@@ -20,6 +21,8 @@ let handledResult = null;
 let activeNickname = t('玩家');
 let resultDate = 0;
 let soundOn = config.sound;
+const soloMusic = createGameMusic();
+let pkActive = false;
 let starting = false, startRequest = 0;
 let pk;
 document.addEventListener('languagechange-request', async event => {
@@ -30,8 +33,18 @@ document.addEventListener('languagechange-request', async event => {
   else if (resume) { game.resume(); render(); }
 });
 const sounds = createSounds(document.body.dataset.base, { onError: () => toast(t('音效暫時無法播放，請檢查音量或再開啟音效。')) });
-sounds.setEnabled(soundOn);
-function playSound(name) { if (soundOn) void sounds.play(name); }
+function playSound(name) { if (soundOn) { soloMusic.duck(); void sounds.play(name); } }
+function setSoundEnabled(value) {
+  soundOn = config.sound = Boolean(value);
+  sounds.setEnabled(soundOn); soloMusic.setEnabled(soundOn); pk?.syncSound();
+  $('#sound').setAttribute('aria-pressed', String(soundOn));
+  $('#sound').textContent = t(soundOn ? '♫ 聲音：開' : '♪ 聲音：關');
+}
+function unlockSoloMusic() {
+  if (soundOn) void soloMusic.unlock().then(ok => { if (!ok) toast(t('無法播放背景音樂，遊戲仍可繼續。')); });
+}
+function toggleSound() { setSoundEnabled(!soundOn); store.saveSettings(config); }
+setSoundEnabled(soundOn);
 function makeStage() {
   stage?.destroy(); stage = createStage($('#game-stage'), game.config, game.cards, index => {
     const action = game.flip(index);
@@ -52,6 +65,7 @@ function handleResult() {
 }
 function render() {
   game.tick(); handleResult(); stage.update(game);
+  soloMusic.setPhase(!pkActive && ['playing', 'preview', 'paused'].includes(game.state) ? 'playing' : 'off');
   $('#elapsed').innerHTML = clockText(game.elapsedMs);
   $('#flips').textContent = game.flips;
   $('#matched').innerHTML = `${game.matched.size / 2} <small>/ ${game.config.pairs}</small>`;
@@ -62,7 +76,6 @@ function render() {
   $('#start').disabled = starting || !['ready', 'won', 'timeout'].includes(game.state);
   $('#start').textContent = starting ? t('準備遊戲…') : (['won', 'timeout'].includes(game.state) ? t('再玩一局') : t('開始遊戲'));
   $('#nickname').disabled = game.state !== 'ready' && !['won', 'timeout'].includes(game.state);
-  $('#sound').textContent = soundOn ? '♫' : '♪'; $('#sound').setAttribute('aria-label', soundOn ? t('關閉音效') : t('開啟音效')); $('#sound').title = soundOn ? t('關閉音效') : t('開啟音效'); $('#sound').classList.toggle('off', !soundOn);
   const states = {
     ready: t('按「開始遊戲」，先記住牌面，再找出相同的兩張。'), preview: msg`記憶預覽，還有 ${Math.max(1, Math.ceil((game.previewEnd - performance.now()) / 1000))} 秒。預覽不計時。`,
     playing: game.open.length === 2 ? t('這兩張不一樣，再記住一次。') : (game.config.timed ? msg`剩餘 ${Math.max(0, Math.ceil((game.config.limitSeconds * 1000 - game.elapsedMs) / 1000))} 秒，找出下一對。` : t('一次翻開兩張，找到相同的圖案。')),
@@ -99,6 +112,7 @@ $('#start').onclick = async () => {
   if (game.state !== 'ready') newRound();
   const request = ++startRequest;
   const ready = sounds.prepare(); // Synchronous gesture unlock before rendering/await.
+  unlockSoloMusic();
   starting = true; render();
   await ready;
   if (request !== startRequest) return;
@@ -111,7 +125,7 @@ $('#start').onclick = async () => {
   render();
 };
 $('#solo-again').onclick = () => $('#start').click();
-$('#pause').onclick = () => { void sounds.prepare(); if (game.state === 'paused') game.resume(); else game.pause(); render(); };
+$('#pause').onclick = () => { void sounds.prepare(); unlockSoloMusic(); if (game.state === 'paused') game.resume(); else game.pause(); render(); };
 $('#restart').onclick = async () => {
   if (['preview', 'playing', 'paused'].includes(game.state)) {
     const wasPaused = game.state === 'paused'; game.pause(); render();
@@ -119,7 +133,7 @@ $('#restart').onclick = async () => {
   }
   newRound(); $('#start').focus();
 };
-$('#sound').onclick = () => { soundOn = !soundOn; sounds.setEnabled(soundOn); if (soundOn) void sounds.prepare(); render(); };
+$('#sound').onclick = () => { toggleSound(); if (soundOn) { void sounds.prepare(); unlockSoloMusic(); } };
 $('#rank-group').onchange = updateRankList;
 const playPanel = $('.game-layout .play-panel');
 function zoomSolo(value) {
@@ -131,7 +145,7 @@ $('#solo-zoom-out').onclick = () => zoomSolo(soloZoom - .2);
 $('#solo-zoom-in').onclick = () => zoomSolo(soloZoom + .2);
 $('#solo-zoom-reset').onclick = () => zoomSolo(1);
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.pause()) render(); });
-window.addEventListener('pagehide', () => { sessionRows = []; });
+window.addEventListener('pagehide', () => { sessionRows = []; soloMusic.stop(); });
 window.addEventListener('pageshow', event => { if (event.persisted) { sessionRows = []; renderRanking(); } });
 $('#fullscreen').onclick = async () => {
   const panel = playPanel;
@@ -148,7 +162,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.
 async function showSettings(onApply = () => {}) {
   game.pause(); render();
   const { openSettings } = await import('./settings.js');
-  openSettings(config, next => { config = next; soundOn = config.sound; sounds.setEnabled(soundOn); void sounds.prepare(); const saved = store.saveSettings(config); newRound(); renderRanking(); onApply(); return saved; });
+  openSettings(config, next => { config = next; setSoundEnabled(config.sound); void sounds.prepare(); const saved = store.saveSettings(config); newRound(); renderRanking(); onApply(); return saved; });
 }
 $('#settings-open').onclick = () => showSettings();
 $('#records-open').onclick = async () => {
@@ -157,8 +171,9 @@ $('#records-open').onclick = async () => {
   openRecords(records, () => { if (store.clearRecords()) { records = []; return true; } return false; });
 };
 makeStage(); renderRanking(); render();
-pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound,
+pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound, toggleSound,
   setActive(active) {
+    pkActive = active;
     document.body.classList.toggle('pk-active', active);
     if (active) { startRequest++; starting = false; game.pause(); }
     $('.game-layout').hidden = active;

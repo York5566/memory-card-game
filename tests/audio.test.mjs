@@ -9,7 +9,7 @@ function fixture({ manualWarmup = false } = {}) {
     resume() { events.push('resume'); this.state = 'running'; return Promise.resolve(); }
     async decodeAudioData() { events.push('decode'); await pending; return { pcm: true }; }
     createBuffer() { return { silent: true }; }
-    createBufferSource() { return { connect() {}, disconnect() {}, start() {
+    createBufferSource() { return { connect() {}, disconnect() {}, stop() { events.push('stop'); this.onended?.(); }, start() {
       if (this.buffer.silent) {
         events.push('warmup'); finishWarmup = () => this.onended();
         if (!manualWarmup) queueMicrotask(finishWarmup);
@@ -98,4 +98,14 @@ test('音訊恢復一直未完成時會結束等待，不讓開始按鈕永久�
   const ready = player.prepare();
   t.mock.timers.tick(4000);
   assert.equal(await ready, false);
+});
+
+test('聲音開關立即停止正在播放的音效，重新開啟後可再次播放', async () => {
+  const { player, events, release } = fixture(); release();
+  assert.equal(await player.play('win'), true);
+  player.setEnabled(false);
+  assert.equal(events.filter(e => e === 'stop').length, 1);
+  assert.equal(await player.play('flip'), false);
+  player.setEnabled(true);
+  assert.equal(await player.play('flip'), true);
 });

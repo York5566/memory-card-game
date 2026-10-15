@@ -2,7 +2,7 @@ import { locale, t, msg, localizeMarkup } from './i18n.js';
 import site from './site-config.js';
 import { sanitize } from './core.js';
 import { createStage } from './stage.js';
-import { roomEvents } from './pk-presentation.js';
+import { roomEvents, matchedOwner, waitingCopy } from './pk-presentation.js';
 import { toast, confirmAction } from './site.js';
 import { challenge, shareCloud } from './cloud.js';
 import { imageIds, encodeProfile, decodeProfile, readLimited, LIMITS, sha256 } from './profile-format.js';
@@ -42,7 +42,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
         <div id="pk-flash" class="pk-flash" hidden aria-hidden="true"><strong></strong><span></span></div>
         <div id="pk-result" class="pk-board-layer" hidden><div class="pk-result"><span class="pk-result-symbol" aria-hidden="true"></span><h3 id="pk-result-title"></h3><p id="pk-result-note"></p><strong id="pk-result-score"></strong><p id="pk-event" class="pk-event" role="alert" hidden></p><p id="pk-rematch-note" class="hint" role="status"></p><div class="pk-actions"><button id="pk-again" class="button primary">再來一場</button><button id="pk-result-back" class="button">返回準備畫面</button></div><div class="pk-result-particles" aria-hidden="true"></div></div></div>
       </div>
-      <p class="pk-color-key hint">A 藍色・B 橘色；卡牌角標代表最後翻牌者，打勾代表配對得分。</p>
+      <p class="pk-color-key hint">A 藍色・B 橘色；只在成功配對的卡牌上標記得分者。</p>
     </div>
     <details class="pk-how"><summary>第一次玩？看簡單規則</summary><p>輪到你時翻兩張，相同就得分並繼續；不同就換人。每回合 20 秒，連續兩回合未操作會結束。</p><p>邀請使用房主設定；配對使用先進入者設定。兩人確認後才開始，單人設定不會被對手覆蓋。</p><p>結束後 60 秒內，雙方按「再來一場」可與原對手重新對戰。對手離開時，可返回準備畫面重新配對。</p></details>`);
   const music = createPKMusic();
@@ -53,11 +53,15 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   document.addEventListener('fullscreenchange', () => {
     $('fullscreen').setAttribute('aria-label', t(document.fullscreenElement === panel ? '退出全螢幕' : '全螢幕'));
   });
-  let zoom = 1, flashTimer, presentationView = null;
+  let zoom = 1, flashTimer, presentationView = null, intent = '';
   const cue = name => { if (getConfig().sound) music.cue(name); };
   function phase(value) {
     panel.dataset.phase = value;
     $('search').hidden = !['queue','connecting','handoff'].includes(value);
+    const copy = waitingCopy(value,intent);
+    $('search').querySelector('h3').textContent = t(copy[0]);
+    $('search').querySelector('p').textContent = t(copy[1]);
+    $('cancel').textContent = t(copy[2]);
     panel.querySelectorAll('.pk-steps li').forEach((el,i) => { if (i === (value === 'setup' ? 0 : ['playing','preview','ended'].includes(value) ? 2 : 1)) el.setAttribute('aria-current','step'); else el.removeAttribute('aria-current'); });
   }
   function flash(title, note, owner = '', duration = 1400) {
@@ -145,7 +149,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     localReceipt = { ...await response.json(), digest }; return { code: localReceipt.code };
   }
   async function begin(type) {
-    if (pending) return; busy(true); $('error').hidden = true; phase('connecting'); $('setup').hidden = true; $('cancel').hidden = false;
+    if (pending) return; intent = type; busy(true); $('error').hidden = true; phase('connecting'); $('setup').hidden = true; $('cancel').hidden = false;
     if (ws) { send({ type: 'leave' }); stopSocket(); persist(null); }
     const attempt = ++generation;
     try {
@@ -224,7 +228,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   function renderRoom() {
     if (!view) return;
     phase(view.state);
-    $('setup').hidden = true; $('cancel').hidden = true; $('match-area').hidden = false;
+    $('setup').hidden = true; $('cancel').hidden = true; $('match-area').hidden = view.state === 'lobby' && !view.players[1];
     $('invite').hidden = view.state !== 'lobby' || Boolean(view.players[1]) || Boolean(localRoom);
     if (!$('invite').hidden) { const link = new URL(location.href); link.search = ''; link.hash = 'pk=' + roomId; $('link').value = link.href; }
     music.setPhase(view.state === 'ended' ? 'off' : view.state === 'lobby' ? 'waiting' : 'playing');
@@ -234,7 +238,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     stage.update({ state: view.state === 'preview' ? 'preview' : assetsReady && view.state === 'playing' && (localRoom || connected) && view.turn === view.seat && view.connected.every(Boolean) && !flipPending ? 'playing' : 'ready',
       matched: new Set(view.matched), open: view.open, isRevealed: i => Boolean(view.cards[i]) });
     stage.buttons.forEach((button, index) => {
-      const owner = view.cardOwners?.[index];
+      const owner = matchedOwner(view,index);
       if (owner === 0 || owner === 1) {
         button.dataset.player = owner;
         let badge = button.querySelector('.pk-card-owner');

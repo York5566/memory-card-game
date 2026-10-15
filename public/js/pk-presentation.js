@@ -8,8 +8,19 @@ export function fitPKBoard({width,height,count,ratio=0.8,gap=12,zoom=1,columns=0
     if(size>best.size)best={size,columns:cols,rows};
   }
   const scale=Math.max(.6,Math.min(2,zoom)), cardWidth=Math.max(58,Math.min(280,best.size))*scale;
-  const cardHeight=Math.max(64,cardWidth/ratio);
-  return {columns:best.columns,cardWidth,cardHeight,width:best.columns*cardWidth+(best.columns-1)*gap,height:best.rows*cardHeight+(best.rows-1)*gap};
+  // Round down so fractional pixels cannot create a scrollbar at exact-fit sizes.
+  const roundedWidth=Math.floor(cardWidth*10)/10, cardHeight=Math.max(64,Math.floor(roundedWidth/ratio*10)/10);
+  return {columns:best.columns,cardWidth:roundedWidth,cardHeight,width:best.columns*roundedWidth+(best.columns-1)*gap,height:best.rows*cardHeight+(best.rows-1)*gap};
+}
+export function matchedOwner(view,index) {
+  const owner=view.cardOwners?.[index];
+  return view.matched.includes(index) && (owner===0 || owner===1) ? owner : null;
+}
+export function waitingCopy(phase,intent) {
+  if(phase==='queue'||phase==='handoff') return ['正在尋找你的對手','配對成功會有提示音，請保持頁面開啟。','取消配對'];
+  if(intent==='create') return ['正在建立邀請房間','房間建立後，將顯示可分享給朋友的連結。','返回準備畫面'];
+  if(intent==='join') return ['正在加入朋友的房間','連線完成後，先確認規則，再按準備。','返回準備畫面'];
+  return ['正在連線','請稍候，正在確認連線狀態。','返回準備畫面'];
 }
 export function roomEvents(previous,next) {
   const events=[],peer=1-next.seat,sameRound=previous?.round===next.round;

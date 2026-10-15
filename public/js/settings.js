@@ -37,7 +37,7 @@ export function openSettings(applied, apply) {
     preview?.destroy(); const c = sanitize(history.value);
     const selected = { ...PRODUCTS[product], name: productName(c, PRODUCTS[product].id) }, cards = previewCards(c, selected.id);
     const stage = dialog.querySelector('#preview-stage');
-    preview = createStage(stage, c, cards, () => {}, true);
+    preview = createStage(stage, c, cards, () => {}, true, {fit:true});
     preview.update({ state: 'preview', isRevealed: () => showing.face !== 'back', matched: new Set(showing.face === 'matched' ? [0, 1] : []), open: [] });
     const card = createCard(c, selected.id); card.disabled = true; card.tabIndex = -1;
     card.classList.toggle('revealed', showing.face !== 'back'); card.classList.toggle('matched', showing.face === 'matched');
@@ -59,9 +59,9 @@ export function openSettings(applied, apply) {
   function sizePreview() {
     if (!preview || !dialog.open) return;
     const stage = dialog.querySelector('#preview-stage'), frame = dialog.querySelector('.preview-frame');
-    const main = document.querySelector('#game-stage'), detail = dialog.querySelector('#preview-card');
-    stage.style.width = `${main.clientWidth || 680}px`; stage.style.padding = getComputedStyle(main).padding;
-    stage.querySelector('.card-grid').style.maxWidth = getComputedStyle(main.querySelector('.card-grid')).maxWidth;
+    const main = document.querySelector('body.pk-active #pk-stage') || document.querySelector('#game-stage'), detail = dialog.querySelector('#preview-card');
+    stage.style.width = `${main.clientWidth || 680}px`; stage.style.height = `${main.clientHeight || 420}px`; stage.style.padding = '16px';
+    preview.setZoom(1);
     detail.style.width = `${preview.buttons[0]?.offsetWidth || 120}px`;
     for (const [element, visible] of [[stage, tab !== 'records' && showing.view === 'board'], [detail, tab !== 'records' && showing.view === 'card']]) {
       element.style.visibility = visible ? 'visible' : 'hidden'; element.setAttribute('aria-hidden', String(!visible));

@@ -43,20 +43,30 @@ export function createStage(container, config, cards, onFlip, preview = false, o
     grid.append(button); return button;
   });
   let zoom = 1;
-  if (options.duel) {
-    container.classList.add('pk-card-stage');
+  const fitted = options.duel || options.fit;
+  if (fitted) {
+    container.classList.add('fitted-stage');
+    if (options.duel) container.classList.add('pk-card-stage');
     const customHeading = c.headerText !== stock.headerText || c.title.text !== stock.title.text || c.title.subtitle !== stock.title.subtitle || c.logo.asset !== 'none' || c.logo.upload;
     container.querySelector('.stage-heading').hidden = !customHeading;
     container.querySelector('.stage-eyebrow').hidden = c.headerText === stock.headerText;
     container.querySelector('.stage-copy h2').hidden = c.title.text === stock.title.text;
     container.querySelector('.stage-subtitle').hidden = c.title.subtitle === stock.title.subtitle;
   }
+  let lastSize = '', resizeFrame = 0;
   const resize = () => {
-    if (options.duel) {
+    if (fitted) {
       const heading = container.querySelector('.stage-heading');
-      const availableHeight = Math.max(80, container.clientHeight - (heading.hidden ? 0 : heading.offsetHeight + 12) - 32);
+      if (!container.clientWidth || !container.clientHeight) return;
+      const style = getComputedStyle(container);
+      const width = container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const height = container.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - (heading.hidden ? 0 : heading.offsetHeight + 12);
+      const signature = [width, height, zoom, c.boardScale].join(':');
+      if (signature === lastSize) return;
+      lastSize = signature;
+      const availableHeight = Math.max(80, Math.floor(height));
       container.querySelector('.board-wrap').style.minHeight = availableHeight + 'px';
-      const layout = fitPKBoard({width: container.clientWidth - 32, height: availableHeight, count: cards.length, ratio: c.ratioW / c.ratioH, gap: c.gap, zoom, columns: c.columns});
+      const layout = fitPKBoard({width: Math.floor(width), height: availableHeight, count: cards.length, ratio: c.ratioW / c.ratioH, gap: c.gap, zoom: zoom * c.boardScale / 100, columns: c.columns});
       grid.style.width = layout.width + 'px'; grid.style.maxWidth = 'none';
       grid.style.gridTemplateColumns = 'repeat(' + layout.columns + ', ' + layout.cardWidth + 'px)';
       for (const button of buttons) { button.style.height = layout.cardHeight + 'px'; button.style.maxHeight = 'none'; }
@@ -70,10 +80,16 @@ export function createStage(container, config, cards, onFlip, preview = false, o
     // Keep extreme ratios usable rather than turning a card into a thin, unclickable strip.
     for (const button of buttons) button.style.minHeight = '54px';
   };
-  const observer = new ResizeObserver(resize); observer.observe(container); resize();
+  // Observe a bounded viewport, not the card grid whose size we are changing.
+  // Defer writes outside ResizeObserver delivery and ignore unchanged measurements.
+  const scheduleResize = () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(resize); };
+  const observer = new ResizeObserver(scheduleResize);
+  observer.observe(container, {box:'border-box'});
+  if (fitted) observer.observe(container.querySelector('.stage-heading'));
+  resize();
   return {
     buttons,
-    setZoom(value) { zoom = value; if (!options.duel) { grid.style.width = c.boardScale * zoom + '%'; grid.style.maxWidth = 'calc(var(--card-base-max, 630px) * ' + zoom + ')'; for (const button of buttons) button.style.maxHeight = 300 * zoom + 'px'; } resize(); },
+    setZoom(value) { zoom = value; if (!fitted) { grid.style.width = c.boardScale * zoom + '%'; grid.style.maxWidth = 'calc(var(--card-base-max, 630px) * ' + zoom + ')'; for (const button of buttons) button.style.maxHeight = 300 * zoom + 'px'; } resize(); },
     setCards(next) {
       next.forEach((id, i) => {
         if (id === cards[i]) return;
@@ -92,6 +108,6 @@ export function createStage(container, config, cards, onFlip, preview = false, o
       });
       container.querySelector('.stage-overlay').hidden = game.state !== 'paused';
     },
-    destroy() { observer.disconnect(); },
+    destroy() { observer.disconnect(); cancelAnimationFrame(resizeFrame); },
   };
 }

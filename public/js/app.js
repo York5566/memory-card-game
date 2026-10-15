@@ -37,7 +37,7 @@ function makeStage() {
     const action = game.flip(index);
     if (action !== 'ignored') playSound({ flip: 'flip', match: 'match', miss: 'miss', won: 'win' }[action]);
     render();
-  });
+  }, false, {fit:true});
   stage.setZoom(soloZoom);
   $('#game-stage .resume-overlay').onclick = () => { game.resume(); render(); };
 }
@@ -64,10 +64,17 @@ function render() {
   $('#nickname').disabled = game.state !== 'ready' && !['won', 'timeout'].includes(game.state);
   $('#sound').textContent = soundOn ? '♫' : '♪'; $('#sound').setAttribute('aria-label', soundOn ? t('關閉音效') : t('開啟音效')); $('#sound').title = soundOn ? t('關閉音效') : t('開啟音效'); $('#sound').classList.toggle('off', !soundOn);
   const states = {
-    ready: t('準備好了嗎？開始後先看看所有圖案。'), preview: msg`記憶預覽，還有 ${Math.max(1, Math.ceil((game.previewEnd - performance.now()) / 1000))} 秒。預覽不計時。`,
+    ready: t('按「開始遊戲」，先記住牌面，再找出相同的兩張。'), preview: msg`記憶預覽，還有 ${Math.max(1, Math.ceil((game.previewEnd - performance.now()) / 1000))} 秒。預覽不計時。`,
     playing: game.open.length === 2 ? t('這兩張不一樣，再記住一次。') : (game.config.timed ? msg`剩餘 ${Math.max(0, Math.ceil((game.config.limitSeconds * 1000 - game.elapsedMs) / 1000))} 秒，找出下一對。` : t('一次翻開兩張，找到相同的圖案。')),
     paused: t('已暫停。準備好時按「繼續」。'), won: msg`全部配對完成！挑戰用時 ${elapsedText(game.elapsedMs)}，翻牌 ${game.flips} 次。`, timeout: msg`時間到！完成 ${game.matched.size / 2} / ${game.config.pairs} 對。再試一次吧。`,
   };
+  const ended = ['won','timeout'].includes(game.state);
+  $('#solo-result').hidden = !ended;
+  if (ended) {
+    $('#solo-result-title').textContent = t(game.state === 'won' ? '全部配對完成！' : '時間到！');
+    $('#solo-result-note').textContent = states[game.state];
+    $('#solo-result .pk-result').dataset.outcome = game.state === 'won' ? 'win' : 'loss';
+  }
   const status = states[game.state]; if ($('#game-status').textContent !== status) $('#game-status').textContent = status;
 }
 function renderRanking() {
@@ -103,6 +110,7 @@ $('#start').onclick = async () => {
   }
   render();
 };
+$('#solo-again').onclick = () => $('#start').click();
 $('#pause').onclick = () => { void sounds.prepare(); if (game.state === 'paused') game.resume(); else game.pause(); render(); };
 $('#restart').onclick = async () => {
   if (['preview', 'playing', 'paused'].includes(game.state)) {

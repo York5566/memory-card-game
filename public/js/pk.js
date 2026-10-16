@@ -1,8 +1,9 @@
+import { invitationError } from './verification.js';
 import { locale, t, msg, localizeMarkup } from './i18n.js';
 import site from './site-config.js';
 import { sanitize } from './core.js';
 import { createStage } from './stage.js';
-import { roomEvents, matchedOwner, waitingCopy } from './pk-presentation.js';
+import { roomEvents, matchedOwner, waitingCopy, resultOutcome } from './pk-presentation.js';
 import { toast, confirmAction } from './site.js';
 import { challenge, shareCloud } from './cloud.js';
 import { imageIds, encodeProfile, decodeProfile, readLimited, LIMITS, sha256 } from './profile-format.js';
@@ -20,7 +21,7 @@ function persist(s) { try { s ? sessionStorage.setItem(KEY, JSON.stringify(s)) :
 const randomToken = () => [...crypto.getRandomValues(new Uint8Array(32))].map(v => v.toString(16).padStart(2, '0')).join('');
 const internationalNames = ['MintFox','Mochi','StarBerry','LunaLeaf','PeachSky','MapleCat','CloudOtter','Cocoa','SunnyKoala','BlueFinch','Amber','Nori','Yuzu','Olive','PandaPop','Nova','KiwiBird','Sora','Mango','Ripple','LemonTea','Poppy','SnowBean','Clover'];
 
-export function initPK({ getConfig, getName, setActive, prepare, playSound, openSettings, toggleSound }) {
+export function initPK({ getConfig, getName, setActive, prepare, playSound, openSettings, toggleSound, audioContext }) {
   const panel = document.querySelector('#pk-panel');
   panel.innerHTML = localizeMarkup(`<div class="pk-top"><h2>雙人 PK</h2><div class="pk-top-actions"><button class="button small" id="pk-music" aria-pressed="true" title="控制背景音樂、翻牌音效與提示音">♫ 聲音：開</button><button class="icon-button" id="pk-fullscreen" aria-label="全螢幕">⛶</button><button class="button" id="pk-exit">返回單人遊戲</button></div></div>
     <ol class="pk-steps" aria-label="對戰步驟"><li><b>1</b>選擇玩法</li><li><b>2</b>雙方準備</li><li><b>3</b>輪流翻牌</li></ol>
@@ -32,6 +33,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     <div id="pk-challenge"></div><p id="pk-status" class="pk-status" role="status" aria-live="polite"></p><p id="pk-error" class="notice warning" role="alert" hidden></p>
     <div id="pk-search" hidden><span class="pk-search-orbit" aria-hidden="true">✦</span><h3>正在尋找你的對手</h3><p>配對成功會有提示音，請保持頁面開啟。</p><button class="button" id="pk-cancel" hidden>取消配對</button></div>
     <div id="pk-invite" hidden><h3>下一步：把連結傳給朋友</h3><div class="pk-link-row"><input id="pk-link" aria-label="邀請連結" readonly><button class="button primary" id="pk-copy">複製連結</button></div><p class="hint">朋友加入後，兩人都按「我準備好了」就開始。房間保留 3 分鐘。</p></div>
+    <div id="pk-lobby-back" hidden><button id="pk-setup-back" class="button">← 返回選擇玩法</button><p class="hint">返回會離開此房間；你可以重新調整設定、邀請或配對。</p></div>
     <div id="pk-match-area" hidden>
       <div class="pk-scoreboard"><div id="pk-player-0" data-player="0"><b class="pk-seat">A</b><div><span></span><small></small></div><strong>0</strong></div><b class="pk-vs" aria-hidden="true">VS</b><div id="pk-player-1" data-player="1"><b class="pk-seat">B</b><div><span></span><small></small></div><strong>0</strong></div></div>
       <div class="pk-board-tools"><div id="pk-turn" role="status"><strong id="pk-turn-title"></strong><span id="pk-turn-detail" aria-live="off"></span></div><div class="zoom-controls" aria-label="牌面大小"><button class="button small" id="pk-zoom-out" aria-label="縮小卡牌">−</button><button class="button small" id="pk-zoom-fit" title="適合畫面">100%</button><button class="button small" id="pk-zoom-in" aria-label="放大卡牌">＋</button></div><button id="pk-leave" class="button small">離開房間</button></div>
@@ -45,7 +47,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
       <p class="pk-color-key hint">A 藍色・B 橘色；只在成功配對的卡牌上標記得分者。</p>
     </div>
     <details class="pk-how"><summary>第一次玩？看簡單規則</summary><p>輪到你時翻兩張，相同就得分並繼續；不同就換人。每回合 20 秒，連續兩回合未操作會結束。</p><p>邀請使用房主設定；配對使用先進入者設定。兩人確認後才開始，單人設定不會被對手覆蓋。</p><p>結束後 60 秒內，雙方按「再來一場」可與原對手重新對戰。對手離開時，可返回準備畫面重新配對。</p></details>`);
-  const music = createPKMusic();
+  const music = createPKMusic({ getContext: audioContext });
   const sound = name => { if (name === 'win') return; music.duck(); playSound(name); };
   const $ = id => panel.querySelector('#pk-' + id);
   document.addEventListener('fullscreenchange', () => {
@@ -55,6 +57,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   const cue = name => { if (getConfig().sound) music.cue(name); };
   function phase(value) {
     panel.dataset.phase = value;
+    $('lobby-back').hidden = value !== 'lobby';
     $('search').hidden = !['queue','connecting','handoff'].includes(value);
     const copy = waitingCopy(value,intent);
     $('search').querySelector('h3').textContent = t(copy[0]);
@@ -164,7 +167,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
       await connect(); if (attempt !== generation) { stopSocket(); return; }
       mode = type === 'queue' ? 'queue' : 'connecting'; phase(mode); music.setPhase('waiting'); $('setup').hidden = true; $('cancel').hidden = false;
       if (!send({ type, source, id: inviteId })) throw Error(errorText('unavailable'));
-    } catch (error) { if (attempt !== generation) return; mode = 'setup'; phase(mode); $('setup').hidden = false; stopSocket(); persist(null); music.stop(); showError(error.message || errorText('unavailable')); busy(false); }
+    } catch (error) { if (attempt !== generation) return; mode = 'setup'; phase(mode); $('setup').hidden = false; stopSocket(); persist(null); music.stop(); status(''); showError(error.message ? invitationError(error, type === 'join', t) : errorText('unavailable')); busy(false); }
   }
   async function receive(data) {
     if (!active) return;
@@ -254,10 +257,10 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     $('ready-layer').hidden = view.state !== 'lobby' || !view.players[1];
     $('arena').hidden = view.state === 'lobby' && !view.players[1];
     $('ready-note').textContent = t(view.ready[view.seat] ? '已通知對手你準備好了，請稍候。' : '你準備好，就可以開始了。');
-    $('leave').hidden = view.state === 'ended';
+    $('leave').hidden = ['lobby', 'ended'].includes(view.state);
     $('ready').hidden = view.state !== 'lobby'; $('ready').disabled = !assetsReady || (!localRoom && !connected) || !view.players[1] || view.ready[view.seat] || !view.connected.every(Boolean);
     $('ready').textContent = view.ready[view.seat] ? t('已準備，等待對手') : t('我準備好了');
-    $('again').hidden = view.state !== 'ended';
+    $('again').hidden = view.state !== 'ended' || !view.startedAt;
     $('again').disabled = rematchPending || !view.canRematch || view.rematch?.[view.seat] || (!localRoom && !connected);
     $('again').textContent = view.rematch?.[view.seat] ? t('已邀請再戰') : t('再來一場');
     renderResult();
@@ -280,7 +283,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     if (!view) return;
     if (!localRoom && !connected) { turnStatus(t('連線中斷，正在重新連線…')); status(t('連線中斷，正在重新連線…')); return; }
     if (view.state === 'ended') {
-      turnStatus(t('對戰結束。')); status('');
+      turnStatus(t(view.startedAt ? '對戰結束。' : '準備已結束')); status('');
       const remaining = Math.max(0, Math.ceil((view.expiresAt - now) / 1000));
       $('again').disabled = rematchPending || !view.canRematch || !remaining || view.rematch?.[view.seat] || (!localRoom && !connected);
       $('rematch-note').textContent = !remaining ? t('再戰時間已結束，請返回準備畫面。') : !view.canRematch ? t('對手已離開或暫時離線，現在無法再戰。可離開房間重新配對。') : view.rematch?.[view.seat] ? msg`等待對手同意再戰…剩餘 ${remaining} 秒` : view.rematch?.[1 - view.seat] ? msg`對手邀請你再戰！剩餘 ${remaining} 秒` : msg`想和同一位對手再比一場？雙方在 ${remaining} 秒內按「再來一場」即可。`;
@@ -295,19 +298,21 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     turnStatus(t(view.turn === view.seat ? '你的回合' : '對手的回合'), msg`剩餘 ${seconds} 秒`, String(view.turn), seconds);
   }
   function renderResult() {
-    const ended = view.state === 'ended'; $('result').hidden = !ended; $('rematch-note').hidden = !ended;
+    const ended = view.state === 'ended'; $('result').hidden = !ended; $('rematch-note').hidden = !ended || !view.startedAt;
     if (!ended) { resultKey = ''; $('event').hidden = true; return; }
     const key = roomId + ':' + view.round;
     if (resultKey === key) return;
     resultKey = key; clearTimeout(flashTimer); $('flash').hidden = true; $('event').hidden = true; $('result').classList.remove('has-invitation');
     $('result-score').textContent = view.scores[view.seat] + ' : ' + view.scores[1 - view.seat];
-    const outcome = view.winner === null ? 'draw' : view.winner === view.seat ? 'win' : 'loss';
+    const outcome = resultOutcome(view), cancelled = outcome === 'cancelled';
+    $('result-score').hidden = cancelled;
+    $('result-back').textContent = t(cancelled ? '返回選擇玩法' : '返回準備畫面');
     $('result').dataset.outcome = outcome; $('result').querySelector('.pk-result').dataset.outcome = outcome;
-    $('result').querySelector('.pk-result-symbol').textContent = outcome === 'win' ? '★' : outcome === 'draw' ? '∞' : '☾';
-    $('result-title').textContent = t(!view.players.every(Boolean) ? '房間已結束' : outcome === 'win' ? '獲勝！' : outcome === 'draw' ? '平手！' : '敗北');
-    $('result-note').textContent = t(!view.players.every(Boolean) ? '房間等待時間已結束。' : outcome === 'win' ? '漂亮的記憶力，這一場由你拿下！' : outcome === 'draw' ? '勢均力敵，再比一場吧！' : '差一點，下次再挑戰！');
+    $('result').querySelector('.pk-result-symbol').textContent = cancelled ? '↩' : outcome === 'win' ? '★' : outcome === 'draw' ? '∞' : '☾';
+    $('result-title').textContent = t(cancelled ? '準備已結束' : outcome === 'win' ? '獲勝！' : outcome === 'draw' ? '平手！' : '敗北');
+    $('result-note').textContent = t(cancelled ? '這場尚未開始。返回選擇玩法，即可重新邀請或配對。' : outcome === 'win' ? '漂亮的記憶力，這一場由你拿下！' : outcome === 'draw' ? '勢均力敵，再比一場吧！' : '差一點，下次再挑戰！');
     const particles = $('result').querySelector('.pk-result-particles'); particles.replaceChildren();
-    for (let i = 0; i < 16; i++) { const p = document.createElement('i'); p.style.setProperty('--i', i); particles.append(p); }
+    for (let i = 0; !cancelled && i < 16; i++) { const p = document.createElement('i'); p.style.setProperty('--i', i); particles.append(p); }
     if (outcome === 'win') { music.duck(); playSound('win'); }
 
   }
@@ -330,7 +335,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
     tickStatus();
   }
   async function leave(closePanel = false) {
-    if (view && view.state !== 'ended' && view.players[1] && !await confirmAction(t('離開這場 PK？'), t('離開後這場對戰會結束。'), t('離開房間'))) return false;
+    if (view && view.state !== 'ended' && view.players[1] && !await confirmAction(t(view.state === 'lobby' ? '返回選擇玩法？' : '離開這場 PK？'), t(view.state === 'lobby' ? '返回會離開目前房間，並通知對方。再次對戰需要新的邀請或配對。' : '離開後這場對戰會結束。'), t(view.state === 'lobby' ? '返回選擇玩法' : '離開房間'))) return false;
     generation++; send({ type: 'leave' }); stopSocket(); session = null; persist(null); inviteId = '';
     if (readInvitation()) history.replaceState(null, '', location.pathname + location.search);
     resetUI(); if (closePanel) { if (document.fullscreenElement === panel) await document.exitFullscreen().catch(() => {}); active = false; clearInterval(timer); panel.hidden = true; setActive(false); document.querySelector('#pk-open').focus(); }
@@ -338,6 +343,7 @@ export function initPK({ getConfig, getName, setActive, prepare, playSound, open
   }
   $('create').onclick = () => begin('create'); $('match').onclick = () => begin('queue'); $('join').onclick = () => begin('join');
   $('zoom-out').onclick = () => updateZoom(zoom - .2); $('zoom-in').onclick = () => updateZoom(zoom + .2); $('zoom-fit').onclick = () => updateZoom(1);
+  $('setup-back').onclick = async () => { if (await leave()) $('create').focus(); };
   $('result-back').onclick = () => leave();
   $('cancel').onclick = () => leave(); $('leave').onclick = () => leave(); $('exit').onclick = () => leave(true);
   $('again').onclick = () => {

@@ -111,6 +111,7 @@ function menu({ language = 'ja', current = 'en', cancel = false, ...options } = 
   result.context.CustomEvent = class { constructor(type, options) { this.type = type; this.detail = options.detail; this.defaultPrevented = false; } preventDefault() { this.defaultPrevented = true; } };
   result.context.config = { ads: { demo: false, enabled: false } };
   result.context.t = value => value;
+  result.context.initTutorial = () => {}; // Guidance is covered separately; this fixture exercises language navigation.
   const site = readFileSync(new URL('../public/js/site.js', import.meta.url), 'utf8').replace(/^import[^\n]*\n/gm, '').replaceAll('export function', 'function');
   runInNewContext(site, result.context);
   let prevented = false;

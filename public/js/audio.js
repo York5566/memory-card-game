@@ -1,10 +1,11 @@
+import { createFlipBuffer } from './flip-sound.js';
 const NAMES = ['flip', 'match', 'miss', 'win'];
 
 // Start an actual silent source inside the gesture, not only an empty context.
 // Wait for that source and the flip buffer before exposing the first playable card.
-export function createSounds(base, { Context = globalThis.AudioContext || globalThis.webkitAudioContext, fetchAudio = globalThis.fetch, onError = () => {} } = {}) {
+export function createSounds(base, { Context = globalThis.AudioContext || globalThis.webkitAudioContext, getContext, fetchAudio = globalThis.fetch, onError = () => {} } = {}) {
   let context, warmup, warming = false, enabled = true, generation = 0, warned = false;
-  const bytes = new Map(), buffers = new Map();
+  const bytes = new Map(), buffers = new Map(), decoded = new Map();
   const voices = new Set();
   const load = name => {
     if (!bytes.has(name)) bytes.set(name, Promise.resolve().then(async () => {
@@ -20,27 +21,30 @@ export function createSounds(base, { Context = globalThis.AudioContext || global
       .catch(() => { bytes.delete(name); return null; }));
     return bytes.get(name);
   };
-  NAMES.forEach(load);
+  NAMES.filter(name => name !== 'flip').forEach(load);
   function buffer(name) {
+    if (name === 'flip' && !decoded.has(name)) decoded.set(name, createFlipBuffer(context));
+    if (decoded.has(name)) return Promise.resolve(decoded.get(name));
     if (!buffers.has(name)) buffers.set(name, load(name).then(data => {
       if (!data) throw Error('Audio unavailable');
       return context.decodeAudioData(data.slice(0));
-    }).catch(error => { buffers.delete(name); throw error; }));
+    }).then(value => { decoded.set(name, value); return value; }).catch(error => { buffers.delete(name); throw error; }));
     return buffers.get(name);
   }
   function prepare() {
     if (!enabled) return Promise.resolve(false);
     try {
       if (!context || context.state === 'closed') {
-        context = new Context({ latencyHint: 'interactive' });
-        buffers.clear(); warmup = null;
+        context = getContext ? getContext() : new Context({ latencyHint: 'interactive' });
+        buffers.clear(); decoded.clear(); warmup = null;
       }
       const needsResume = context.state !== 'running';
       // Both resume and source.start must run before awaiting anything.
       const resumed = needsResume ? context.resume() : Promise.resolve();
       if (!warmup || (needsResume && !warming)) {
         const source = context.createBufferSource();
-        source.buffer = context.createBuffer(1, Math.ceil(context.sampleRate * .12), context.sampleRate);
+        const lead = Math.min(.5, Math.max(.18, (context.baseLatency || 0) + (context.outputLatency || 0) + .04));
+        source.buffer = context.createBuffer(1, Math.ceil(context.sampleRate * lead), context.sampleRate);
         source.connect(context.destination);
         warming = true;
         warmup = new Promise(resolve => {
@@ -63,15 +67,18 @@ export function createSounds(base, { Context = globalThis.AudioContext || global
       if (!enabled || !NAMES.includes(name)) return false;
       const requested = generation;
       try {
-        if (!await prepare()) throw Error('Audio context unavailable');
-        const decoded = await buffer(name);
+        // A prepared first flip starts inside the card gesture with no fetch/await.
+        if (!context || context.state !== 'running' || warming || !decoded.has(name)) {
+          if (!await prepare()) throw Error('Audio context unavailable');
+          await buffer(name);
+        }
         if (!enabled || requested !== generation) return false;
         const source = context.createBufferSource(), gain = context.createGain();
-        source.buffer = decoded; gain.gain.value = .24;
+        source.buffer = decoded.get(name); gain.gain.value = .24;
         source.connect(gain); gain.connect(context.destination);
         voices.add(source);
         source.onended = () => { voices.delete(source); source.disconnect(); gain.disconnect(); };
-        source.start(); warned = false; return true;
+        source.start(context.currentTime + .02); warned = false; return true;
       } catch {
         if (!warned && enabled) { warned = true; onError(); }
         return false;

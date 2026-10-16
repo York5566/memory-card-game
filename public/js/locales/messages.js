@@ -1,8 +1,10 @@
+import { uiV152Messages } from './ui-v152-messages.js';
 import { uiV151Messages } from './ui-v151-messages.js';
 import { pkV150Messages } from './pk-v150-messages.js';
 import { pkUpdateMessages } from './pk-update-messages.js';
 import { pkMessages } from './pk-messages.js';
 export const messages = {
+  ...uiV152Messages,
   ...pkMessages,
   ...pkUpdateMessages,
   ...pkV150Messages,

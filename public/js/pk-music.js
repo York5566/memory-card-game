@@ -41,7 +41,7 @@ export function composeCue(name, sampleRate=22050) {
   return data;
 }
 // Shared by solo and PK. A hidden tab is still allowed to play music and cues.
-export function createGameMusic({ Context = globalThis.AudioContext || globalThis.webkitAudioContext } = {}) {
+export function createGameMusic({ Context = globalThis.AudioContext || globalThis.webkitAudioContext, getContext } = {}) {
   let context, gain, buffer, source, phase = 'off', enabled = true, failed = false;
   const cues = new Set(), cueBuffers = new Map();
   const volume = () => phase === 'playing' ? .16 : .20;
@@ -59,10 +59,10 @@ export function createGameMusic({ Context = globalThis.AudioContext || globalThi
   return {
     // Called synchronously from a click so Chrome can unlock the context.
     async unlock() {
-      if (!Context) return false;
+      if (!Context && !getContext) return false;
       try {
         if (!context || context.state === 'closed') {
-          context = new Context({ latencyHint: 'playback' }); gain = context.createGain(); gain.connect(context.destination);
+          context = getContext ? getContext() : new Context({ latencyHint: 'playback' }); gain = context.createGain(); gain.connect(context.destination);
           const samples = composeLoop(); buffer = context.createBuffer(1, samples.length, 22050); buffer.copyToChannel(samples, 0);
         }
         await context.resume(); failed = false; sync(); return true;

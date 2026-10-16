@@ -1,5 +1,7 @@
 import { t } from './i18n.js';
 import config from './site-config.js';
+import { initTutorial } from './tutorial.js';
+initTutorial();
 export function navigateLanguage(href, language) {
   if (/^#pk=[a-f0-9]{48}$/.test(window.location.hash)) { const next = new URL(href, location.href); next.hash = location.hash; href = next.href; }
   if (window.memoryGameLanguage) window.memoryGameLanguage.navigate(href, language);

@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSounds } from '../public/js/audio.js';
+import { createAudioContextProvider } from '../public/js/audio-context.js';
+import { createGameMusic } from '../public/js/pk-music.js';
+import { createFlipBuffer } from '../public/js/flip-sound.js';
+import { readFileSync } from 'node:fs';
 function fixture({ manualWarmup = false } = {}) {
   const events = []; let release, finishWarmup;
   const pending = new Promise(resolve => { release = resolve; });
@@ -8,7 +12,7 @@ function fixture({ manualWarmup = false } = {}) {
     state = 'suspended'; destination = {}; sampleRate = 48000;
     resume() { events.push('resume'); this.state = 'running'; return Promise.resolve(); }
     async decodeAudioData() { events.push('decode'); await pending; return { pcm: true }; }
-    createBuffer() { return { silent: true }; }
+    createBuffer() { return { silent: true, copyToChannel(samples) { this.silent = !samples.some(v => v !== 0); } }; }
     createBufferSource() { return { connect() {}, disconnect() {}, stop() { events.push('stop'); this.onended?.(); }, start() {
       if (this.buffer.silent) {
         events.push('warmup'); finishWarmup = () => this.onended();
@@ -20,12 +24,35 @@ function fixture({ manualWarmup = false } = {}) {
   const player = createSounds('/memory-card-game/', { Context, fetchAudio: async url => { events.push(url); return { ok: true, arrayBuffer: async () => new ArrayBuffer(8) }; } });
   return { player, events, release, Context, finishWarmup: () => finishWarmup() };
 }
-test('開局在等待下載前同步恢復 AudioContext，第一次翻牌等待解碼後播放', async () => {
+
+test('內嵌第一次翻牌音效與既有 WAV 樣本完全相同', () => {
+  const wav=readFileSync(new URL('../public/assets/flip.wav',import.meta.url));
+  let pcm,rate; for(let at=12;at+8<=wav.length;){ const size=wav.readUInt32LE(at+4), tag=wav.toString('ascii',at,at+4); if(tag==='fmt ')rate=wav.readUInt32LE(at+12); if(tag==='data')pcm=wav.subarray(at+8,at+8+size); at+=8+size+(size%2); }
+  const buffer=createFlipBuffer({createBuffer(channels,length,sampleRate){return {channels,length,sampleRate,copyToChannel(data){this.data=data;}};}});
+  assert.equal(buffer.channels,1);assert.equal(buffer.sampleRate,rate);assert.equal(buffer.length,pcm.length/2);
+  for(let i=0;i<buffer.length;i++)assert.equal(buffer.data[i],pcm.readInt16LE(i*2)/32768);
+  assert.ok(buffer.data.some(v=>Math.abs(v)>.01));
+});
+
+test('單人與 PK 音樂、翻牌共用一個已解鎖的 AudioContext', async () => {
+  const {Context,release}=fixture();release();let count=0;
+  class Shared extends Context {
+    constructor(){super();count++;this.currentTime=0;}
+    createGain(){return {connect(){},disconnect(){},gain:{setValueAtTime(){},cancelScheduledValues(){},setTargetAtTime(){}}};}
+  }
+  const getContext=createAudioContextProvider({Context:Shared});
+  const sounds=createSounds('/',{getContext,fetchAudio:async()=>({ok:false})});
+  const solo=createGameMusic({getContext}),pk=createGameMusic({getContext});
+  assert.equal(await sounds.prepare(),true);assert.equal(await solo.unlock(),true);assert.equal(await sounds.play('flip'),true);
+  solo.stop();assert.equal(await pk.unlock(),true);assert.equal(count,1);pk.stop();
+});
+test('開局同步恢復 AudioContext，第一張牌不等待網路或音檔解碼', async () => {
   const { player, events, release } = fixture();
   const ready = player.prepare(); assert.deepEqual(events.slice(0, 2), ['resume', 'warmup']);
   const played = player.play('flip'); assert.ok(!events.includes('start'));
-  release(); assert.equal(await ready, true); assert.equal(await played, true); assert.equal(events.filter(e => e === 'start').length, 1);
-  assert.ok(events.includes('/memory-card-game/assets/flip.wav'));
+  assert.equal(await ready, true); assert.equal(await played, true); release(); assert.equal(events.filter(e => e === 'start').length, 1);
+  assert.ok(!events.includes('/memory-card-game/assets/flip.wav'));
+  const next = player.play('flip'); assert.equal(events.filter(e => e === 'start').length, 2, 'Prepared flip starts synchronously'); assert.equal(await next, true);
 });
 test('解碼途中關閉音效取消待播放音符，再次開啟可播放', async () => {
   const { player, events, release } = fixture();
@@ -42,8 +69,8 @@ test('連續翻牌各自建立音源，靜音及未知音效不播放', async ()
 test('音檔下載失敗可重試，不永久快取失敗結果', async () => {
   const { Context, release } = fixture(); release(); let failing = true, warnings = 0;
   const player = createSounds('/', { Context, onError: () => warnings++, fetchAudio: async () => ({ ok: !failing, status: 503, arrayBuffer: async () => new ArrayBuffer(8) }) });
-  assert.equal(await player.play('flip'), false); assert.equal(warnings, 1);
-  failing = false; assert.equal(await player.play('flip'), true);
+  assert.equal(await player.play('match'), false); assert.equal(warnings, 1);
+  failing = false; assert.equal(await player.play('match'), true);
 });
 test('瀏覽器拒絕音效時回報一次且不拋出未處理錯誤', async () => {
   let warnings = 0;

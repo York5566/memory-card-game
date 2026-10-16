@@ -1,4 +1,8 @@
 // Pure presentation rules; zoom never changes room configuration or card order.
+export function resultOutcome(view) {
+  if (!view.startedAt) return 'cancelled';
+  return view.winner === null ? 'draw' : view.winner === view.seat ? 'win' : 'loss';
+}
 export function fitPKBoard({width,height,count,ratio=0.8,gap=12,zoom=1,columns=0}) {
   width=Math.max(80,width); height=Math.max(80,height); ratio=Math.max(.1,Math.min(10,ratio));
   let best={size:0,columns:2,rows:Math.ceil(count/2)};

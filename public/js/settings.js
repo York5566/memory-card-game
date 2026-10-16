@@ -11,14 +11,14 @@ export function openSettings(applied, apply) {
   const dialog = document.querySelector('#settings-dialog'); if (dialog.open) return;
   let saved = copy(applied), history = new History(applied), tab = 'play', product = 0, preview, frameRequest = 0;
   let showing = { view: 'board', face: 'front' };
-  let busy = false, lastCode = '';
+  let busy = false, lastCode = '', cardPane = 'faces';
   const base = defaults(); const prior = document.activeElement;
   dialog.innerHTML = html`<header class="dialog-header"><div><h2 id="settings-title">設定</h2><p>調整草稿；儲存並套用後，遊戲回到準備畫面。</p></div><button class="icon-button close-settings" aria-label="關閉設定">×</button></header>
-    <div class="settings-body"><div class="settings-form"><div class="settings-tabs" role="tablist" aria-label="設定分頁">${Object.entries(TABS).map(([id, name]) => `<button class="tab" id="tab-${id}" role="tab" aria-controls="settings-fields" data-tab="${id}">${name}</button>`).join('')}</div><div id="settings-fields" class="settings-fields" role="tabpanel"></div></div>
-    <aside class="settings-preview" aria-label="設定即時預覽"><div class="preview-heading"><h3>即時預覽</h3><button type="button" class="button small" id="preview-expand" aria-expanded="false">放大預覽</button></div>
+    <div class="settings-body preview-collapsed"><div class="settings-form"><div class="settings-tabs" role="tablist" aria-label="設定分頁">${Object.entries(TABS).map(([id, name]) => `<button class="tab" id="tab-${id}" role="tab" aria-controls="settings-fields" data-tab="${id}">${name}</button>`).join('')}</div><div id="settings-fields" class="settings-fields" role="tabpanel"></div></div>
+    <aside class="settings-preview" aria-label="設定即時預覽"><div class="preview-heading"><h3>即時預覽</h3><button type="button" class="button small" id="preview-toggle" aria-expanded="false" aria-controls="preview-stage preview-card preview-records">顯示預覽</button><button type="button" class="button small" id="preview-expand" aria-expanded="false">放大預覽</button></div>
     <div class="preview-tools"><div role="group" aria-label="預覽範圍"><button type="button" data-view="board">整體畫面</button><button type="button" data-view="card">卡牌細節</button></div><div role="group" aria-label="預覽牌面"><button type="button" data-face="front">正面</button><button type="button" data-face="back">卡背</button><button type="button" data-face="matched">配對成功</button></div></div>
     <div class="preview-frame"><div id="preview-stage" class="stage"></div><div id="preview-card"></div><div id="preview-records" hidden></div></div><p class="preview-caption" id="preview-caption"></p><p class="preview-hint" id="preview-summary"></p></aside></div>
-    <footer class="settings-footer"><div><div class="undo-row"><button class="button small" id="settings-undo">復原</button><button class="button small" id="settings-redo">重做</button><button class="reset-field" id="settings-reset-all">全部設定恢復預設</button></div><div class="save-status" id="save-status" role="status">僅儲存在此瀏覽器。</div></div><div class="footer-actions"><button class="button" id="settings-close">關閉</button><button class="button primary" id="settings-apply">儲存並套用</button></div></footer>`;
+    <footer class="settings-footer"><div><details class="settings-history"><summary>復原與重設</summary><div class="undo-row"><button class="button small" id="settings-undo">復原</button><button class="button small" id="settings-redo">重做</button><button class="reset-field" id="settings-reset-all">全部設定恢復預設</button></div></details><div class="save-status" id="save-status" role="status">僅儲存在此瀏覽器。</div></div><div class="footer-actions"><button class="button" id="settings-close">關閉</button><button class="button primary" id="settings-apply">儲存並套用</button></div></footer>`;
   const status = message => { dialog.querySelector('#save-status').textContent = message; };
   async function operation(message, task) {
     if (busy) return; busy = true; status(message);
@@ -78,6 +78,11 @@ export function openSettings(applied, apply) {
     event.currentTarget.textContent = expanded ? t('返回調整') : t('放大預覽'); event.currentTarget.setAttribute('aria-expanded', String(expanded));
     sizePreview();
   };
+  dialog.querySelector('#preview-toggle').onclick = event => {
+    const collapsed = dialog.querySelector('.settings-body').classList.toggle('preview-collapsed');
+    event.currentTarget.textContent = t(collapsed ? '顯示預覽' : '收合預覽');
+    event.currentTarget.setAttribute('aria-expanded', String(!collapsed)); previewRender();
+  };
   function field(spec, prefix = '') {
     const [key, sourceLabel, type, lo, hi, step = 1] = spec; const label = t(sourceLabel); const path = prefix + key; const value = displaySetting(get(history.value, path), path); const id = 'setting-' + path.replaceAll('.', '-');
     let control;
@@ -89,7 +94,16 @@ export function openSettings(applied, apply) {
       control = html`<input type="range" aria-label="${label}滑桿" min="${lo}" max="${max}" step="${step}" value="${value}" data-path="${path}"><input id="${id}" type="number" data-path="${path}" min="${lo}" max="${max}" step="${step}" value="${value}">`; }
     return html`<div class="field"><div class="field-label"><label for="${id}">${label}</label><button type="button" class="reset-field" data-reset="${path}" aria-label="${label}恢復預設">恢復預設</button></div><div class="field-control">${control}</div>${key === 'pairs' ? html`<p class="field-note" id="pairs-description">${value} 對 = ${value * 2} 張卡牌；已啟用 ${history.value.products.filter(p => p.enabled).length} 種圖案。</p>` : ''}</div>`;
   }
-  function transformFields(prefix, title) { return `<details class="details-block"><summary>${title}</summary><div class="details-body">${TRANSFORM_SPECS.map(s => field(s, prefix)).join('')}</div></details>`; }
+  function group(title, content, open = false) { return `<details class="settings-group" ${open ? 'open' : ''}><summary>${t(title)}</summary><div class="details-body">${content}</div></details>`; }
+  function selectedFields(keys) { return SPECS[tab].filter(([key]) => keys.includes(key)).map(s => field(s)).join(''); }
+  function imageAdjustments(prefix) {
+    return TRANSFORM_SPECS.slice(0, 4).map(s => field(s, prefix)).join('') + group('更多圖片調整', TRANSFORM_SPECS.slice(4).map(s => field(s, prefix)).join(''));
+  }
+  function transformFields(prefix, title) { return group(title, imageAdjustments(prefix)); }
+  function syncAvailability() {
+    const limit = dialog.querySelector('#setting-limitSeconds')?.closest('.field');
+    if (limit) { limit.hidden = !history.value.timed; limit.querySelectorAll('input,button').forEach(el => el.disabled = busy || !history.value.timed); }
+  }
   // Update values in place: rebuilding the form closes <details>, loses focus,
   // and changes its scroll height while the user is editing a lower section.
   function syncFields() {
@@ -110,15 +124,27 @@ export function openSettings(applied, apply) {
     host.querySelectorAll('[data-thumbnail]').forEach(node => { const i = Number(node.dataset.thumbnail); node.src = imageURL(history.value.products[i].image.upload) || assetURL(PRODUCTS[i].path); });
     host.querySelectorAll('[data-product-name]').forEach(node => node.textContent = productName(history.value, PRODUCTS[Number(node.dataset.productName)].id));
     host.querySelectorAll('#edit-product option').forEach(node => node.textContent = productName(history.value, PRODUCTS[Number(node.value)].id));
-    previewRender(); updateButtons();
+    syncAvailability(); previewRender(); updateButtons();
   }
   function uploadField(path, label) {
     const custom = get(history.value, path)?.upload;
     return html`<div class="upload-panel"><strong>${label}</strong><p class="field-note">PNG、JPG、WebP，原圖最多 10 MiB；自動壓縮至 256 KiB。圖片先保存在此瀏覽器，產生雲端代碼或使用自訂圖片參與 PK 時上傳。</p><label class="upload-label">選擇圖片<input type="file" accept="image/png,image/jpeg,image/webp" data-upload="${path}"></label><div class="upload-status"><span data-upload-state="${path}">${custom ? t('使用自訂圖片') : t('使用內建圖片')}</span><button class="button small" data-remove-image="${path}" ${custom ? '' : 'hidden'}>移除自訂圖片</button></div></div>`;
   }
-  function productFields() { return uploadField(`products.${product}.image`, t('替換這個圖案')) + field(['label', t('圖案名稱'), 'text', 30], `products.${product}.`) + TRANSFORM_SPECS.map(s => field(s, `products.${product}.image.`)).join(''); }
+  function productFields() { return `<h4 data-product-name="${product}">${esc(productName(history.value, PRODUCTS[product].id))}</h4>` + uploadField(`products.${product}.image`, t('替換這個圖案')) + group('圖片名稱與構圖', field(['label', t('圖案名稱'), 'text', 30], `products.${product}.`) + imageAdjustments(`products.${product}.image.`)); }
   function library() {
-    return html`<details class="details-block" open><summary>遊戲圖庫</summary><div class="details-body"><p class="hint">勾選要加入遊戲的圖案，至少保留 2 種。可替換 12 個圖案；在下方選擇圖案後上傳自己的圖片，並調整名稱與構圖。</p><div class="library-list">${PRODUCTS.map((p, i) => `<label class="library-item"><img data-thumbnail="${i}" src="${imageURL(history.value.products[i].image.upload) || assetURL(p.path)}" alt=""><span class="label-line"><input type="checkbox" data-product="${i}" ${history.value.products[i].enabled ? 'checked' : ''}><span data-product-name="${i}">${esc(productName(history.value, p.id))}</span></span></label>`).join('')}</div><label class="field-label" for="edit-product">調整正面圖案</label><select id="edit-product">${PRODUCTS.map((p, i) => `<option value="${i}" ${product === i ? 'selected' : ''}>${esc(productName(history.value, p.id))}</option>`).join('')}</select><div id="product-fields">${productFields()}</div></div></details>`;
+    return html`<p class="hint">勾選要玩的圖案；點「編輯圖片」即可上傳照片。至少保留 2 種。</p><div class="library-list">${PRODUCTS.map((p, i) => `<div class="library-item"><label class="library-select"><img data-thumbnail="${i}" src="${imageURL(history.value.products[i].image.upload) || assetURL(p.path)}" alt=""><span class="label-line"><input type="checkbox" data-product="${i}" ${history.value.products[i].enabled ? 'checked' : ''}><span data-product-name="${i}">${esc(productName(history.value, p.id))}</span></span></label><button type="button" class="button small" data-edit-product="${i}" aria-label="${esc(t('編輯圖片'))} ${esc(productName(history.value, p.id))}">${t('編輯圖片')}</button></div>`).join('')}</div><label class="field-label" for="edit-product">調整正面圖案</label><select id="edit-product">${PRODUCTS.map((p, i) => `<option value="${i}" ${product === i ? 'selected' : ''}>${esc(productName(history.value, p.id))}</option>`).join('')}</select><section class="product-editor" id="product-fields">${productFields()}</section>`;
+  }
+  function cardSections() {
+    return `<div class="settings-segments" role="group" aria-label="${t('卡牌設定分類')}">${[['faces','正面圖案'],['back','卡背'],['style','大小與顏色']].map(([key,label]) => `<button type="button" class="button small" data-card-pane="${key}" aria-controls="card-pane-${key}" aria-pressed="${cardPane === key}">${t(label)}</button>`).join('')}</div>` +
+      '<section id="card-pane-faces" data-card-section="faces">' + library() + selectedFields(['showLabels']) + '</section>' +
+      '<section id="card-pane-back" data-card-section="back">' + uploadField('back', t('自訂卡背')) + selectedFields(['back.asset']) + transformFields('back.', t('卡背圖片構圖')) + '</section>' +
+      '<section id="card-pane-style" data-card-section="style">' + group('卡牌排版', selectedFields(['ratioW','ratioH','columns','gap','radius','boardScale']), true) + group('卡牌顏色', selectedFields(['cardColor','backColor','matchColor'])) + '</section>';
+  }
+  function selectCardPane(next) {
+    cardPane = next;
+    dialog.querySelectorAll('[data-card-section]').forEach(el => el.hidden = el.dataset.cardSection !== next);
+    dialog.querySelectorAll('[data-card-pane]').forEach(el => el.setAttribute('aria-pressed', String(el.dataset.cardPane === next)));
+    showing = { view: next === 'style' ? 'board' : 'card', face: next === 'back' ? 'back' : 'front' }; previewRender();
   }
   function renderCloud(host) {
     const ready = cloudReady();
@@ -146,10 +172,29 @@ export function openSettings(applied, apply) {
     host.setAttribute('aria-labelledby', `tab-${tab}`);
     for (const button of dialog.querySelectorAll('[data-tab]')) { button.setAttribute('aria-selected', String(button.dataset.tab === tab)); button.tabIndex = button.dataset.tab === tab ? 0 : -1; }
     if (tab === 'cloud') { renderCloud(host); host.scrollTop = 0; return; }
-    host.innerHTML = html`<div class="tab-top"><h3>${TABS[tab]}</h3><button class="button small" id="reset-page">本頁恢復預設</button></div>${SPECS[tab].map(s => field(s)).join('')}`;
-    if (tab === 'cards') host.insertAdjacentHTML('beforeend', uploadField('back', t('自訂卡背')) + transformFields('back.', t('卡背圖片構圖')) + library());
-    if (tab === 'screen') host.insertAdjacentHTML('beforeend', uploadField('background', t('自訂背景')) + transformFields('background.', t('背景圖片構圖')) + uploadField('logo', t('自訂 LOGO')) + transformFields('logo.', t('LOGO 畫布內圖片構圖')));
+    const intro = { play: '先決定難度，其他設定保留預設就能玩。', cards: '先選圖案或上傳照片，再視需要調整卡背與外觀。', screen: '先換背景；標題、LOGO 與細部排版可按需展開。', records: '決定是否保存成績；不需要填寫活動名稱也能玩。' };
+    host.innerHTML = html`<div class="tab-top"><div><h3>${TABS[tab]}</h3><p class="settings-intro">${t(intro[tab])}</p></div><button class="reset-field" id="reset-page">本頁恢復預設</button></div>`;
+    if (tab === 'play') host.insertAdjacentHTML('beforeend', html`<div class="difficulty-shortcuts"><span>快速選擇卡牌數</span><div>${[4,6,10].map((pairs,i) => html`<button type="button" class="button small" data-pairs="${pairs}">${t(['輕鬆','標準','挑戰'][i])} · ${pairs} 對</button>`).join('')}</div></div>` + selectedFields(['pairs','timed','limitSeconds','previewSeconds','sound']) + group('進階玩法', selectedFields(['mismatchMs'])));
+    if (tab === 'cards') host.insertAdjacentHTML('beforeend', cardSections());
+    if (tab === 'screen') host.insertAdjacentHTML('beforeend',
+      group('背景圖片', uploadField('background', t('自訂背景')) + selectedFields(['background.asset','backgroundColor']) + transformFields('background.',t('背景圖片構圖')), true) +
+      group('標題與文字', selectedFields(['headerText','title.text','title.subtitle']) + group('文字外觀與位置', selectedFields(['title.size','title.x','title.y','title.opacity','title.color','title.align']))) +
+      group('LOGO 圖片', uploadField('logo',t('自訂 LOGO')) + selectedFields(['logo.asset']) + group('LOGO 大小與位置', selectedFields(['logo.canvasW','logo.canvasH','logo.boxX','logo.boxY'])) + transformFields('logo.',t('LOGO 畫布內圖片構圖'))));
+    if (tab === 'records') host.insertAdjacentHTML('beforeend', selectedFields(['records.enabled','records.leaderboard']));
     if (tab === 'records') host.insertAdjacentHTML('beforeend', html`<p class="hint">成績紀錄預設開啟，最多保存 500 筆，僅儲存在此瀏覽器。可在此關閉保存；關閉不刪除舊成績。排行榜不會加入歷史明細。</p><h3>保存的成績欄位</h3><div class="fields-list">${Object.entries(FIELDS).map(([key, name]) => html`<div><label><input type="checkbox" data-record-field="${key}" ${history.value.records.fields.includes(key) ? 'checked' : ''}>${t(name)}</label><button class="reset-field" data-reset-record-field="${key}" aria-label="${t(name)}欄位恢復預設">恢復預設</button></div>`).join('')}</div><p class="hint">成績識別碼、完整組別識別碼、是否限時與限時時長固定保留。即使排行榜開啟，也只保存你勾選的其他欄位。</p>`);
+    if (tab === 'records') {
+      const details = document.createElement('details'); details.className = 'settings-group';
+      details.innerHTML = `<summary>${t('活動與保存欄位')}</summary><div class="details-body">${selectedFields(['event'])}</div>`;
+      const body = details.lastElementChild, heading = host.querySelector('h3:not(.tab-top h3)');
+      if (heading) { while (heading.nextSibling) body.append(heading.nextSibling); body.prepend(heading); }
+      host.append(details);
+    }
+    host.querySelectorAll('[data-pairs]').forEach(button => button.onclick = () => {
+      history.update('pairs', Math.min(Number(button.dataset.pairs), history.value.products.filter(p => p.enabled).length));
+      history.commit(); syncFields(); status(t('草稿已變更，尚未套用。'));
+    });
+    host.querySelectorAll('[data-card-pane]').forEach(button => button.onclick = () => { history.commit(); selectCardPane(button.dataset.cardPane); });
+    if (tab === 'cards') selectCardPane(cardPane);
     host.querySelector('#reset-page').onclick = () => {
       history.begin(); SPECS[tab].forEach(([path]) => set(history.value, path, copy(get(base, path))));
       if (tab === 'cards') { history.value.back = copy(base.back); history.value.products = copy(base.products); }
@@ -162,7 +207,11 @@ export function openSettings(applied, apply) {
       const fields = host.querySelector('#product-fields'); fields.innerHTML = productFields(); bindFields(fields);
       focusPreview(`products.${product}.image`);
     };
-    bindFields(host); host.scrollTop = 0; previewRender();
+    host.querySelectorAll('[data-edit-product]').forEach(button => button.onclick = () => {
+      picker.value = button.dataset.editProduct; picker.onchange();
+      const editor = host.querySelector('#product-fields'); editor.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); editor.querySelector('input[type=file]').focus({preventScroll:true});
+    });
+    bindFields(host); syncAvailability(); host.scrollTop = 0; previewRender();
   }
   function bindFields(host) {
     host.querySelectorAll('[data-upload]').forEach(input => input.onchange = () => {
@@ -183,7 +232,7 @@ export function openSettings(applied, apply) {
         if (path.endsWith('.asset')) { delete get(history.value, path.split('.')[0]).upload; syncFields(); }
         host.querySelectorAll('[data-path]').forEach(other => { if (other !== input && other.dataset.path === path) { if (other.type === 'checkbox') other.checked = value; else other.value = value; } });
         const desc = host.querySelector('#pairs-description'); if (path === 'pairs' && desc) desc.textContent = msg`${value} 對 = ${value * 2} 張卡牌；已啟用 ${history.value.products.filter(p => p.enabled).length} 種圖案。`;
-        focusPreview(path); status(t('草稿已變更，尚未套用。'));
+        syncAvailability(); focusPreview(path); status(t('草稿已變更，尚未套用。'));
       };
       input.addEventListener('focus', () => { history.begin(); focusPreview(path); }); input.addEventListener('pointerdown', () => history.begin());
       input.addEventListener('input', update);
@@ -230,7 +279,7 @@ export function openSettings(applied, apply) {
   dialog.querySelector('#settings-reset-all').onclick = () => { history.replace(base); syncFields(); status(t('全部設定已恢復預設，尚未套用。成績紀錄保持原樣。')); };
   dialog.querySelector('#settings-apply').onclick = async () => {
     const invalid = [...dialog.querySelectorAll('input')].find(input => !input.checkValidity());
-    if (invalid) { if (dialog.querySelector('.preview-expanded')) dialog.querySelector('#preview-expand').click(); invalid.reportValidity(); return; }
+    if (invalid) { if (dialog.querySelector('.preview-expanded')) dialog.querySelector('#preview-expand').click(); const pane = invalid.closest('[data-card-section]'); if (pane) selectCardPane(pane.dataset.cardSection); for (let node = invalid.parentElement; node && node !== dialog; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true; invalid.reportValidity(); return; }
     history.commit(); const next = sanitize(history.value); history.value = copy(next);
     const ok = apply(copy(next)); saved = copy(next);
     status(ok ? t('已儲存並套用。設定面板會保持開啟。') : t('已套用到這次畫面，但本機保存失敗。')); toast(ok ? t('設定已儲存並套用') : t('設定已套用，本機保存失敗')); previewRender();

@@ -1,3 +1,4 @@
+import { verificationError } from './verification.js';
 import { t, locale, LOCALES, knownMessage } from './i18n.js';
 import site from './site-config.js';
 import { encodeProfile, decodeProfile, readLimited, LIMITS, sha256, normalizeCode, validCode } from './profile-format.js';
@@ -14,9 +15,9 @@ function loadTurnstile() {
   if (window.turnstile) return Promise.resolve();
   if (!scriptPromise) scriptPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script'); script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; script.async = true;
-    const timeout = setTimeout(() => { script.remove(); scriptPromise = null; reject(new Error(t('驗證元件載入逾時，請稍後再試。'))); }, 20000);
+    const timeout = setTimeout(() => { script.remove(); scriptPromise = null; reject(verificationError(t('驗證元件載入逾時，請稍後再試。'))); }, 20000);
     script.onload = () => { clearTimeout(timeout); resolve(); };
-    script.onerror = () => { clearTimeout(timeout); script.remove(); scriptPromise = null; reject(new Error(t('無法載入驗證元件，請檢查網路或內容阻擋設定。'))); };
+    script.onerror = () => { clearTimeout(timeout); script.remove(); scriptPromise = null; reject(verificationError(t('無法載入驗證元件，請檢查網路或內容阻擋設定。'))); };
     document.head.append(script);
   });
   return scriptPromise;
@@ -28,8 +29,8 @@ export async function challenge(host, action) {
   return new Promise((resolve, reject) => {
     let widget, done = false;
     const finish = (error, token) => { if (done) return; done = true; clearTimeout(timeout); if (widget !== undefined) window.turnstile.remove(widget); error ? reject(error) : resolve(token); };
-    const timeout = setTimeout(() => finish(new Error(t('驗證逾時，請再試一次。'))), 120000);
-    widget = window.turnstile.render(host, { sitekey: site.cloud.siteKey, action, theme: 'light', language: LOCALES[locale].turnstile, callback: token => finish(null, token), 'error-callback': () => { finish(new Error(t('驗證未完成，請再試一次。'))); return true; }, 'expired-callback': () => finish(new Error(t('驗證已過期，請重新操作。'))) });
+    const timeout = setTimeout(() => finish(verificationError(t('驗證逾時，請再試一次。'))), 120000);
+    widget = window.turnstile.render(host, { sitekey: site.cloud.siteKey, action, theme: 'light', language: LOCALES[locale].turnstile, callback: token => finish(null, token), 'error-callback': () => { finish(verificationError(t('驗證未完成，請再試一次。'))); return true; }, 'expired-callback': () => finish(verificationError(t('驗證已過期，請重新操作。'))) });
   });
 }
 async function call(path, options) {

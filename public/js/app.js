@@ -4,6 +4,7 @@ import { createStage, escapeHTML as esc } from './stage.js';
 import { toast, confirmAction, navigateLanguage } from './site.js';
 import { createSounds } from './audio.js';
 import { createGameMusic } from './pk-music.js';
+import { createAudioContextProvider } from './audio-context.js';
 import { loadImages } from './images.js';
 import { initPK } from './pk.js';
 const $ = selector => document.querySelector(selector);
@@ -21,7 +22,8 @@ let handledResult = null;
 let activeNickname = t('玩家');
 let resultDate = 0;
 let soundOn = config.sound;
-const soloMusic = createGameMusic();
+const audioContext = createAudioContextProvider();
+const soloMusic = createGameMusic({ getContext: audioContext });
 let pkActive = false;
 let starting = false, startRequest = 0;
 let pk;
@@ -32,7 +34,7 @@ document.addEventListener('languagechange-request', async event => {
   if (await confirmAction(t('切換語言？'), t('切換語言會重新載入此頁，結束目前遊戲並清空本次排行榜。已保存的設定、圖片與成績紀錄會保留。'), t('切換語言'))) navigateLanguage(event.detail.href, event.detail.language);
   else if (resume) { game.resume(); render(); }
 });
-const sounds = createSounds(document.body.dataset.base, { onError: () => toast(t('音效暫時無法播放，請檢查音量或再開啟音效。')) });
+const sounds = createSounds(document.body.dataset.base, { getContext: audioContext, onError: () => toast(t('音效暫時無法播放，請檢查音量或再開啟音效。')) });
 function playSound(name) { if (soundOn) { soloMusic.duck(); void sounds.play(name); } }
 function setSoundEnabled(value) {
   soundOn = config.sound = Boolean(value);
@@ -171,7 +173,7 @@ $('#records-open').onclick = async () => {
   openRecords(records, () => { if (store.clearRecords()) { records = []; return true; } return false; });
 };
 makeStage(); renderRanking(); render();
-pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound, toggleSound,
+pk = initPK({ openSettings: showSettings, getConfig: () => config, getName: () => $('#nickname').value, prepare: () => sounds.prepare(), playSound, toggleSound, audioContext,
   setActive(active) {
     pkActive = active;
     document.body.classList.toggle('pk-active', active);

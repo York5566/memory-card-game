@@ -22,7 +22,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.match(html, /rel="canonical" href="https:\/\/wwwne1198\.party\/"/);
       assert.ok(!html.includes('york5566.github.io')); assert.ok(!html.includes('/memory-card-game/'));
       assert.match(await read('memory-card-game/games/memory/index.html'), /content="0; url=https:\/\/wwwne1198\.party\/games\/memory\/"/);
-      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 16);
+      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 24);
       assert.ok(!sitemap.includes('/memory-card-game/')); assert.ok(!sitemap.includes('404'));
     });
     await t.test('檢查會拒絕回歸舊的 CSS 子目錄', async () => {
@@ -32,14 +32,14 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       await writeFile(join(directory, 'dist/index.html'), original);
     });
     await t.test('四種語言直接輸出完整 HTML，語言選單保留頁面位置，SEO 互相對應', async () => {
-      for (const [lang, prefix] of [['zh-Hant',''],['en','en/'],['ja','ja/'],['ko','ko/']]) for (const route of ['', 'games/memory/', 'help/', 'privacy/']) {
+      for (const [lang, prefix] of [['zh-Hant',''],['en','en/'],['ja','ja/'],['ko','ko/']]) for (const route of ['', 'games/memory/', 'help/', 'privacy/', 'tools/random-picker/', 'tools/random-groups/']) {
         const html = await read(prefix + route + 'index.html');
         assert.ok(html.includes(`<html lang="${lang}">`));
         assert.ok(html.includes(`rel="canonical" href="https://wwwne1198.party/${prefix}${route}"`));
         assert.equal((html.match(/<link rel="alternate" hreflang=/g) || []).length, 5);
         for(const other of ['','en/','ja/','ko/']) assert.ok(html.includes(`href="/${other}${route}" lang=`));
         assert.match(html,/href="\/style.css"/);assert.match(html,/src="\/js\/site.js"/);
-        assert.ok(html.includes(`src="/js/language.js" data-base="/" data-page="${route === '' ? 'home' : route.startsWith('help') ? 'help' : route.startsWith('privacy') ? 'privacy' : 'game'}"`));
+        assert.ok(html.includes(`src="/js/language.js" data-base="/" data-page="${route === '' ? 'home' : route.startsWith('help') ? 'help' : route.startsWith('privacy') ? 'privacy' : route.includes('random-picker') ? 'picker' : route.includes('random-groups') ? 'groups' : 'game'}"`));
         assert.ok(html.indexOf('src="/js/language.js"') < html.indexOf('data-site-analytics="ga4"'), 'Detect before analytics initializes');
         assert.equal((html.match(/data-language-link/g) || []).length, 4, 'Current language is also selectable and can be remembered');
         if(lang==='en') {
@@ -56,7 +56,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
     });
     await t.test('搜尋與分享標籤、可爬取的本文共同描述自訂圖片，教學連結有對應錨點', async () => {
       const titles = new Set();
-      for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
+      for (const path of ['games/memory/index.html', 'help/index.html']) {
         const html = await read(path), title = html.match(/<title>(.*?)<\/title>/s)[1]; titles.add(title);
         assert.match(title, /上傳/);
         assert.match(html.match(/<h1[^>]*>(.*?)<\/h1>/s)[1], /圖片/);
@@ -65,7 +65,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
         assert.ok(html.includes(`name="twitter:title" content="${title}"`));
         assert.match(html, /PNG、JPG/); assert.match(html, /背景與 LOGO/);
       }
-      assert.equal(titles.size, 3);
+      assert.equal(titles.size, 2);
       assert.ok((await read('help/index.html')).includes('id="upload-images"'));
       const gameHTML = await read('games/memory/index.html');
       const graph = JSON.parse(gameHTML.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
@@ -76,13 +76,15 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       const sitemap = await read('sitemap.xml');
       for (const [prefix,word] of [['','線上配對'],['en/','online'],['ja/','オンライン'],['ko/','온라인']]) {
         const home = await read(prefix + 'index.html'), game = await read(prefix + 'games/memory/index.html');
-        assert.ok(home.includes('id="online-pk-title"'));
-        assert.ok(home.includes('href="/' + prefix + 'games/memory/?mode=pk"'));
-        assert.ok(home.match(/<title>(.*?)<\/title>/s)[1].toLowerCase().includes(word));
+        assert.ok(home.includes('id="tools"'));
+        assert.ok(home.includes('href="/' + prefix + 'tools/random-picker/"'));
+        assert.ok(home.includes('href="/' + prefix + 'tools/random-groups/"'));
+        assert.ok(home.toLowerCase().includes(word));
+        assert.ok(home.includes('href="/' + prefix + 'games/memory/"'));
         assert.ok(home.match(/<meta name="description" content="([^"]+)"/)[1].toLowerCase().includes(word));
         assert.ok(home.match(/<meta property="og:description" content="([^"]+)"/)[1].toLowerCase().includes(word));
         assert.ok(game.includes('rel="canonical" href="https://wwwne1198.party/' + prefix + 'games/memory/"'));
-        assert.ok(home.includes('href="/' + prefix + 'help/#pk"'));
+        assert.ok((await read(prefix+'help/index.html')).includes('id="pk"'));
       }
       assert.ok(!sitemap.includes('?mode=pk')); assert.ok(!sitemap.includes('#pk='));
     });
@@ -90,7 +92,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       const sitemap = await read('sitemap.xml');
       for (const prefix of ['', 'en/', 'ja/', 'ko/']) {
         const policy = await read(prefix + 'privacy/index.html');
-        assert.match(policy, /<time datetime="2026-10-10">2026-10-10<\/time>/);
+        assert.match(policy, /<time datetime="2026-10-21">2026-10-21<\/time>/);
         assert.ok(policy.includes('https://policies.google.com/technologies/partner-sites'));
         assert.ok(policy.includes('https://www.cloudflare.com/turnstile-privacy-policy/'));
         assert.ok(policy.includes('mailto:wwwne1198@gmail.com'));
@@ -110,7 +112,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
     });
     await t.test('搜尋圖示與縮圖提供真實檔案、可見 HTML、主要圖片及圖片 sitemap', async () => {
       const imageURL = 'https://wwwne1198.party/assets/previews/memory-card-game.png';
-      for (const path of ['index.html', 'games/memory/index.html', 'help/index.html']) {
+      for (const path of ['games/memory/index.html', 'help/index.html']) {
         const html = await read(path);
         assert.ok(!html.includes('rel="icon" type="image/svg+xml"'));
         assert.match(html, /rel="icon" type="image\/png" sizes="96x96" href="\/assets\/favicon-96.png"/);
@@ -122,7 +124,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
         assert.equal(graph[2].height, 900);
       }
       const sitemap = await read('sitemap.xml');
-      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 12);
+      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 20);
       assert.ok(sitemap.includes(`<image:loc>${imageURL}</image:loc>`));
     });
     await t.test('損毀 ICO、移除可見縮圖或圖片 sitemap 都會被發布檢查攔截', async () => {
@@ -131,7 +133,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.notEqual(run('scripts/check.mjs').status, 0);
       await writeFile(icoPath, ico);
       for (const [path, alter] of [
-        ['index.html', html => html.replace('src="/assets/previews/memory-card-game.png"', 'src="/assets/products/02.svg"')],
+        ['index.html', html => html.replace('src="/assets/previews/tools-portal.png"', 'src="/assets/products/02.svg"')],
         ['sitemap.xml', xml => xml.replace(/<image:image>.*?<\/image:image>/g, '')],
       ]) {
         const original = await read(path);

@@ -15,6 +15,10 @@ test('教學完成或跳過只寫自己的旗標，不動遊戲資料；儲存�
   const storage = { getItem: key => data.get(key), setItem: (key,value) => data.set(key,value) };
   assert.equal(guideSeen(storage),false); markGuideSeen(storage); assert.equal(guideSeen(storage),true);
   assert.equal(data.get('settings'),'keep'); assert.deepEqual([...data.keys()],['settings',GUIDE_KEY]);
+  assert.equal(guideSeen(storage,'activity-tools-guide-v1'),false);
+  markGuideSeen(storage,'activity-tools-guide-v1');
+  assert.equal(guideSeen(storage,'activity-tools-guide-v1'),true);
+  assert.equal(guideSeen(storage),true);
   const denied = { getItem(){ throw Error('blocked'); }, setItem(){ throw Error('blocked'); } };
   assert.equal(guideSeen(denied),false); assert.doesNotThrow(()=>markGuideSeen(denied));
 });

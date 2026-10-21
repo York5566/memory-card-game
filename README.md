@@ -1,10 +1,32 @@
-# 翻牌遊戲：靜態前端與雲端 PK v1.6.1
+# 一起玩工具箱 v1.7.0
 
 獨立網站專案，依 `HAND-OFF_純靜態網站版.txt` 的產品需求實作。原 Windows 桌面版、活動資料與發行包不需修改。
 
-網站名稱為「翻牌遊戲」，正式網域為 https://wwwne1198.party/，集中設定於 `site.config.mjs`。交付包含原始碼、靜態成果及 GitHub Pages 部署流程；取得後仍需自行提交與推送，廣告預設關閉。
+網站名稱為「一起玩工具箱」，正式網域為 https://wwwne1198.party/，集中設定於 `site.config.mjs`。交付包含原始碼、靜態成果及 GitHub Pages 部署流程；取得後仍需自行提交與推送，廣告預設關閉。
 
 首次按「開始遊戲」會先準備音效：在點擊時啟動音訊環境與無聲暖機，再開始記憶預覽或遊戲。翻牌音訊已內建，不必等待音檔下載或解碼；BGM 與音效共用音訊環境，並由一個聲音開關控制。準備期間按鈕顯示「準備遊戲…」；關閉聲音時直接開始，音訊準備保留等待上限，避免瀏覽器阻擋造成無法開始。
+
+## v1.7.0 活動工具入口 — 2026-10-21
+
+首頁改為「一起玩工具箱」，提供翻牌遊戲、抽籤轉盤與隨機分組。每個工具都有範例、操作說明及使用情境；首頁提供可跳過、可重新開啟的快速上手教學。繁中、英文、日文、韓文的完整靜態內容與手機版同步提供。
+
+| 工具 | 網址 | 使用者可調整的內容 |
+| --- | --- | --- |
+| 翻牌遊戲 | /games/memory/ | 沿用照片、卡牌、背景、音效、單人與雙人 PK 等既有功能 |
+| 抽籤轉盤 | /tools/random-picker/ | 名單、每輪 1–50 位、權重 1–1000、是否重複中獎、同名合併、動畫 0–10 秒 |
+| 隨機分組 | /tools/random-groups/ | 指定組數或每組最多人數、自訂組名、指定隊員、固定整組、重新分組、手動移動成員、同名合併 |
+
+抽籤與分組最多 500 筆名單、每個名字最多 80 字元、最多 50 組。可選擇三種配色、16–48 px 結果文字、活動標題、聲音與全螢幕。重分時保留指定成員；人數不平均時盡量均衡，但已固定的成員優先。最多保留 100 步復原。
+
+- TXT 每行一筆；CSV 第一欄為名字、第二欄可放權重，支援引號、逗號與標題列。檔案上限 256 KB。
+- 設定與名單可匯出／匯入 JSON；結果可複製或匯出 CSV。設定檔不包含結果，CSV 是本次結果快照。
+- 預設不把新工具名單存進瀏覽器。勾選「在此瀏覽器記住設定與名單」後才保存，四語共用；取消勾選即移除本機副本。結果重新整理或離開頁面即清空，離開或換語言前會提醒。
+- 名單、抽籤與分組在瀏覽器執行，不呼叫 PK 後端或新增 R2／D1 用量。正式網站仍沿用 GA4 頁面瀏覽；沒有新增名單或結果的分析事件。
+- 隨機選擇使用瀏覽器的 crypto.getRandomValues；沒有第三方公證或不可竄改紀錄，活動主辦方可復原及重抽。
+
+首頁與新工具各有專屬標題、摘要、分享圖片、canonical、hreflang 及結構化資料；sitemap 現有 24 個內容頁與 20 個圖片項目。遊戲網址及既有分享連結保留。
+
+此版只更新網站前端；Worker API 保持 1.3.0。可用「開始預覽.cmd」或 npm run dev 開啟首頁（預設 http://127.0.0.1:4173/）；完整 PK 測試仍用「開始 PK 預覽.cmd」。本機預覽不呼叫正式雲端上傳或 GA4。由使用者提交及推送，沒有自動部署。
 
 ## v1.6.1 暱稱與排行榜版面修正
 
@@ -34,7 +56,7 @@ PK 準備畫面以「邀請朋友／線上配對」兩個入口引導，完整�
 
 **尚未部署 Worker API 1.3.0 者，請先更新 Cloudflare Worker，再推送 GitHub Pages。** 詳細命令、資源綁定、用量上限、停用方式與正式驗收請見 [PK 部署與流量管控.md](PK%20部署與流量管控.md)。下方較早版本的「不需重新部署 Worker」只適用於該次歷史更新。
 
-本機完整 PK 預覽請雙擊「開始 PK 預覽.cmd」，網站為 http://127.0.0.1:4185/games/memory/。第一次會在 cloudflare 安裝測試相依套件；使用隔離的本機雲端模擬器，沒有正式帳戶流量。普通「開始預覽.cmd」仍只提供單人／靜態預覽。
+本機完整 PK 預覽請雙擊「開始 PK 預覽.cmd」，網站為 http://127.0.0.1:4185/games/memory/。第一次會在 cloudflare 安裝測試相依套件；使用隔離的本機雲端模擬器，沒有正式帳戶流量。普通「開始預覽.cmd」提供工具首頁、抽籤、分組及單人遊戲預覽。
 
 四種語言的 PK 介面、教學、隱私權文字和遊戲頁 SEO 已更新。房間邀請不新增 sitemap 頁面；既有 canonical、hreflang、GA4、AdSense 設定保持相同。PK 結果不存入單人排行榜。
 
@@ -172,7 +194,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 `site.config.mjs` 預設正式 origin 為 `https://wwwne1198.party`、basePath 為 `/`。CSS、JavaScript、圖片、導覽、canonical、OG 與 sitemap 都由此產生。Pages 工作流程不再把歷史專案子目錄帶入自訂網域的成品。仍可明確以 `SITE_ORIGIN`、`SITE_BASE_PATH` 覆寫，但目前網域不需要這些環境變數。
 
-各頁以「可上傳圖片／照片、自訂記憶配對卡牌」作主題，直接輸出獨立 title、description、H1、OG 與 Twitter 大圖摘要，並有 WebSite／WebPage／ImageObject 結構化資料；遊戲頁另有 WebApplication。分享圖為 1200×630 PNG，設計原稿在 `design/social/`。沒有虛構評分或評論。首頁與說明提供靜態玩法內容、常見問題與內部連結。
+各工具頁依抽籤、分組或自訂圖片翻牌的實際功能作主題，直接輸出獨立 title、description、H1、OG 與 Twitter 大圖摘要，並有 WebSite／WebPage／ImageObject 結構化資料；遊戲頁另有 WebApplication。分享圖為 1200×630 PNG，設計原稿在 `design/social/`。沒有虛構評分或評論。首頁與說明提供靜態玩法內容、常見問題與內部連結。
 
 正式建置包含 sitemap、robots、CNAME 與 .nojekyll；404 不索引，舊 `/memory-card-game/` 的三個對應頁面立即轉址到新版，不列入 sitemap。所有不存在的網址仍應由託管服務回傳 404。
 
@@ -184,7 +206,7 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 ## GA4 流量分析
 
-已加入使用者提供的 GA4 評估 ID `G-VXMTJFXBHE`。正式首頁、遊戲頁與使用說明會載入 Google tag，使用 GA4 預設頁面瀏覽及其資料串流設定。沒有另外新增開始遊戲、過關、暱稱或歷史成績的自訂追蹤事件。
+已加入使用者提供的 GA4 評估 ID `G-VXMTJFXBHE`。正式內容頁會載入 Google tag，使用 GA4 預設頁面瀏覽及其資料串流設定。沒有另外新增開始遊戲、過關、暱稱或歷史成績的自訂追蹤事件。
 
 `site.config.mjs` 的 `ga4MeasurementId` 集中管理 ID，可用 `GA4_MEASUREMENT_ID` 環境變數覆寫，設為空字串可關閉。本機預覽不輸出 GA4；正式成品即使被拿到 localhost、file:// 或其他網域開啟，也會因 origin 檢查而不載入追蹤。404 與舊網址轉址頁不追蹤，每頁只初始化一次。Google tag 以非同步方式載入，遊戲功能不等待追蹤程式完成。
 
@@ -203,10 +225,12 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 - `public/js/core.js`：規則、狀態機、設定資料、復原、本機保存、排序、CSV。
 - `stage.js`：主畫面與預覽共用圖片構圖、卡牌及排版。
 - `app.js`：遊戲操作與本次會話排行；重新開始只在記憶預覽、遊戲中與暫停時顯示。
-- `audio.js`：提前下載音效、在使用者開局手勢建立並恢復 AudioContext，第一次翻牌等解碼完成再播放；靜音會取消待播放聲音。
+- `audio.js`：在開局手勢準備共用 AudioContext，翻牌音訊內建並先暖機；靜音會取消待播放聲音。
 - `preview.js`：設定預覽選圖與自動切換牌面的規則。
 - `settings.js`、`records.js`：設定草稿及歷史明細。
 - `src/layout.html`、`src/pages/`：共用網站外殼與靜態內容。
+- `src/tools-pages.mjs`、`public/js/tools-text.js`：首頁與新工具的四語靜態內容。
+- `public/js/tools-core.js`、`tools.js`、`public/tools.css`：抽籤、分組、匯入匯出及工具介面。
 - `scripts/`：零第三方依賴的建置、預覽與成果檢查。
 - `tests/*.test.mjs`：計時邊界、資料保存、排序、CSV、冷啟動音效、預覽與 SEO 網址安全測試。
 
@@ -225,4 +249,4 @@ CSV 具有 UTF-8 BOM、CRLF、引號跳脫與公式注入防護，固定包含�
 
 搜尋 favicon 同時宣告固定路徑的 96px PNG 與多尺寸 ICO。搜尋主要圖片為可見於三個內容頁的無文字卡牌示意圖（1200×900 PNG），加入 primaryImageOfPage 及圖片 sitemap；社群分享保留原本各頁的 1200×630 海報。發布後需等待 Google 重新抓取，無法由程式保證搜尋結果必定顯示縮圖。詳見《搜尋索引與發布檢查.md》。
 
-設定按鈕沿用開始遊戲的綠底白字樣式。全螢幕／放大遊戲檢視進入時，在上方中央、Chrome 預設原生 Esc 提醒下方浮動顯示「CTRL+滾輪可以調整畫面大小」。提示使用接近原生提醒的 #282c32 深灰底、白字、圓角與 CTRL 鍵框，350ms 淡入、進入後約 3.8 秒開始 700ms 淡出、4.5 秒後清除；退出或離開頁面會取消。提示不增加預留空間、不改變原間距或牌面位置，也不攔截點擊及 Ctrl+滾輪；中央提醒會短暫覆蓋下方內容。時序依 [Chromium 預設停留](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/chrome/browser/ui/exclusive_access/exclusive_access_bubble.h)與[動畫](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/chrome/browser/ui/views/exclusive_access/exclusive_access_bubble_views.cc)，外觀參考[原生提醒](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/fullscreen_control/subtle_notification_view.cc)及[色彩](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/components/fullscreen_control/color_mixer.cc)。瀏覽器沒有開放原生視窗的顯示、位置或結束事件，因此以下方 108px 與預設時間配合，不能保證不同版本、縮放、平台或互動時完全同步。減少動態效果時不播放淡入淡出動畫。
+設定按鈕沿用綠底白字樣式。單人及 PK 的卡牌縮放使用畫面內的 −／百分比／＋ 按鈕，已移除 Ctrl＋滾輪提示。抽籤及分組另提供全螢幕展示與結果字級控制。

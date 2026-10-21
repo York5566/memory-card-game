@@ -1,9 +1,11 @@
+import { toolPage } from '../src/tools-pages.mjs';
+import { toolText } from '../public/js/tools-text.js';
 import { t, LOCALES, localeBase, localizeMarkup } from '../public/js/i18n.js';
 import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from '../site.config.mjs';
-import { siteAddress, pageMetadata, SEARCH_PREVIEW, escapeHTML as escape } from './seo.mjs';
+import { siteAddress, pageMetadata, previewFor, escapeHTML as escape } from './seo.mjs';
 import { analyticsMarkup } from './analytics.mjs';
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(root, 'dist');
@@ -23,14 +25,17 @@ export async function build({ preview = false } = {}) {
     ['home', '', '首頁', config.description],
     ['game', 'games/memory', '上傳圖片翻牌，線上配對與好友對戰', '上傳照片免費製作記憶配對卡牌，自訂圖案、卡背、背景與 LOGO。支援 2 至 12 對卡牌、圖片構圖調整、好友邀請連結與線上 PK 配對，手機與電腦皆可遊玩。'],
     ['help', 'help', '圖片上傳與玩法設定教學', '了解翻牌遊戲的線上配對、好友邀請、雙人 PK 規則與再戰方式。學習上傳圖片、自訂卡牌與背景、調整構圖、使用雲端代碼，以及查看成績紀錄。'],
-    ['privacy', 'privacy', '隱私權政策', '了解翻牌遊戲如何保存本機設定、圖片與成績，以及雲端代碼、30 天期限、GA4 統計、Cookie、Cloudflare 驗證與資料刪除方式。'],
+    ['privacy', 'privacy', '隱私權政策', toolText('privacyMeta', 'zh-Hant')],
+    ['picker', 'tools/random-picker', toolText('picker', 'zh-Hant'), toolText('pickerMeta', 'zh-Hant')],
+    ['groups', 'tools/random-groups', toolText('groups', 'zh-Hant'), toolText('groupsMeta', 'zh-Hant')],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
   ];
   for (const language of Object.keys(LOCALES)) for (const [page, route, sourceTitle, sourceDescription] of routes) {
     const title = t(sourceTitle, language), description = t(sourceDescription, language);
     const prefix = LOCALES[language].prefix;
     const switcher = `<details class="language-menu"><summary aria-label="${escape(t('語言', language))}"><svg class="language-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span>${LOCALES[language].label}</span></summary><nav aria-label="${escape(t('切換語言', language))}">${Object.entries(LOCALES).map(([id, info]) => `<a href="${localeBase(base, id)}${route ? route + '/' : ''}" lang="${id}" hreflang="${id}" data-language-link ${id === language ? 'aria-current="true"' : ''}>${info.label}</a>`).join('')}</nav></details>`;
-    let body = await readFile(join(root, `src/pages/${page}.html`), 'utf8');
+    let body = ['home','picker','groups'].includes(page) ? toolPage(page, language, base, localeBase(base, language)) : await readFile(join(root, `src/pages/${page}.html`), 'utf8');
+    body = body.replace('{{TOOLS_PRIVACY}}', `<h2 id="activity-tools">${escape(toolText('privacyTitle', language))}</h2><p>${escape(toolText('privacyBody', language))}</p>`).replace('{{PRIVACY_SCOPE}}', escape(toolText('privacyScope', language)));
     const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain }, language);
     const html = localizeMarkup(template.replace('{{BODY}}', body), language).replace('{{META}}', meta).replace('{{ANALYTICS}}', analyticsMarkup(config, { domain }, page)).replaceAll('{{NAME}}', escape(t(config.name, language)))
       .replaceAll('{{LANG}}', language).replaceAll('{{LOCALE_BASE}}', localeBase(base, language)).replace('{{LANGUAGE_SWITCH}}', switcher)
@@ -45,7 +50,7 @@ export async function build({ preview = false } = {}) {
     const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([, route]) => route !== null).map(([page, route]) => {
       const path = route ? route + '/' : '';
       const alternates = [...Object.keys(LOCALES), 'x-default'].map(id => `<xhtml:link rel="alternate" hreflang="${id}" href="${escape(domain + localeBase(base, id === 'x-default' ? 'zh-Hant' : id) + path)}"/>`).join('');
-      const image = page === 'privacy' ? '' : `<image:image><image:loc>${escape(domain + base + SEARCH_PREVIEW.path)}</image:loc></image:image>`;
+      const image = page === 'privacy' ? '' : `<image:image><image:loc>${escape(domain + base + previewFor(page, config).path)}</image:loc></image:image>`;
       return `<url><loc>${escape(domain + localeBase(base, language) + path)}</loc>${alternates}${image}</url>`;
     })).join('');
     await writeFile(join(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`);
@@ -53,7 +58,7 @@ export async function build({ preview = false } = {}) {
     if (base === '/' && new URL(domain).hostname === 'wwwne1198.party') {
       await writeFile(join(output, 'CNAME'), 'wwwne1198.party\n');
       // 保留搬到自訂網域後曾公開的舊子目錄網址，不將未知網址導回首頁。
-      for (const [, route, title] of routes.filter(([page, route]) => route !== null && page !== 'privacy')) {
+      for (const [, route, title] of routes.filter(([page]) => ['home','game','help'].includes(page))) {
         const target = `${domain}/${route ? route + '/' : ''}`;
         const dest = join(output, 'memory-card-game', route, 'index.html');
         await mkdir(dirname(dest), { recursive: true });

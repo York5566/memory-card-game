@@ -15,7 +15,7 @@ if errorlevel 1 (
 )
 set "webPreviewPort=4173"
 if defined PORT set "webPreviewPort=%PORT%"
-echo 本機預覽網址：http://127.0.0.1:%webPreviewPort%/games/memory/
+echo 本機預覽網址：http://127.0.0.1:%webPreviewPort%/
 echo 保持此視窗開啟；停止預覽請按 Ctrl+C。
 "%webNodeExe%" scripts\serve.mjs
 if errorlevel 1 pause

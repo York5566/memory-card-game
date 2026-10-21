@@ -3,7 +3,7 @@ import { readdir, readFile, access } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import config from '../site.config.mjs';
-import { siteAddress, SEARCH_PREVIEW } from './seo.mjs';
+import { siteAddress, previewFor } from './seo.mjs';
 import { analyticsMarkup } from './analytics.mjs';
 // URL decoding is needed for the Traditional Chinese checkout on Windows.
 const { fileURLToPath } = await import('node:url');
@@ -41,8 +41,9 @@ for (const path of all) {
       if (!has96) throw Error('favicon.ico 缺少 96×96 圖層');
     }
     const isPrivacy = html.includes('data-page="privacy"');
+    const preview = previewFor(html.match(/<body data-page="([^"]+)"/)?.[1], config);
     if (!isRedirect && !html.includes(`<a class="privacy-link" href="${localeBase(base, language)}privacy/">${t('隱私權政策', language)}</a>`)) throw Error('頁尾缺少對應語言的隱私權政策連結：' + path);
-    if (!is404 && !isRedirect && !isPrivacy && !new RegExp(`<img[^>]+src="${base}${SEARCH_PREVIEW.path}"[^>]+alt="[^"]+"`).test(html)) throw Error('頁面缺少可直接爬取且有替代文字的主要圖片');
+    if (!is404 && !isRedirect && !isPrivacy && !new RegExp(`<img[^>]+src="${base}${preview.path}"[^>]+alt="[^"]+"`).test(html)) throw Error('頁面缺少可直接爬取且有替代文字的主要圖片');
     const analytics = html.match(/<script data-site-analytics="ga4">[\s\S]*?<\/script>/g) || [];
     const expectedAnalytics = analyticsMarkup(config, { domain }, is404 || isRedirect ? '404' : 'content');
     if (analytics.length !== (expectedAnalytics ? 1 : 0) || (expectedAnalytics && !html.includes(expectedAnalytics))) throw Error('GA4 代碼重複、ID 不一致或不應出現在預覽／錯誤頁：' + path);
@@ -68,15 +69,15 @@ for (const path of all) {
       const json = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1];
       if (!json || JSON.parse(json)['@graph'][1].url !== canonical) throw Error('結構化資料網址有誤');
       const graph = JSON.parse(json)['@graph'], primary = graph[2];
-      if (graph[0].inLanguage !== language || graph[1].inLanguage !== language || graph[1].mainEntity && graph[1].mainEntity.inLanguage !== language) throw Error('Structured-data language mismatch');
+      if (graph[0].inLanguage !== language || graph[1].inLanguage !== language || graph[1].mainEntity?.['@type'] === 'WebApplication' && graph[1].mainEntity.inLanguage !== language) throw Error('Structured-data language mismatch');
       if (isPrivacy) {
         if (primary || graph[1].primaryImageOfPage || graph[1].mainEntity) throw Error('隱私權頁不應宣告遊戲主要圖片或遊戲程式');
       } else {
-        if (primary.url !== domain + base + SEARCH_PREVIEW.path || primary.contentUrl !== primary.url || graph[1].primaryImageOfPage['@id'] !== primary['@id'] || primary.width !== SEARCH_PREVIEW.width || primary.height !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片標記有誤');
-        const preview = await readFile(resolve(dir, 'dist', SEARCH_PREVIEW.path));
-        if (preview.length < 24 || preview.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || preview.readUInt32BE(16) !== SEARCH_PREVIEW.width || preview.readUInt32BE(20) !== SEARCH_PREVIEW.height) throw Error('搜尋主要圖片格式或尺寸有誤');
+        if (primary.url !== domain + base + preview.path || primary.contentUrl !== primary.url || graph[1].primaryImageOfPage['@id'] !== primary['@id'] || primary.width !== preview.width || primary.height !== preview.height) throw Error('搜尋主要圖片標記有誤');
+        const previewBytes = await readFile(resolve(dir, 'dist', preview.path));
+        if (previewBytes.length < 24 || previewBytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' || previewBytes.readUInt32BE(16) !== preview.width || previewBytes.readUInt32BE(20) !== preview.height) throw Error('搜尋主要圖片格式或尺寸有誤');
         checked++;
-        imageURLs.push(canonical);
+        imageURLs.push(primary.url);
       }
       if (html.includes('noindex') || !html.includes('max-image-preview:large')) throw Error('正式頁面索引設定有誤');
       const meta = key => html.match(new RegExp(`<meta (?:property|name)="${key}" content="([^"]+)">`))?.[1];
@@ -110,7 +111,7 @@ if (domain) {
   }
 
   const images = [...sitemap.matchAll(/<image:loc>(.*?)<\/image:loc>/g)].map(m => m[1]);
-  if (!sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"') || images.length !== imageURLs.length || images.some(url => url !== domain + base + SEARCH_PREVIEW.path)) throw Error('圖片 sitemap 與可見主要圖片不一致');
+  if (!sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"') || images.length !== imageURLs.length || JSON.stringify(images.sort()) !== JSON.stringify(imageURLs.sort())) throw Error('圖片 sitemap 與可見主要圖片不一致');
   const robots = await readFile(resolve(dir, 'dist/robots.txt'), 'utf8');
   if (!robots.includes(`Sitemap: ${domain}${base}sitemap.xml`)) throw Error('robots 的 sitemap 網址有誤');
   if (domain === 'https://wwwne1198.party' && base === '/') {

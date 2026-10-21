@@ -23,4 +23,4 @@ createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.end(data);
   } catch { res.writeHead(404); res.end('Not found'); }
-}).listen(port, '127.0.0.1', () => console.log(`Local: http://127.0.0.1:${port}${base}games/memory/`));
+}).listen(port, '127.0.0.1', () => console.log(`Local: http://127.0.0.1:${port}${base}`));

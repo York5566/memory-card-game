@@ -14,3 +14,5 @@
 
 .portal-guide-entry{margin:-28px 0 40px;text-align:right}.tool-mobile-go{display:none}.tool-stage{scroll-margin-top:16px}
 @media(max-width:700px){.tool-mobile-go{display:flex;width:calc(100% - 36px);margin:18px}.portal-guide-entry{margin:-12px 0 30px;text-align:left}}
+
+.portal-workflow{border:1px solid var(--tool-line);border-radius:20px;padding:28px;margin:32px 0 50px;background:var(--paper)}.portal-workflow h2{font-size:1.4rem;margin:0 0 12px}.portal-workflow p{color:var(--muted);max-width:800px;line-height:1.8}.portal-workflow .button{margin:8px 8px 0 0}.tool-transfer{margin-top:14px;border-top:1px solid var(--tool-line);padding-top:14px}.tool-transfer .tool-note{margin-bottom:0}

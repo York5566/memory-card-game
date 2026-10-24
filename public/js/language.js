@@ -38,14 +38,14 @@
     return languages.some(language => typeof language === 'string' && language) ? 'en' : 'zh-Hant';
   }
   function automaticDestination() {
-    if (!['home', 'game', 'help', 'privacy', 'picker', 'groups'].includes(page)) return null;
+    if (!['home', 'game', 'help', 'privacy', 'picker', 'groups', 'scoreboard', 'timer', 'workspace', 'bingo', 'tournament', 'quiz', 'seating', 'dice', 'qr', 'badges', 'image', 'whiteboard', 'certificates', 'guide', 'display'].includes(page)) return null;
     const here = new URL(window.location.href);
     if (!base.startsWith('/') || !base.endsWith('/') || !here.pathname.startsWith(base)) return null;
     const relative = here.pathname.slice(base.length);
     // Explicit English/Japanese/Korean URLs override both saved and browser preferences.
     if (['en/', 'ja/', 'ko/'].some(prefix => relative.startsWith(prefix))) return null;
     const route = relative.replace(/index\.html$/, '');
-    if (!['', 'games/memory/', 'help/', 'privacy/', 'tools/random-picker/', 'tools/random-groups/'].includes(route)) return null;
+    if (!['', 'games/memory/', 'help/', 'privacy/', 'tools/random-picker/', 'tools/random-groups/', 'tools/scoreboard/', 'tools/timer/', 'tools/workspace/', 'tools/bingo/', 'tools/tournament/', 'tools/quiz/', 'tools/seating/', 'tools/dice/', 'tools/qr/', 'tools/badges/', 'tools/image/', 'tools/whiteboard/', 'tools/certificates/', 'guide/', 'display/'].includes(route)) return null;
     const explicit = here.searchParams.get('lang');
     let language;
     if (valid(explicit)) language = explicit;

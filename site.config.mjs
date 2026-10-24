@@ -1,8 +1,9 @@
+import {toolText} from './public/js/tools-text.js';
 // 正式網站使用自訂網域根目錄；資產、SEO 與部署共用這份設定。
 export default {
   name: '一起玩工具箱',
   toolsPortal: true,
-  description: '免費活動工具：自訂圖片翻牌遊戲、好友 PK 與線上配對、抽籤轉盤、隨機分組。自由設定名單、權重、分組規則與呈現方式，支援全螢幕及四種語言，免登入即可使用。',
+  description: toolText('hubMeta','zh-Hant'),
   basePath: process.env.SITE_BASE_PATH ?? '/',
   domain: process.env.SITE_ORIGIN ?? 'https://wwwne1198.party',
   googleSiteVerification: process.env.GOOGLE_SITE_VERIFICATION || '',

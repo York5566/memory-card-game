@@ -1,3 +1,7 @@
+import { toolBridge } from './tool-bridge.js';
+import { audienceView } from './presentation-core.js';
+let bridge=null;
+import { saveHandoff, takeHandoff, activityURL } from './activity-handoff.js';
 import { MAX_FILE_BYTES, entries, draw, group, teamCount, defaults, validateConfig, csv, importList, ToolError } from './tools-core.js';
 import { toolText } from './tools-text.js';
 
@@ -191,9 +195,22 @@ $('export-config').addEventListener('click',()=>{try{if(!commit())return;const c
 $('clear').addEventListener('click',()=>{if(!window.confirm(T('clearWarning')))return;form.elements.remember.checked=false;replaceConfig(defaults(kind));feedback(T('cleared'));});
 $('csv').addEventListener('click',()=>{if(hasResults())download(csv(resultRows()),`${kind}-results.csv`,'text/csv;charset=utf-8');});
 $('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(resultRows().map(row=>row.join('\t')).join('\n'));feedback(T('copied'));}catch{feedback(T('copyError'),true);}});
+$('transfer-list').addEventListener('click',()=>{
+ if(busy||!form.reportValidity()||!commit())return;
+ try{const items=getEntries().items;if(!items.length)throw new ToolError('empty');
+ const target=kind==='picker'?'groups':'picker';
+ if(hasResults()&&!confirm(T('leaveWarning')))return;
+ saveHandoff(sessionStorage,{version:1,target,title:config.title,names:items.map(x=>x.name).join('\n')});navigationConfirmed=true;location.assign(transferURL(target));
+ }catch(error){fail(error instanceof ToolError?error:new ToolError('transferError'));}
+});
+$('transfer-scoreboard')?.addEventListener('click',()=>{
+ if(busy||!form.reportValidity()||!commit()||!teams.length)return;
+ try{saveHandoff(sessionStorage,{version:1,target:'scoreboard',title:config.title,teams:teams.map((members,i)=>({name:titleOfTeam(i),color:palettes[config.theme][i%6],members:members.map(m=>m.name)}))});navigationConfirmed=true;location.assign(transferURL('scoreboard'));}catch{fail(new ToolError('transferError'));}
+});
 $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await stage.requestFullscreen();}catch{feedback(T('fullscreenError'),true);}});
 document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=T(document.fullscreenElement===stage?'exitFullscreen':'fullscreen');});
 function needsLeaveWarning() {
+  try{if(bridge?.isSaved()&&JSON.stringify(readForm())===JSON.stringify(config))return false;}catch{}
   if(hasResults())return true;
   if(!form.elements.names.value.trim())return false;
   if(form.elements.remember.checked) { try { if(JSON.stringify(validateConfig(readForm(),kind))===localStorage.getItem(storageKey))return false; } catch { /* Invalid or unsaved edits still need a warning. */ } }
@@ -217,3 +234,13 @@ window.addEventListener('beforeunload',event=>{if(!navigationConfirmed && needsL
 
 try{const stored=localStorage.getItem(storageKey);if(stored){config=validateConfig(JSON.parse(stored),kind);form.elements.remember.checked=true;}}catch{feedback(T('storageError'),true);}
 writeForm();render();
+
+try{const data=takeHandoff(sessionStorage,kind);if(data){if(config.names.trim()&&!confirm(T('transferReplace')))feedback(T('transferCancelled'));else{replaceConfig({...config,names:data.names,title:data.title,weighted:false,dedupe:false,fixed:{}});feedback(T('transferSuccess'));}}}catch{fail(new ToolError('transferError'));}
+
+for(const target of ['tournament','quiz'])$('transfer-'+target)?.addEventListener('click',()=>{
+ if(busy||!form.reportValidity()||!commit()||!teams.length)return;
+ try{if(teams.length>(target==='quiz'?20:32)||target==='tournament'&&teams.length<2)throw new ToolError(target==='quiz'?'quizRules':'tournamentRules');saveHandoff(sessionStorage,{version:1,target,title:config.title,teams:teams.map((members,i)=>({name:titleOfTeam(i),color:palettes[config.theme][i%6],members:members.map(m=>m.name)}))});navigationConfirmed=true;location.assign(transferURL(target));}catch(e){fail(e);}
+});
+bridge=toolBridge(host,{kind,config:()=>config,busy:()=>busy,progress:()=>kind==='picker'?{rounds:rounds.map(r=>r.map(i=>i.id))}:{teams:teams.map(r=>r.map(i=>i.id))},prepare:()=>!busy&&form.reportValidity()&&commit(),load:(c,p)=>{config=structuredClone(c);clearResults();if(p){const items=new Map(getEntries().items.map(i=>[i.id,i]));if(kind==='picker'){rounds=p.rounds.map(r=>r.map(id=>items.get(id)));removed=new Set(config.replacement?[]:p.rounds.flat());}else teams=p.teams.map(r=>r.map(id=>items.get(id)));}writeForm();save();render();},view:()=>audienceView(config,{rounds,teams},T)});
+
+function transferURL(target){const url=new URL(activityURL(target,document.body.dataset.base,lang),location.origin);if(bridge?.eventID){url.searchParams.set('event',bridge.eventID);url.searchParams.set('handoff','1');}return url.href;}

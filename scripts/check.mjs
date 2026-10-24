@@ -25,7 +25,7 @@ for (const path of all) {
     const title = html.match(/<title>(.*?)<\/title>/s)?.[1];
     if (titles.has(title)) throw Error('頁面標題重複：' + path); titles.add(title);
     if ((html.match(/<h1[\s>]/g) || []).length !== 1 || !/<meta name="description" content="[^"]+">/.test(html)) throw Error('頁面需要單一 H1 與摘要：' + path);
-    const is404 = path.endsWith('404.html'), isRedirect = html.includes('data-redirect="true"'), canonical = html.match(/<link rel="canonical" href="([^"]+)">/)?.[1];
+    const is404 = path.endsWith('404.html') || html.includes('data-internal-display="true"'), isRedirect = html.includes('data-redirect="true"'), canonical = html.match(/<link rel="canonical" href="([^"]+)">/)?.[1];
     if (!isRedirect) {
       if (!html.includes(`<link rel="icon" type="image/png" sizes="96x96" href="${base}assets/favicon-96.png">`) || !html.includes(`href="${base}favicon.ico"`) || /rel="icon" type="image\/svg\+xml"/.test(html)) throw Error('favicon 必須明確提供可爬取的 PNG 與 ICO');
       const icon = await readFile(resolve(dir, 'dist/assets/favicon-96.png')), ico = await readFile(resolve(dir, 'dist/favicon.ico'));
@@ -43,7 +43,7 @@ for (const path of all) {
     const isPrivacy = html.includes('data-page="privacy"');
     const preview = previewFor(html.match(/<body data-page="([^"]+)"/)?.[1], config);
     if (!isRedirect && !html.includes(`<a class="privacy-link" href="${localeBase(base, language)}privacy/">${t('隱私權政策', language)}</a>`)) throw Error('頁尾缺少對應語言的隱私權政策連結：' + path);
-    if (!is404 && !isRedirect && !isPrivacy && !new RegExp(`<img[^>]+src="${base}${preview.path}"[^>]+alt="[^"]+"`).test(html)) throw Error('頁面缺少可直接爬取且有替代文字的主要圖片');
+    if (!is404 && !isRedirect && !isPrivacy && !new RegExp(`<img[^>]+src="${base}${preview.path}"[^>]+alt="[^"]+"`).test(html)) throw Error('頁面缺少可直接爬取且有替代文字的主要圖片：'+path);
     const analytics = html.match(/<script data-site-analytics="ga4">[\s\S]*?<\/script>/g) || [];
     const expectedAnalytics = analyticsMarkup(config, { domain }, is404 || isRedirect ? '404' : 'content');
     if (analytics.length !== (expectedAnalytics ? 1 : 0) || (expectedAnalytics && !html.includes(expectedAnalytics))) throw Error('GA4 代碼重複、ID 不一致或不應出現在預覽／錯誤頁：' + path);

@@ -50,7 +50,7 @@ test('指定語言網址不受瀏覽器或記憶設定覆蓋，重新載入不�
   assert.deepEqual(browser({ url: target, languages: ['ja'] }).redirects, []);
 });
 test('首頁、遊戲、教學、隱私權政策與子目錄保留查詢參數及錨點，轉址使用 replace', () => {
-  for (const [route, page] of [['', 'home'], ['games/memory/', 'game'], ['help/', 'help'], ['help/index.html', 'help'], ['privacy/', 'privacy'], ['privacy/index.html', 'privacy'], ['tools/random-picker/', 'picker'], ['tools/random-groups/', 'groups']]) {
+  for (const [route, page] of [['', 'home'], ['games/memory/', 'game'], ['help/', 'help'], ['help/index.html', 'help'], ['privacy/', 'privacy'], ['privacy/index.html', 'privacy'], ['tools/random-picker/', 'picker'], ['tools/random-groups/', 'groups'], ['tools/scoreboard/', 'scoreboard'], ['tools/timer/', 'timer']]) {
     const result = browser({ base: '/nested/', page, url: 'https://example.test/nested/' + route + '?utm_source=line#upload-images', languages: ['ja'] });
     assert.equal(result.redirects[0], 'https://example.test/nested/ja/' + route.replace(/index\.html$/, '') + '?utm_source=line#upload-images');
     assert.deepEqual(result.navigations, []);
@@ -60,6 +60,16 @@ test('首頁、遊戲、教學、隱私權政策與子目錄保留查詢參數�
 test('內部導覽、404、未知路徑及部署根目錄外不會被改到另一頁', () => {
   for (const options of [{ referrer: 'https://example.test/' }, { page: '404' }, { url: 'https://example.test/unknown/' }, { base: '/nested/', url: 'https://example.test/help/' }]) assert.deepEqual(browser(options).redirects, []);
   assert.equal(browser({ referrer: 'https://google.com/' }).redirects.length, 1);
+});
+
+test('七個新工具及一般指南保留頁面位置並依偏好切換四語網址',()=>{
+  for(const kind of ['seating','dice','qr','badges','image','whiteboard','certificates','guide']){
+    const path=kind==='guide'?'guide/':'tools/'+kind+'/';
+    for(const lang of ['en','ja','ko']){
+      assert.equal(browser({page:kind,url:'https://example.test/'+path,languages:[lang]}).redirects[0],'https://example.test/'+lang+'/'+path);
+      assert.deepEqual(browser({page:kind,url:'https://example.test/'+lang+'/'+path,languages:['zh']}).redirects,[]);
+    }
+  }
 });
 test('已知搜尋及分享爬蟲保留要求的完整靜態 HTML', () => {
   for (const userAgent of ['Googlebot', 'Google-InspectionTool/1.0', 'GoogleOther', 'Mediapartners-Google', 'APIs-Google', 'bingbot', 'Discordbot/2.0', 'facebookexternalhit/1.1', 'Twitterbot', 'Slackbot']) assert.deepEqual(browser({ userAgent }).redirects, []);

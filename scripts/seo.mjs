@@ -1,10 +1,11 @@
+import {TOOL_CATALOG,SUITE_KINDS} from '../public/js/tool-catalog.js';
 import { toolText } from '../public/js/tools-text.js';
 import { t, LOCALES, localeBase } from '../public/js/i18n.js';
 export const escapeHTML = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
 // A visible, text-free game illustration for search; social cards retain their page titles.
 export const SEARCH_PREVIEW = { path: 'assets/previews/memory-card-game.png', width: 1200, height: 900, caption: '六張翻牌卡牌，隨行杯、相機與運動鞋各成一對' };
 export function previewFor(page, config = {}) {
-  const kind = page === 'home' && config.toolsPortal ? 'portal' : ['picker','groups'].includes(page) ? page : null;
+  const kind = (page === 'home' || page === 'guide') && config.toolsPortal ? 'portal' : ['picker','groups','scoreboard','timer','workspace','bingo','tournament','quiz',...SUITE_KINDS].includes(page) ? page : null;
   return kind ? { path: `assets/previews/tools-${kind}.png`, width: 1200, height: 900, caption: toolText(kind === 'portal' ? 'homeMetaTitle' : kind, 'zh-Hant') } : SEARCH_PREVIEW;
 }
 export function siteAddress(config) {
@@ -25,9 +26,9 @@ export function pageMetadata({ page, route, title, description }, config, { base
   const localizedBase = localeBase(base, language);
   const documentTitle = page === 'home' ? `${name}｜${config.toolsPortal ? toolText('homeMetaTitle',language) : tr('上傳圖片、線上配對與好友對戰')}` : `${title}｜${name}`;
   const preview = previewFor(page, config);
-  const canonical = domain && route !== null ? `${domain}${localizedBase}${route ? route + '/' : ''}` : '';
+  const canonical = domain && route !== null && page !== 'display' ? `${domain}${localizedBase}${route ? route + '/' : ''}` : '';
   const tags = [
-    `<meta name="robots" content="${page === '404' || !domain ? 'noindex, follow' : 'index, follow, max-image-preview:large'}">`,
+    `<meta name="robots" content="${page === '404' || page === 'display' || !domain ? 'noindex, follow' : 'index, follow, max-image-preview:large'}">`,
     `<meta property="og:type" content="website">`, `<meta property="og:locale" content="${LOCALES[language].og}">`,
     `<meta property="og:site_name" content="${escapeHTML(name)}">`,
     `<meta property="og:title" content="${escapeHTML(documentTitle)}">`,
@@ -39,9 +40,9 @@ export function pageMetadata({ page, route, title, description }, config, { base
   if (canonical) {
     const home = domain + localizedBase;
     const assetBase = domain + base;
-    const image = `${assetBase}assets/social/${language === 'zh-Hant' ? '' : language + '/'}${page === 'privacy' ? 'home' : page}.png`;
+    const image = `${assetBase}assets/social/${language === 'zh-Hant' ? '' : language + '/'}${['privacy','guide'].includes(page) ? 'home' : page}.png`;
     const searchImage = assetBase + preview.path;
-    const imageAlt = page === 'privacy' && config.toolsPortal ? `${name}: ${toolText('homeMetaTitle',language)}` : ['picker','groups'].includes(page) || page === 'home' && config.toolsPortal ? `${name}: ${page === 'home' ? toolText('homeMetaTitle',language) : title}` : `${name}: ${tr(page === 'help' ? '圖片上傳與構圖設定教學' : '上傳照片，自訂記憶配對卡牌')} · ${tr('可替換圖案、卡背、背景與 LOGO')}`;
+    const imageAlt = ['privacy','guide'].includes(page) && config.toolsPortal ? `${name}: ${toolText('homeMetaTitle',language)}` : ['picker','groups','scoreboard','timer','workspace','bingo','tournament','quiz',...SUITE_KINDS].includes(page) || page === 'home' && config.toolsPortal ? `${name}: ${page === 'home' ? toolText('homeMetaTitle',language) : title}` : `${name}: ${tr(page === 'help' ? '圖片上傳與構圖設定教學' : '上傳照片，自訂記憶配對卡牌')} · ${tr('可替換圖案、卡背、背景與 LOGO')}`;
     tags.push(`<link rel="canonical" href="${escapeHTML(canonical)}">`, `<meta property="og:url" content="${escapeHTML(canonical)}">`);
     for (const [id, info] of Object.entries(LOCALES)) {
       tags.push(`<link rel="alternate" hreflang="${id}" href="${escapeHTML(domain + localeBase(base, id) + (route ? route + '/' : ''))}">`);
@@ -58,8 +59,8 @@ export function pageMetadata({ page, route, title, description }, config, { base
     ];
     if (page === 'privacy') { delete graph[1].primaryImageOfPage; graph.pop(); }
     if (page === 'game') graph[1].mainEntity = { '@type': 'WebApplication', name: tr('翻牌遊戲'), url: canonical, image: searchImage, applicationCategory: 'GameApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: language, isAccessibleForFree: true, description, featureList: ['上傳照片或圖片，自訂 12 種配對圖案', '自訂卡背、背景與 LOGO', '圖片縮放、位置、旋轉、透明度與裁切調整', '2 至 12 對卡牌、限時或不限時挑戰', '本機成績紀錄與 CSV 匯出', '自訂圖片，邀請朋友線上 PK', '線上配對對戰，雙方同意即可再來一場'].map(tr) };
-    if (['picker','groups'].includes(page)) graph[1].mainEntity = { '@type': 'WebApplication', name: title, url: canonical, image: searchImage, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: language, isAccessibleForFree: true, description };
-    if (page === 'home' && config.toolsPortal) { graph[1]['@type'] = 'CollectionPage'; graph[1].mainEntity = { '@type': 'ItemList', itemListElement: [['memory','games/memory/'],['picker','tools/random-picker/'],['groups','tools/random-groups/']].map(([key,path],i) => ({ '@type': 'ListItem', position:i+1, name:toolText(key,language), url:home+path })) }; }
+    if (['picker','groups','scoreboard','timer','workspace','bingo','tournament','quiz',...SUITE_KINDS].includes(page)) graph[1].mainEntity = { '@type': 'WebApplication', name: title, url: canonical, image: searchImage, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Any', browserRequirements: 'Requires JavaScript', inLanguage: language, isAccessibleForFree: true, description };
+    if (page === 'home' && config.toolsPortal) { graph[1]['@type'] = 'CollectionPage'; graph[1].mainEntity = { '@type': 'ItemList', itemListElement: TOOL_CATALOG.map(({id:key,path},i) => ({ '@type': 'ListItem', position:i+1, name:toolText(key,language), url:home+path })) }; }
     const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replaceAll('<', '\\u003c');
     tags.push(`<script type="application/ld+json">${json}</script>`);
   }

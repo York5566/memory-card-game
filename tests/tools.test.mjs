@@ -80,11 +80,11 @@ test('工具文案四語完整，變數一致；四語頁面輸出可爬取標�
 });
 test('工具站首頁與工具頁結構化資料符合各自內容，不再把所有頁面當遊戲',()=>{
  const config={name:'一起玩工具箱',domain:'https://wwwne1198.party',basePath:'/',toolsPortal:true};
- for(const [page,route] of [['home',''],['picker','tools/random-picker'],['groups','tools/random-groups']]){
+ for(const [page,route] of [['home',''],['picker','tools/random-picker'],['groups','tools/random-groups'],['scoreboard','tools/scoreboard'],['timer','tools/timer']]){
   const output=pageMetadata({page,route,title:page,description:'test'},config,siteAddress(config),'en');
   const graph=JSON.parse(output.meta.match(/application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
   assert.ok(graph[2].url.includes('tools-'));assert.equal((output.meta.match(/hreflang=/g)||[]).length,5);
   assert.equal(graph[1].mainEntity['@type'],page==='home'?'ItemList':'WebApplication');
-  if(page==='home')assert.equal(graph[1].mainEntity.itemListElement.length,3);else assert.equal(graph[1].mainEntity.applicationCategory,'UtilitiesApplication');
+  if(page==='home')assert.equal(graph[1].mainEntity.itemListElement.length,15);else assert.equal(graph[1].mainEntity.applicationCategory,'UtilitiesApplication');
  }
 });

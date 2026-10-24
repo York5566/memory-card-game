@@ -3,6 +3,9 @@ import config from './site-config.js';
 import { initTutorial } from './tutorial.js';
 initTutorial();
 export function navigateLanguage(href, language) {
+  if (document.body.dataset.page === 'display') { const next=new URL(href,window.location.href);next.hash=location.hash;href=next.href; }
+  const eventID=new URL(window.location.href).searchParams.get('event');
+  if(eventID&&/^[a-zA-Z0-9-]{8,80}$/.test(eventID)){const next=new URL(href,window.location.href);next.searchParams.set('event',eventID);next.searchParams.set('resume','1');href=next.href;}
   if (/^#pk=[a-f0-9]{48}$/.test(window.location.hash)) { const next = new URL(href, location.href); next.hash = location.hash; href = next.href; }
   if (window.memoryGameLanguage) window.memoryGameLanguage.navigate(href, language);
   else window.location.assign(href);

@@ -122,6 +122,8 @@ function menu({ language = 'ja', current = 'en', cancel = false, ...options } = 
   result.context.config = { ads: { demo: false, enabled: false } };
   result.context.t = value => value;
   result.context.initTutorial = () => {}; // Guidance is covered separately; this fixture exercises language navigation.
+  result.context.document.readyState = 'complete';
+  result.context.initFocusUI = () => {}; // Focus controls are exercised in the browser, not this menu adapter.
   const site = readFileSync(new URL('../public/js/site.js', import.meta.url), 'utf8').replace(/^import[^\n]*\n/gm, '').replaceAll('export function', 'function');
   runInNewContext(site, result.context);
   let prevented = false;

@@ -8,13 +8,14 @@
   "vars": {
     "API_ENABLED": "true",
     "PK_ENABLED": "true",
+    "PARTY_ENABLED": "true",
     "ALLOWED_ORIGINS": "https://wwwne1198.party"
   },
   "d1_databases": [{ "binding": "DB", "database_name": "memory-card-game", "database_id": "bce04f96-bdca-4994-9684-ff766182bef5", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "IMAGES", "bucket_name": "memory-card-game" }],
-  "ratelimits": [{ "name": "API_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }, { "name": "PK_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 12, "period": 60 } }],
-  "durable_objects": { "bindings": [{ "name": "PK_ARENA", "class_name": "PKArena" }] },
-  "migrations": [{ "tag": "pk-v1", "new_sqlite_classes": ["PKArena"] }],
+  "ratelimits": [{ "name": "PARTY_RATE_LIMITER", "namespace_id": "1003", "simple": { "limit": 30, "period": 60 } },{ "name": "API_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } }, { "name": "PK_RATE_LIMITER", "namespace_id": "1002", "simple": { "limit": 12, "period": 60 } }],
+  "durable_objects": { "bindings": [{ "name": "PK_ARENA", "class_name": "PKArena" }, { "name": "PARTY_ROOMS", "class_name": "PartyRooms" }] },
+  "migrations": [{ "tag": "pk-v1", "new_sqlite_classes": ["PKArena"] }, { "tag": "party-v1", "new_sqlite_classes": ["PartyRooms"] }],
   "triggers": { "crons": ["17 * * * *"] },
   "observability": { "enabled": false }
 }

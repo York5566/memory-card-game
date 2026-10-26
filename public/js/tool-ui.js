@@ -1,7 +1,8 @@
 import { toolText } from './tools-text.js';
+import { SECONDARY_ACTIONS, ACTION_KEYS } from './focus-core.js';
 export const T=(key,...values)=>toolText(key,document.documentElement.lang,...values);
 export function el(tag,cls='',text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
-export function button(text,run,cls='button small'){const b=el('button',cls,text);b.type='button';b.onclick=run;return b;}
+export function button(text,run,cls='button small'){const b=el('button',cls,text);b.type='button';b.onclick=run;for(const key of SECONDARY_ACTIONS)if(text===T(key)){b.dataset.focusSecondary='';break;}for(const[action,keys]of Object.entries(ACTION_KEYS))if(keys.some(key=>text===T(key))){b.dataset.shortcutAction=action;break;}return b;}
 export function input(type,value,attrs={}){const n=el('input');n.type=type;n.value=value;for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);return n;}
 export function label(text,control){const n=el('label','tool-field');n.append(el('span','',text),control);return n;}
 export function select(options,value){const n=el('select');for(const[v,title]of options){const o=el('option','',title);o.value=v;n.append(o);}n.value=value;return n;}

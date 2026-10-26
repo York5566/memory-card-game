@@ -1,3 +1,6 @@
+import {T as toolLabel} from './tool-ui.js';
+import {MiniError} from './mini-core.js';
+import {memoryMaterials} from './material-bridges.js';
 import { t, msg, html, localizeMarkup, region } from './i18n.js';
 import { defaults, copy, History, SPECS, TRANSFORM_SPECS, PRODUCTS, FIELDS, get, set, canonical, sanitize } from './core.js';
 import { createStage, createCard, productName, escapeHTML as esc, assetURL, displaySetting } from './stage.js';
@@ -24,7 +27,7 @@ export function openSettings(applied, apply) {
     if (busy) return; busy = true; status(message);
     const controls = [...dialog.querySelectorAll('button,input,select')].map(node => [node, node.disabled]);
     controls.forEach(([node]) => node.disabled = true); dialog.setAttribute('aria-busy', 'true');
-    try { await task(); } catch (error) { status(error instanceof DOMException ? t('操作失敗，請再試一次。') : error.message || t('操作失敗，請再試一次。')); }
+    try { await task(); } catch (error) { status(error instanceof MiniError ? toolLabel(error.code) : error instanceof DOMException ? t('操作失敗，請再試一次。') : error.message || t('操作失敗，請再試一次。')); }
     finally { busy = false; dialog.removeAttribute('aria-busy'); controls.forEach(([node, disabled]) => node.disabled = disabled); syncFields(); }
   }
   const dirty = () => canonical(history.value) !== canonical(saved);
@@ -175,7 +178,7 @@ export function openSettings(applied, apply) {
     const intro = { play: '先決定難度，其他設定保留預設就能玩。', cards: '先選圖案或上傳照片，再視需要調整卡背與外觀。', screen: '先換背景；標題、LOGO 與細部排版可按需展開。', records: '決定是否保存成績；不需要填寫活動名稱也能玩。' };
     host.innerHTML = html`<div class="tab-top"><div><h3>${TABS[tab]}</h3><p class="settings-intro">${t(intro[tab])}</p></div><button class="reset-field" id="reset-page">本頁恢復預設</button></div>`;
     if (tab === 'play') host.insertAdjacentHTML('beforeend', html`<div class="difficulty-shortcuts"><span>快速選擇卡牌數</span><div>${[4,6,10].map((pairs,i) => html`<button type="button" class="button small" data-pairs="${pairs}">${t(['輕鬆','標準','挑戰'][i])} · ${pairs} 對</button>`).join('')}</div></div>` + selectedFields(['pairs','timed','limitSeconds','previewSeconds','sound']) + group('進階玩法', selectedFields(['mismatchMs'])));
-    if (tab === 'cards') host.insertAdjacentHTML('beforeend', cardSections());
+    if (tab === 'cards') {host.insertAdjacentHTML('beforeend', cardSections());const pick=document.createElement('button');pick.type='button';pick.className='button';pick.textContent=toolLabel('matMemory');pick.onclick=()=>operation(toolLabel('matUse'),async()=>{const files=await memoryMaterials();if(!files||!confirm(toolLabel('miniReplace')))return;const images=[];for(const item of files)images.push({...await importImage(item.file,false),label:item.label});history.begin();history.value.products.forEach((p,i)=>{p.enabled=i<images.length;if(images[i]){p.image.upload=images[i].id;p.label=images[i].label;}});history.value.pairs=Math.min(history.value.pairs,images.length);history.commit();renderTab();status(toolLabel('matImported'));});host.prepend(pick);}
     if (tab === 'screen') host.insertAdjacentHTML('beforeend',
       group('背景圖片', uploadField('background', t('自訂背景')) + selectedFields(['background.asset','backgroundColor']) + transformFields('background.',t('背景圖片構圖')), true) +
       group('標題與文字', selectedFields(['headerText','title.text','title.subtitle']) + group('文字外觀與位置', selectedFields(['title.size','title.x','title.y','title.opacity','title.color','title.align']))) +

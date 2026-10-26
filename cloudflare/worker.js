@@ -1,5 +1,7 @@
 import { decodeProfile, readLimited, LIMITS, sha256, normalizeCode, validCode } from '../public/js/profile-format.js';
 import { handlePK } from './pk.js';
+import { handleParty } from './party.js';
+export { PartyRooms } from './party.js';
 export { PKArena } from './pk.js';
 
 const DAY = 86400000;
@@ -117,6 +119,7 @@ export function createWorker({ verify = verifyTurnstile, now = () => Date.now() 
   return {
     async fetch(request, env) {
       if (new URL(request.url).pathname.startsWith('/api/pk/')) return handlePK(request, env, { verify, ipKey });
+      if (new URL(request.url).pathname.startsWith('/api/party/')) return handleParty(request, env, { verify, ipKey });
       const origin = request.headers.get('Origin'), allowed = (env.ALLOWED_ORIGINS || '').split(',').map(v => v.trim());
       let response;
       try {

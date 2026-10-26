@@ -155,7 +155,7 @@ function run() {
     const total=items.reduce((sum,item)=>sum+item.weight,0);let before=0;for(const item of items){if(item.id===first.id)break;before+=item.weight;}
     const tau=Math.PI*2, desired=(tau-(before+first.weight/2)/total*tau)%tau;
     const start=angle, target=start+(tau-(start%tau)+desired)%tau+tau*5;
-    pending={items,winners,target};busy=true;fields.disabled=true;$('run').hidden=true;$('skip').hidden=false;$('undo').disabled=true;$('reset').disabled=true;$('result-actions').hidden=true;feedback(T('drawing'));
+    pending={items,winners,target};busy=true;fields.disabled=true;$('run').hidden=true;$('skip').hidden=false;$('undo').disabled=true;$('reset').disabled=true;$('result-actions').hidden=true;feedback(T('pickerDrawing'));
     const duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:config.duration*1000;
     if(!duration){finishDraw();return;}const started=performance.now();
     const animate=now=>{const p=Math.min(1,(now-started)/duration);angle=start+(target-start)*(1-Math.pow(1-p,4));drawWheel(items);if(p<1)frame=requestAnimationFrame(animate);else finishDraw();};frame=requestAnimationFrame(animate);
@@ -207,8 +207,8 @@ $('transfer-scoreboard')?.addEventListener('click',()=>{
  if(busy||!form.reportValidity()||!commit()||!teams.length)return;
  try{saveHandoff(sessionStorage,{version:1,target:'scoreboard',title:config.title,teams:teams.map((members,i)=>({name:titleOfTeam(i),color:palettes[config.theme][i%6],members:members.map(m=>m.name)}))});navigationConfirmed=true;location.assign(transferURL('scoreboard'));}catch{fail(new ToolError('transferError'));}
 });
-$('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await stage.requestFullscreen();}catch{feedback(T('fullscreenError'),true);}});
-document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=T(document.fullscreenElement===stage?'exitFullscreen':'fullscreen');});
+
+
 function needsLeaveWarning() {
   try{if(bridge?.isSaved()&&JSON.stringify(readForm())===JSON.stringify(config))return false;}catch{}
   if(hasResults())return true;
@@ -217,7 +217,7 @@ function needsLeaveWarning() {
   return true;
 }
 function allowNavigation() {
-  if(busy) { feedback(T('drawing')); return false; }
+  if(busy) { feedback(T('pickerDrawing')); return false; }
   if(needsLeaveWarning() && !window.confirm(T('leaveWarning'))) return false;
   navigationConfirmed = true; return true;
 }

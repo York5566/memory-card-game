@@ -22,7 +22,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       assert.match(html, /rel="canonical" href="https:\/\/wwwne1198\.party\/"/);
       assert.ok(!html.includes('york5566.github.io')); assert.ok(!html.includes('/memory-card-game/'));
       assert.match(await read('memory-card-game/games/memory/index.html'), /content="0; url=https:\/\/wwwne1198\.party\/games\/memory\/"/);
-      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 80);
+      const sitemap = await read('sitemap.xml'); assert.equal((sitemap.match(/<loc>/g) || []).length, 112);
       assert.ok(!sitemap.includes('/memory-card-game/')); assert.ok(!sitemap.includes('404'));
     });
     await t.test('活動工作區與三工具有四語 SEO，展示頁不索引或載入分析',async()=>{
@@ -30,6 +30,27 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
       for(const prefix of ['','en/','ja/','ko/']){
         for(const kind of ['workspace','bingo','tournament','quiz','seating','dice','qr','badges','image','whiteboard','certificates']){const html=await read(prefix+'tools/'+kind+'/index.html');assert.ok(html.includes('rel="canonical" href="https://wwwne1198.party/'+prefix+'tools/'+kind+'/"'));assert.ok(html.includes('application/ld+json'));assert.ok(html.includes('UtilitiesApplication'));assert.equal((html.match(/hreflang=/g)||[]).length,9);if(prefix==='en/'||prefix==='ko/')assert.ok(!/[\u3400-\u9fff]/.test(html.match(/<meta name="description" content="([^"]+)"/)[1]));}
         const display=await read(prefix+'display/index.html');assert.ok(display.includes('noindex, follow'));assert.ok(!display.includes('rel="canonical"'));assert.ok(!display.includes('data-site-analytics'));assert.ok(!sitemap.includes('/display/'));
+      }
+    });
+    await t.test('七款遊戲與素材庫有四語內容及 SEO，手機加入頁不索引或分析',async()=>{
+      const sitemap=await read('sitemap.xml');
+      for(const [lang,prefix]of [['zh-Hant',''],['en','en/'],['ja','ja/'],['ko','ko/']]){
+        for(const kind of ['puzzle','reveal','sequence','reaction','differences','charades','drawing','materials']){
+          const html=await read(prefix+'tools/'+kind+'/index.html');
+          assert.ok(html.includes('<html lang="'+lang+'">'));
+          assert.ok(html.includes('rel="canonical" href="https://wwwne1198.party/'+prefix+'tools/'+kind+'/"'));
+          assert.ok(html.includes(kind==='materials'?'UtilitiesApplication':'GameApplication'));
+          assert.ok(html.includes('assets/social/'+prefix+kind+'.png'));
+          assert.ok(html.includes('assets/previews/tools-'+kind+'.png'));
+          assert.equal((html.match(/<link rel="alternate" hreflang=/g)||[]).length,5);
+          assert.ok(sitemap.includes('<loc>https://wwwne1198.party/'+prefix+'tools/'+kind+'/</loc>'));
+          if(lang==='en'||lang==='ko')assert.ok(!/[\u3400-\u9fff]/.test(html.split('<main id="main">')[1].split('</main>')[0]));
+        }
+        const join=await read(prefix+'tools/join/index.html');
+        assert.ok(join.includes('noindex, follow'));
+        assert.ok(!join.includes('rel="canonical"'));
+        assert.ok(!join.includes('data-site-analytics'));
+        assert.ok(!sitemap.includes('/tools/join/'));
       }
     });
     await t.test('檢查會拒絕回歸舊的 CSS 子目錄', async () => {
@@ -142,7 +163,7 @@ test('正式自訂網域、舊網址、子目錄與本機預覽的完整建置',
         assert.equal(graph[2].height, 900);
       }
       const sitemap = await read('sitemap.xml');
-      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 76);
+      assert.equal((sitemap.match(/<image:loc>/g) || []).length, 108);
       assert.ok(sitemap.includes(`<image:loc>${imageURL}</image:loc>`));
     });
     await t.test('損毀 ICO、移除可見縮圖或圖片 sitemap 都會被發布檢查攔截', async () => {

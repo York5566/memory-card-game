@@ -6,8 +6,8 @@ import {toolMessages,toolText} from '../public/js/tools-text.js';
 import {hubPage,suitePage,guidePage} from '../src/suite-pages.mjs';
 import {pageMetadata} from '../scripts/seo.mjs';
 const seed=()=>{let n=4321;return max=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n%max;};};
-test('15 tools have unique stable addresses and seven new tools round-trip defaults',()=>{
- assert.equal(TOOL_CATALOG.length,15);assert.equal(new Set(TOOL_CATALOG.map(t=>t.path)).size,15);
+test('23 tools have unique stable addresses and seven new tools round-trip defaults',()=>{
+ assert.equal(TOOL_CATALOG.length,23);assert.equal(new Set(TOOL_CATALOG.map(t=>t.path)).size,23);
  for(const kind of SUITE_KINDS){const state=validateSuite(defaultSuite(kind),kind);assert.deepEqual(validateSuite(JSON.parse(JSON.stringify(state)),kind),state);}
 });
 test('backups reject wrong tools, versions, remote images and resource exhaustion',()=>{
@@ -70,7 +70,7 @@ test('ZIP output contains UTF-8 names, correct offsets, CRC and file contents',a
 });
 test('new tools and guide have localized, static content and correct metadata in all four languages',()=>{
  for(const [lang,prefix]of [['zh-Hant',''],['en','en/'],['ja','ja/'],['ko','ko/']]){
-  const home=hubPage(lang,'/','/'+prefix);assert.equal((home.match(/data-tool-category=/g)||[]).length,15);assert.ok(home.includes('id="catalog-search"'));
+  const home=hubPage(lang,'/','/'+prefix);assert.equal((home.match(/data-tool-category=/g)||[]).length,23);assert.ok(home.includes('id="catalog-search"'));
   assert.ok(guidePage(lang,'/','/'+prefix).includes('href="/'+prefix+'help/"'));
   for(const kind of SUITE_KINDS){const html=suitePage(kind,lang,'/','/'+prefix);assert.ok(html.includes('data-suite="'+kind+'"'));assert.ok(html.includes('id="suite-backup"'));if(lang==='en'||lang==='ko')assert.ok(!/[\u3400-\u9fff]/.test(html),kind+' '+lang);
    const meta=pageMetadata({page:kind,route:'tools/'+kind,title:toolText(kind,lang),description:toolText(kind+'Meta',lang)},{name:'一起玩工具箱',toolsPortal:true},{domain:'https://example.test',base:'/'},lang);

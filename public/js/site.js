@@ -1,4 +1,6 @@
 import { t } from './i18n.js';
+import { initFocusUI } from './focus-ui.js';
+if(document.readyState==='complete')initFocusUI();else document.addEventListener('DOMContentLoaded',initFocusUI,{once:true});
 import config from './site-config.js';
 import { initTutorial } from './tutorial.js';
 initTutorial();

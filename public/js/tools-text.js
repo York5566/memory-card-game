@@ -1,8 +1,11 @@
+import {focusMessages} from './focus-text.js';
 import {suiteMessages} from './suite-text.js';
+import {miniMessages} from './mini-text.js';
+import {partyMessages} from './party-text.js';
 import { playMessages } from './play-text.js';
 import { activityMessages } from './activity-text.js';
 export const toolMessages = {
-  ...activityMessages,...playMessages,...suiteMessages,
+  ...activityMessages,...playMessages,...suiteMessages,...miniMessages,...partyMessages,...focusMessages,
   guideReopen: ['之後可在首頁按「快速上手」重看。','Reopen this guide from Quick start on the home page.','ホームの「クイックガイド」で再確認できます。','홈의 빠른 안내에서 다시 볼 수 있습니다.'],
   guideButton: ['快速上手','Quick start','クイックガイド','빠른 안내'],
   guideChoose: ['先選一個工具，就能開始','Start by choosing a tool','ツールを選んで始めよう','도구를 골라 시작하세요'],
@@ -113,7 +116,7 @@ export const toolMessages = {
   exitFullscreen: ['離開全螢幕','Exit full screen','全画面を終了','전체 화면 종료'],
   draw: ['開始抽籤','Spin the wheel','抽選スタート','추첨 시작'],
   drawAgain: ['再抽一輪','Draw again','もう一度抽選','다시 추첨'],
-  drawing: ['轉盤轉動中…','Spinning…','抽選中…','회전 중…'],
+  pickerDrawing: ['轉盤轉動中…','Spinning…','抽選中…','회전 중…'],
   skip: ['立即揭曉','Reveal now','今すぐ発表','지금 발표'],
   makeGroups: ['開始分組','Make teams','チームを作る','팀 나누기'],
   reshuffle: ['重新分組','Reshuffle teams','もう一度分ける','다시 나누기'],

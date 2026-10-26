@@ -1,4 +1,6 @@
 import {suitePage,guidePage} from '../src/suite-pages.mjs';
+import {miniPage,materialsPage,joinPage} from '../src/mini-pages.mjs';
+import {MINI_KINDS} from '../public/js/mini-core.js';
 import {SUITE_KINDS} from '../public/js/tool-catalog.js';
 import { playPage, workspacePage, displayPage } from '../src/play-pages.mjs';
 import { activityPage } from '../src/activity-pages.mjs';
@@ -35,6 +37,8 @@ export async function build({ preview = false } = {}) {
     ...['scoreboard','timer'].map(page=>[page,'tools/'+page,toolText(page,'zh-Hant'),toolText(page+'Meta','zh-Hant')]),
     ...['workspace','bingo','tournament','quiz'].map(page=>[page,'tools/'+page,toolText(page,'zh-Hant'),toolText(page+'Meta','zh-Hant')]),
     ...SUITE_KINDS.map(page=>[page,'tools/'+page,toolText(page,'zh-Hant'),toolText(page+'Meta','zh-Hant')]),
+    ...[...MINI_KINDS,'materials'].map(page=>[page,'tools/'+page,toolText(page,'zh-Hant'),toolText(page+'Meta','zh-Hant')]),
+    ['join','tools/join',toolText('join','zh-Hant'),toolText('partyShare','zh-Hant')],
     ['guide','guide',toolText('toolboxGuide','zh-Hant'),toolText('guideMeta','zh-Hant')],
     ['display','display',toolText('display','zh-Hant'),toolText('displayIntro','zh-Hant')],
     ['404', null, '找不到這一頁', '這個網址目前沒有內容，回到首頁繼續玩。'],
@@ -43,8 +47,8 @@ export async function build({ preview = false } = {}) {
     const title = t(sourceTitle, language), description = t(sourceDescription, language);
     const prefix = LOCALES[language].prefix;
     const switcher = `<details class="language-menu"><summary aria-label="${escape(t('語言', language))}"><svg class="language-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg><span>${LOCALES[language].label}</span></summary><nav aria-label="${escape(t('切換語言', language))}">${Object.entries(LOCALES).map(([id, info]) => `<a href="${localeBase(base, id)}${route ? route + '/' : ''}" lang="${id}" hreflang="${id}" data-language-link ${id === language ? 'aria-current="true"' : ''}>${info.label}</a>`).join('')}</nav></details>`;
-    let body = SUITE_KINDS.includes(page)?suitePage(page,language,base,localeBase(base,language)):page==='guide'?guidePage(language,base,localeBase(base,language)):page==='display'?displayPage(language):page==='workspace'?workspacePage(language,base,localeBase(base,language)):['bingo','tournament','quiz'].includes(page)?playPage(page,language,base,localeBase(base,language)):['scoreboard','timer'].includes(page) ? activityPage(page,language,base,localeBase(base,language)) : ['home','picker','groups'].includes(page) ? toolPage(page, language, base, localeBase(base, language)) : await readFile(join(root, `src/pages/${page}.html`), 'utf8');
-    body = body.replace('{{TOOLS_PRIVACY}}', `<h2 id="activity-tools">${escape(toolText('privacyTitle', language))}</h2><p>${escape(toolText('privacyBody', language))+'</p><p>'+escape(toolText('activityPrivacy',language))+'</p><p>'+escape(toolText('eventLocal',language))+'</p><p>'+escape(toolText('playPrivacy',language))+'</p><p>'+escape(toolText('suiteLocal',language))}</p>`).replace('{{PRIVACY_SCOPE}}', escape(toolText('privacyScope', language)));
+    let body = MINI_KINDS.includes(page)?miniPage(page,language,base,localeBase(base,language)):page==='materials'?materialsPage(language,base,localeBase(base,language)):page==='join'?joinPage(language,base):SUITE_KINDS.includes(page)?suitePage(page,language,base,localeBase(base,language)):page==='guide'?guidePage(language,base,localeBase(base,language)):page==='display'?displayPage(language):page==='workspace'?workspacePage(language,base,localeBase(base,language)):['bingo','tournament','quiz'].includes(page)?playPage(page,language,base,localeBase(base,language)):['scoreboard','timer'].includes(page) ? activityPage(page,language,base,localeBase(base,language)) : ['home','picker','groups'].includes(page) ? toolPage(page, language, base, localeBase(base, language)) : await readFile(join(root, `src/pages/${page}.html`), 'utf8');
+    body = body.replace('{{TOOLS_PRIVACY}}', `<h2 id="activity-tools">${escape(toolText('privacyTitle', language))}</h2><p>${escape(toolText('privacyBody', language))+'</p><p>'+escape(toolText('activityPrivacy',language))+'</p><p>'+escape(toolText('eventLocal',language))+'</p><p>'+escape(toolText('playPrivacy',language))+'</p><p>'+escape(toolText('suiteLocal',language))+'</p><p>'+escape(toolText('miniLocal',language))+'</p><p>'+escape(toolText('partyPrivacy',language))}</p>`).replace('{{PRIVACY_SCOPE}}', escape(toolText('privacyScope', language)));
     const { documentTitle, meta } = pageMetadata({ page, route, title, description }, config, { base, domain }, language);
     const html = localizeMarkup(template.replace('{{BODY}}', body), language).replace('{{META}}', meta).replace('{{ANALYTICS}}', analyticsMarkup(config, { domain }, page)).replaceAll('{{NAME}}', escape(t(config.name, language)))
       .replaceAll('{{LANG}}', language).replaceAll('{{LOCALE_BASE}}', localeBase(base, language)).replace('{{LANGUAGE_SWITCH}}', switcher)
@@ -56,7 +60,7 @@ export async function build({ preview = false } = {}) {
   }
   await writeFile(join(output, 'js/site-config.js'), `export default ${JSON.stringify({ name: config.name, basePath: base, ads: config.ads, cloud, pk })};\n`);
   if (domain) {
-    const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([page, route]) => route !== null && page !== 'display').map(([page, route]) => {
+    const urls = Object.keys(LOCALES).flatMap(language => routes.filter(([page, route]) => route !== null && !['display','join'].includes(page)).map(([page, route]) => {
       const path = route ? route + '/' : '';
       const alternates = [...Object.keys(LOCALES), 'x-default'].map(id => `<xhtml:link rel="alternate" hreflang="${id}" href="${escape(domain + localeBase(base, id === 'x-default' ? 'zh-Hant' : id) + path)}"/>`).join('');
       const image = page === 'privacy' ? '' : `<image:image><image:loc>${escape(domain + base + previewFor(page, config).path)}</image:loc></image:image>`;

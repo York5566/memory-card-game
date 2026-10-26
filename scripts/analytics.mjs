@@ -1,7 +1,7 @@
 // 只在正式建置的內容頁輸出 GA4；正式成品在 localhost 開啟也不送出測試流量。
 export function analyticsMarkup(config, { domain }, page) {
   const id = config.ga4MeasurementId || '';
-  if (!domain || (page === '404' || page === 'display') || !id) return '';
+  if (!domain || (page === '404' || ['display','join'].includes(page)) || !id) return '';
   if (!/^G-[A-Z0-9]+$/.test(id)) throw Error('GA4 評估 ID 格式不正確，應為 G- 開頭的英數字');
   return `<!-- Google tag (gtag.js) -->
   <script data-site-analytics="ga4">

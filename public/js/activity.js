@@ -82,15 +82,21 @@ function renderBoard(){
  if(focused&&focusTeam!==undefined)target.querySelector(`[data-team-index="${focusTeam}"][data-score-action="${focused}"]`)?.focus({preventScroll:true});
 }
 let timerAnnouncement='';
+if(!board){
+ const quick=el('div','timer-quick');quick.id='activity-quick-time';quick.setAttribute('role','group');quick.ariaLabel=T('workTimerQuick');
+ for(const minutes of [1,3,5,10]){const b=btn(T('workTimerMinutes',minutes),()=>{if(timer.status!=='idle'||config.phases.length!==1||config.cycles!==1||!form.reportValidity()||!commit())return;config={...config,phases:[{...config.phases[0],seconds:minutes*60}]};resetProgress();writeForm();save();render();});b.dataset.minutes=minutes;quick.append(b);}
+ quick.append(btn(T('workTimerCustom'),()=>stage.dispatchEvent(new Event('focus-request-settings'))));stage.querySelector('.timer-display').before(quick);
+}
+
 function renderTimer(){
  timer=tickTimer(config,timer,Date.now());const status=timer.status,index=timer.index;
  $('time').textContent=formatDuration(timer.remaining);$('time').classList.toggle('has-hours',Math.ceil(timer.remaining/1000)>=3600);$('phase').textContent=phaseName(index);
  $('progress').value=Math.min(1,timer.remaining/(config.phases[index].seconds*1000));stage.classList.toggle('is-finished',status==='finished');
  const announcement=[status,index,timer.cycle,config.cycles,config.phases.length].join(':');
- if(announcement!==timerAnnouncement){$('summary').textContent=T('cycleProgress',timer.cycle+1,config.cycles)+' · '+T('phaseProgress',index+1,config.phases.length)+' · '+T({idle:'timerReady',running:'timerRunning',paused:'timerPaused',finished:'timerFinished'}[status]);
+ if(announcement!==timerAnnouncement){$('summary').textContent=[config.cycles>1?T('cycleProgress',timer.cycle+1,config.cycles):'',config.phases.length>1?T('phaseProgress',index+1,config.phases.length):'',T({idle:'timerReady',running:'timerRunning',paused:'timerPaused',finished:'timerFinished'}[status])].filter(Boolean).join(' · ');
  if(timerAnnouncement&&status!=='idle'&&(status==='finished'||announcement.split(':').slice(1,3).join()!==timerAnnouncement.split(':').slice(1,3).join()))chime();timerAnnouncement=announcement;
  const timeline=$('timeline');timeline.replaceChildren();config.phases.forEach((p,i)=>{const tag=el('span','timer-stage-tag',phaseName(i)+' · '+formatDuration(p.seconds*1000));tag.classList.toggle('is-current',i===index);timeline.append(tag);});}
- $('start').hidden=status==='running';$('pause').hidden=status!=='running';$('start').textContent=T(status==='finished'?'timerAgain':status==='idle'?'timerStart':'timerResume');for(const key of ['next','plus','minus'])$(key).disabled=status==='finished';
+ $('quick-time').hidden=status!=='idle'||config.phases.length!==1||config.cycles!==1; $('timeline').hidden=config.phases.length===1; $('next').hidden=config.phases.length*config.cycles===1; for(const b of $('quick-time').querySelectorAll('[data-minutes]'))b.setAttribute('aria-pressed',String(Number(b.dataset.minutes)*60===config.phases[0].seconds)); $('start').hidden=status==='running';$('pause').hidden=status!=='running';$('start').textContent=T(status==='finished'?'timerAgain':status==='idle'?'timerStart':'timerResume');for(const key of ['next','plus','minus'])$(key).disabled=status==='finished';
 }
 function render(){appearance();if(board)renderBoard();else{timerAnnouncement='';renderTimer();}}
 function timerControl(action,seconds=0){if(!form.reportValidity()||!commit())return;setupAudio();timer=controlTimer(config,timer,action,Date.now(),seconds);renderTimer();}

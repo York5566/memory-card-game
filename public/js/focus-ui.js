@@ -1,5 +1,6 @@
 import {T,el,button} from './tool-ui.js';
 import {validateShortcuts,validShortcut,shortcutName} from './focus-core.js';
+import {workflowProfile} from './workflow-core.js';
 
 const controllers = new Map();
 let active = null, initialized = false;
@@ -25,12 +26,15 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
   const owner = stage.closest('[data-mini],[data-suite],[data-play],[data-activity],[data-tool]'),
     kind = stage.matches('.party-panel') ? 'party' : owner?.dataset.mini || owner?.dataset.suite || owner?.dataset.play || owner?.dataset.activity || owner?.dataset.tool ||
       (stage.matches('.solo-panel')?'memory':stage.id==='pk-panel'?'pk':'party');
+  const profile = workflowProfile(kind);
   const settings = settingsSelector && document.querySelector(settingsSelector);
   let heading = headingSelector && stage.querySelector(headingSelector);
   if (!heading) { heading = el('div','focus-party-heading'); stage.prepend(heading); }
   stage.classList.add('focus-stage'); stage.tabIndex = -1;
-  if(owner?.dataset.suite&&heading?.querySelector('h2'))heading.querySelector('h2').textContent=T(kind);
-  const full = fullSelector ? stage.querySelector(fullSelector) : button('⛶',()=>{});
+  stage.dataset.focusKind=kind;
+  if(profile.editor)owner?.classList.add('workflow-editor');
+  if(owner?.dataset.suite&&heading?.querySelector('h2'))heading.querySelector('h2').textContent=T(profile.resultLabel||kind);
+  const full = (fullSelector && stage.querySelector(fullSelector)) || button('⛶',()=>{});
   if (!full) return;
   const menu = el('div','focus-toolbar'), more = button(T('focusMore'),()=>toggleMore()),
     keys = button('⌨',()=>openKeys()), gear = button('⚙',()=>showSettings());
@@ -39,13 +43,15 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
   gear.ariaLabel = T('focusSettings'); gear.title = T('focusSettings');
   full.classList.add('focus-fullscreen');
   menu.append(more,keys);
-  if (settings || kind==='memory' || kind==='pk') menu.append(gear);
-  menu.append(full); heading.append(menu);
+  keys.hidden=!profile.keys;
+  if (!profile.editor && (settings || kind==='memory' || kind==='pk')) menu.append(gear);
+  if(profile.fullscreen)menu.append(full);else full.remove();
+  heading.append(menu);
   let wrapper = null, marker = null, dialog = null, focusedBefore = null, expanded = false, changedInert = [], oldOverflow = '', frame = 0;
-  if (settings && settings.id !== 'mini-settings') {
+  if (settings && settings.id !== 'mini-settings' && !profile.editor) {
     wrapper = el('details','focus-settings-wrap');
-    wrapper.open = ['picker','groups','seating','qr','badges','image','certificates','tournament','quiz','bingo'].includes(kind);
-    settings.before(wrapper); wrapper.append(el('summary','',T('focusSettings')),settings);
+    wrapper.open = profile.settingsOpen;
+    settings.before(wrapper); wrapper.append(el('summary','',T(profile.settingsLabel)),settings);
     const workspace = wrapper.parentElement;
     workspace.classList.add('focus-workspace');
     const sync = () => workspace.classList.toggle('settings-collapsed',!wrapper.open);
@@ -65,7 +71,7 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
     whiteboard:['undo','redo','next','previous'],memory:['primary','pause'],pk:['primary'],
     party:['primary','next','reveal']
   }[kind] || [];
-  const actions = [...supported,'fullscreen',...(settings||kind==='memory'||kind==='pk'?['settings']:[]),'more'];
+  const actions = profile.keys ? [...supported,...(profile.fullscreen?['fullscreen']:[]),...(!profile.editor&&(settings||kind==='memory'||kind==='pk')?['settings']:[]),...(!profile.editor?['more']:[])] : [];
   const storageKey = 'toolbox-shortcuts-v1:'+kind;
   let bindings = validateShortcuts({},actions);
   let selectedTeam = '0';
@@ -142,10 +148,13 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
       while(child.parentElement&&child!==document.body){for(const n of child.parentElement.children)if(n!==child&&!n.inert){n.inert=true;changedInert.push(n);}child=child.parentElement;}
     }else{for(const n of changedInert)n.inert=false;changedInert=[];document.body.style.overflow=oldOverflow;}
   }
+  const roomReady=()=>kind!=='party'||Boolean(stage.querySelector('.party-room')?.childElementCount);
   async function toggleFullscreen() {
+    if(!profile.fullscreen)return;
     active=controller;closeDialog();
     if(expanded){fallback(false);syncFullscreen();return;}
     if(document.fullscreenElement===stage){await document.exitFullscreen().catch(()=>{});return;}
+    if(!roomReady())return;
     try{await stage.requestFullscreen();}catch{fallback(true);syncFullscreen();}
   }
   full.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();void toggleFullscreen();},true);
@@ -155,7 +164,7 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
     if(focused&&!stage.classList.contains('is-fullscreen')){stage.classList.remove('focus-more-open');more.textContent=T('focusMore');more.setAttribute('aria-expanded','false');}
     if(!focused&&dialog)closeDialog();
     stage.classList.toggle('is-fullscreen',focused);
-    full.textContent='⛶';full.ariaLabel=T(focused?'exitFullscreen':'fullscreen');full.title=full.ariaLabel;
+    full.textContent=focused?'⛶':T(profile.fullscreenLabel);full.ariaLabel=T(focused?'exitFullscreen':profile.fullscreenLabel);full.title=full.ariaLabel;
     full.setAttribute('aria-pressed',String(focused));
     if(focused){active=controller;stage.focus({preventScroll:true});}
     else if(wasFocused)full.focus({preventScroll:true});
@@ -182,7 +191,8 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
     return candidate('[data-shortcut-action="'+action+'"]');
   }
   function invoke(action) {
-    if(action==='fullscreen'){void toggleFullscreen();return true;}
+    if(kind==='party'&&!roomReady())return false;
+    if(action==='fullscreen'){if(!profile.fullscreen)return false;void toggleFullscreen();return true;}
     if(action==='settings'){showSettings();return true;}
     if(action==='more'){toggleMore();return true;}
     if(kind==='scoreboard'&&action.startsWith('score')){
@@ -204,9 +214,20 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
       stage.querySelectorAll(selector).forEach(n=>n.dataset.focusSecondary='');
     }
     stage.querySelectorAll('#tool-summary,.tool-pin-note').forEach(n=>n.dataset.focusDetail='');
+    if(kind==='groups')stage.querySelectorAll('#tool-result-actions').forEach(n=>{delete n.dataset.focusSecondary;n.dataset.focusDetail='';});
+    if(kind==='timer'){
+      stage.querySelectorAll('.tool-result-actions').forEach(n=>delete n.dataset.focusSecondary);
+      const reset=stage.querySelector('#activity-reset');if(reset){delete reset.dataset.focusSecondary;reset.dataset.focusDetail='';}
+    }
     const suiteStatus=stage.querySelector('#suite-status');
     if(suiteStatus){if([T('suiteStart'),T('focusWhiteboardHint')].includes(suiteStatus.textContent))suiteStatus.dataset.focusDetail='';else delete suiteStatus.dataset.focusDetail;}
-    more.hidden=!stage.querySelector('[data-focus-secondary],[data-focus-detail]');
+    if(profile.editor)stage.querySelectorAll('[data-focus-secondary],[data-focus-detail]').forEach(n=>{delete n.dataset.focusSecondary;delete n.dataset.focusDetail;});
+    more.hidden=profile.editor||![...stage.querySelectorAll('[data-focus-secondary],[data-focus-detail]')].some(n=>!n.hidden&&!n.closest('[hidden]'));
+    menu.hidden=profile.editor&&!profile.keys||!roomReady();
+    if(!roomReady()){
+      if(expanded){fallback(false);syncFullscreen();}
+      else if(document.fullscreenElement===stage)document.exitFullscreen().catch(()=>{});
+    }
     more.setAttribute('aria-expanded',String(stage.classList.contains('focus-more-open')));
     const hints=new Map();
     for(const action of actions){const control=target(action);if(control){if(!hints.has(control))hints.set(control,[]);if(bindings[action])hints.get(control).push(shortcutName(bindings[action]));}}
@@ -246,7 +267,8 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
   stage.addEventListener('toggle',schedule,true);
   stage.addEventListener('pointerdown',e=>{active=controller;const team=e.target.closest('.score-team')?.querySelector('.score-value');if(team){selectedTeam=team.dataset.teamIndex;markTeam();}});
   stage.addEventListener('focusin',()=>active=controller);
-  stage.addEventListener('focus-settings-applied',()=>{closeDialog();if(wrapper)wrapper.open=false;stage.scrollIntoView({block:'start',behavior:'instant'});stage.focus({preventScroll:true});});
+  stage.addEventListener('focus-settings-applied',()=>{closeDialog();if(wrapper)wrapper.open=false;if(!profile.editor){stage.scrollIntoView({block:'start',behavior:'instant'});stage.focus({preventScroll:true});}});
+  stage.addEventListener('focus-request-settings',showSettings);
   stage.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&expanded&&!dialog){const nodes=[...stage.querySelectorAll('button,a[href],input,select,textarea,summary,[tabindex="0"]')].filter(usable);const first=nodes[0],last=nodes.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===stage)){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}
   });

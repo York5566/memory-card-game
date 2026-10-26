@@ -1,11 +1,12 @@
 import {focusMessages} from './focus-text.js';
+import {workflowMessages} from './workflow-text.js';
 import {suiteMessages} from './suite-text.js';
 import {miniMessages} from './mini-text.js';
 import {partyMessages} from './party-text.js';
 import { playMessages } from './play-text.js';
 import { activityMessages } from './activity-text.js';
 export const toolMessages = {
-  ...activityMessages,...playMessages,...suiteMessages,...miniMessages,...partyMessages,...focusMessages,
+  ...activityMessages,...playMessages,...suiteMessages,...miniMessages,...partyMessages,...focusMessages,...workflowMessages,
   guideReopen: ['之後可在首頁按「快速上手」重看。','Reopen this guide from Quick start on the home page.','ホームの「クイックガイド」で再確認できます。','홈의 빠른 안내에서 다시 볼 수 있습니다.'],
   guideButton: ['快速上手','Quick start','クイックガイド','빠른 안내'],
   guideChoose: ['先選一個工具，就能開始','Start by choosing a tool','ツールを選んで始めよう','도구를 골라 시작하세요'],

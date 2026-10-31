@@ -1,3 +1,4 @@
+import {usabilityMessages} from './usability-text.js';
 import {focusMessages} from './focus-text.js';
 import {workflowMessages} from './workflow-text.js';
 import {suiteMessages} from './suite-text.js';
@@ -6,7 +7,7 @@ import {partyMessages} from './party-text.js';
 import { playMessages } from './play-text.js';
 import { activityMessages } from './activity-text.js';
 export const toolMessages = {
-  ...activityMessages,...playMessages,...suiteMessages,...miniMessages,...partyMessages,...focusMessages,...workflowMessages,
+  ...activityMessages,...playMessages,...suiteMessages,...miniMessages,...partyMessages,...focusMessages,...workflowMessages,...usabilityMessages,
   guideReopen: ['之後可在首頁按「快速上手」重看。','Reopen this guide from Quick start on the home page.','ホームの「クイックガイド」で再確認できます。','홈의 빠른 안내에서 다시 볼 수 있습니다.'],
   guideButton: ['快速上手','Quick start','クイックガイド','빠른 안내'],
   guideChoose: ['先選一個工具，就能開始','Start by choosing a tool','ツールを選んで始めよう','도구를 골라 시작하세요'],
@@ -14,7 +15,7 @@ export const toolMessages = {
   guideAdjust: ['先試範例，再調成你的規則','Try an example, then make it yours','サンプルを試して、自分のルールに','예시를 써 보고 내 규칙으로 바꾸세요'],
   guideAdjustBody: ["名單、隊伍與時間直接調整；權重、指定隊員、配色與保存方式在展開選項裡。抽籤、分組和計時器也有範例可試用。","Edit lists, teams and times directly. Open more options for weights, assignments, colors and saving. The picker, team maker and timer include examples to try.","名簿・チーム・時間を直接設定。詳細を開くと重み・指定・色・保存も調整できます。抽選・チーム分け・タイマーはサンプルも試せます。","명단, 팀과 시간을 바로 설정하세요. 옵션을 펼쳐 가중치, 팀원 지정, 색상과 저장을 조정할 수 있어요. 추첨, 팀 나누기와 타이머에는 예시도 있습니다."],
   guidePresent: ['展示結果，也能復原與帶走','Present, undo, and keep a copy','結果を発表、取り消し、持ち運び','결과를 보여 주고 복원하거나 보관하세요'],
-  guidePresentBody: ["需要投影時，從工具的「我的活動・展示畫面」開啟展示視窗；主持人保留操作畫面。可只存設定，或把結果與進度一起保存；匯出備份後也能在其他裝置匯入。","For a projector, open Presentation from My activities in a tool and keep the controls on the host screen. Save settings alone or include progress. Export a backup to import on another device.","道具のマイイベント・展示画面から別画面を開き、司会側に操作を残します。設定のみか進行も含めて保存でき、バックアップを別端末に読み込めます。","도구의 내 활동·발표 화면에서 발표 창을 열고 조작은 진행자 화면에 두세요. 설정만 또는 진행도 함께 저장할 수 있고 백업을 다른 기기에 가져올 수 있어요."],
+  guidePresentBody: ["需要投影時，從工具的「保存與展示（選用）」開啟展示視窗；主持人保留操作畫面。可只存設定，或把結果與進度一起保存；匯出備份後也能在其他裝置匯入。","For a projector, open Presentation from Save & present in a tool and keep the controls on the host screen. Save settings alone or include progress. Export a backup to import on another device.","ツールの「保存・展示（任意）」から別画面を開き、司会側に操作を残します。設定のみか進行も含めて保存でき、バックアップを別端末に読み込めます。","도구의 저장·발표 (선택)에서 발표 창을 열고 조작은 진행자 화면에 두세요. 설정만 또는 진행도 함께 저장할 수 있고 백업을 다른 기기에 가져올 수 있어요."],
   goStage: ['設定好了，前往活動畫面','Ready? Go to presentation','準備完了、イベント画面へ','설정 완료, 행사 화면으로'],
   teamCountLabel: ['預計 {0} 組','{0} planned teams','{0}組の予定','예정 팀 수 {0}개'],
   leaveWarning: ['離開或切換語言會清除本次結果及未保存的名單。需要保留請先匯出，確定離開嗎？','Leaving or switching language clears current results and unsaved names. Export first if you need a copy. Leave now?','移動や言語切替で今回の結果と未保存の名簿が消えます。必要なら先に書き出してください。移動しますか？','페이지를 나가거나 언어를 바꾸면 현재 결과와 저장하지 않은 명단이 사라집니다. 필요하면 먼저 내보내세요. 나갈까요?'],

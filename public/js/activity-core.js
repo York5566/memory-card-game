@@ -32,6 +32,12 @@ export function validateActivity(raw,kind) {
  return out;
 }
 export function initialScores(config){return config.teams.map(()=>config.initial);}
+// Map each new position to its previous team; -1 represents a newly added team.
+export function remapScoreProgress(progress,order,initial=0){
+ if(!Array.isArray(order)||order.length<1||order.length>50||order.some(i=>!Number.isInteger(i)||i< -1||i>=progress.scores.length)||new Set(order.filter(i=>i>=0)).size!==order.filter(i=>i>=0).length)throw new ToolError('configError');
+ const positions=new Map(order.map((oldIndex,newIndex)=>[oldIndex,newIndex]));
+ return {scores:order.map(i=>i===-1?initial:progress.scores[i]),history:progress.history.filter(h=>positions.has(h.index)).map(h=>({...h,index:positions.get(h.index)}))};
+}
 export function updateScore(config,scores,index,value){
  if(!num(index,0,config.teams.length-1)||scores.length!==config.teams.length||!num(value,-1000000,1000000))throw new ToolError('scoreRange');
  if(value<0&&!config.allowNegative)throw new ToolError('negativeScore');

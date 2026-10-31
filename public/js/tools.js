@@ -2,7 +2,7 @@ import { toolBridge } from './tool-bridge.js';
 import { audienceView } from './presentation-core.js';
 let bridge=null;
 import { saveHandoff, takeHandoff, activityURL } from './activity-handoff.js';
-import { MAX_FILE_BYTES, entries, draw, group, teamCount, defaults, validateConfig, csv, importList, ToolError } from './tools-core.js';
+import { MAX_FILE_BYTES, entries, draw, group, teamCount, defaults, validateConfig, csv, importList, moveGroupMember, ToolError } from './tools-core.js';
 import { toolText } from './tools-text.js';
 
 const host = document.querySelector('[data-tool]');
@@ -10,13 +10,15 @@ const kind = host.dataset.tool, lang = document.documentElement.lang;
 const T = (key, ...values) => toolText(key, lang, ...values);
 const $ = id => document.getElementById('tool-' + id);
 const form = $('form'), fields = $('fields'), stage = $('stage'), results = $('results');
+const remainingButton=buttonPlaceholder();
+function buttonPlaceholder(){const b=document.createElement('button');b.type='button';b.id='tool-draw-remaining';b.className='button primary';b.hidden=true;b.addEventListener('click',()=>run({remainingOnly:true}));$('run').after(b);const hint=document.createElement('p');hint.id='tool-pool-hint';hint.className='tool-note tool-pool-hint';hint.setAttribute('role','status');$('run').parentElement.before(hint);return b;}
 const storageKey = `activity-tools-${kind}-v1`;
 let config = defaults(kind), rounds = [], teams = [], removed = new Set(), undoStack = [], busy = false, angle = 0, pending = null, frame = 0;
 let audio, navigationConfirmed = false;
 const palettes = { forest:['#47715d','#dcead6','#edc68d','#bad8c5','#f3dfc0','#93b7a4'], sunset:['#a15336','#f1cf9a','#f5e4c3','#d99d7b','#e2b0a7','#ecd3b7'], ocean:['#346c85','#b9d9df','#e7d9ae','#9cbfce','#d4e8ec','#94b0b9'] };
 const el = (tag, className, text) => { const node=document.createElement(tag); if(className) node.className=className; if(text!==undefined) node.textContent=text; return node; };
 const button = (label, fn, className='button small') => { const b=el('button',className,label); b.type='button'; b.addEventListener('click',fn); return b; };
-function feedback(message, error=false) { $('feedback').textContent=message; $('feedback').classList.toggle('is-error',error); }
+function feedback(message,error=false){const ids=['feedback','settings-feedback'],announce=form.contains(document.activeElement)?'settings-feedback':'feedback';for(const id of ids){const n=$(id);if(n){n.setAttribute('aria-live',id===announce?'polite':'off');n.textContent=message;n.classList.toggle('is-error',error);}}}
 function fail(error) { feedback(T(error instanceof ToolError ? error.code : 'invalid'),true); }
 function getEntries() { return entries(config.names,{weighted:kind==='picker' && config.weighted,dedupe:config.dedupe}); }
 function pool() { return getEntries().items.filter(item=>!removed.has(item.id)); }
@@ -40,14 +42,22 @@ function save() {
 }
 function clearResults() { rounds=[]; teams=[]; removed=new Set(); undoStack=[]; angle=0; }
 function structural(c) { return JSON.stringify([c.names,c.weighted,c.dedupe,c.replacement,c.mode,c.value]); }
-function commit({ask=true}={}) {
-  const next=readForm();
+function commit() {
+  let next;
+  try{
+    const raw=readForm();
+    if(raw.names!==config.names||raw.dedupe!==config.dedupe||raw.mode!==config.mode||raw.value!==config.value)raw.fixed={};
+    next=validateConfig(raw,kind);
+  }catch(error){fail(error);return false;}
   if(structural(next)!==structural(config)) {
-    if(ask && hasResults() && !window.confirm(T('changeWarning'))) { writeForm(); return false; }
-    if(next.names!==config.names || next.dedupe!==config.dedupe) next.fixed={};
+    if(hasResults()&&!window.confirm(T(kind==='groups'?'uxGroupReset':'changeWarning'))){writeForm();return false;}
     clearResults();
   }
-  config=next; save(); render(); return true;
+  feedback('');config=next;save();render();return true;
+}
+function applyStyle(key){
+  try{const raw={...config},field=form.elements.namedItem(key);raw[key]=key==='textSize'?Number(field.value):field.value;config=validateConfig(raw,kind);save();render();}
+  catch(error){fail(error);}
 }
 function snapshot() { undoStack.push({rounds:structuredClone(rounds),teams:structuredClone(teams),removed:[...removed],fixed:{...config.fixed}}); if(undoStack.length>100) undoStack.shift(); }
 function setupAudio() { if(!config.sound) return; try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume().catch(()=>{}); } catch { /* Sound is optional. */ } }
@@ -91,19 +101,30 @@ function renderAssignments(items) {
     label.append(name,input); target.append(label);
   }
 }
-function chooseMove(item, from) {
-  const dialog=el('dialog','tool-move-dialog'); dialog.setAttribute('aria-labelledby','tool-move-title');
-  const heading=el('h2','',item.name); heading.id='tool-move-title';
-  const label=el('label','tool-field'), select=el('select'); label.append(el('span','',T('move')),select);
-  teams.forEach((team,i)=>{const option=el('option','',titleOfTeam(i)); option.value=String(i); option.selected=i===from; select.append(option);});
-  const close=()=>{dialog.close();dialog.remove();};
-  const actions=el('div','dialog-actions');
-  actions.append(button(T('cancel'),close),button(T('move'),()=>{
-    const to=Number(select.value); if(to===from){close();return;}
-    if(config.mode==='size' && teams[to].length>=config.value){fail(new ToolError('fixedFull'));close();return;}
-    snapshot(); teams[from]=teams[from].filter(member=>member.id!==item.id); teams[to].push(item); config.fixed[item.id]=to; save(); render(); close(); feedback(T('finished',teams.length));
-  },'button primary'));
-  dialog.append(heading,label,actions); stage.append(dialog); dialog.addEventListener('close',()=>dialog.remove(),{once:true}); dialog.showModal(); select.focus();
+function chooseMove(item,from){
+ const dialog=el('dialog','tool-move-dialog');dialog.setAttribute('aria-labelledby','tool-move-title');
+ const heading=el('h2','',item.name);heading.id='tool-move-title';
+ const field=(caption,control)=>{const l=el('label','tool-field');l.append(el('span','',caption),control);return l;};
+ const target=el('select'),swap=el('select'),hint=el('p','tool-note'),error=el('p','tool-feedback');
+ target.dataset.groupTarget='';swap.dataset.groupSwap='';error.setAttribute('role','alert');
+ teams.forEach((team,i)=>{if(i===from)return;const option=el('option','',titleOfTeam(i)+' · '+T('people',team.length));option.value=i;target.append(option);});
+ const close=()=>dialog.close(),saveButton=button(T('uxGroupAdjust'),()=>{
+  try{const next=moveGroupMember(teams,config.fixed,from,Number(target.value),item.id,swap.value||null,config);snapshot();teams=next.teams;config.fixed=next.fixed;save();render();close();feedback(T('uxGroupAdjusted'));}
+  catch(e){error.textContent=T(e.code||'invalid');error.classList.add('is-error');}
+ },'button primary');
+ function update(){
+  const members=target.options.length?teams[Number(target.value)]:null;if(!members){target.disabled=true;swap.disabled=true;saveButton.disabled=true;hint.textContent=T('uxGroupOne');return;}const full=config.mode==='size'&&members.length>=config.value;
+  swap.replaceChildren();const empty=el('option','',T(full?'uxGroupSwapRequired':'uxGroupMoveOnly'));empty.value='';empty.disabled=full;swap.append(empty);
+  for(const p of members){const option=el('option','',p.name);option.value=p.id;swap.append(option);}
+  swap.value='';hint.textContent=T(full?'uxGroupSwapRequired':'uxGroupHint');saveButton.disabled=full;error.textContent='';
+ }
+ target.onchange=update;swap.onchange=()=>{saveButton.disabled=config.mode==='size'&&teams[Number(target.value)].length>=config.value&&!swap.value;};update();
+ const actions=el('div','dialog-actions');actions.append(button(T('cancel'),close),saveButton);
+ dialog.append(heading,field(T('uxGroupTarget'),target),field(T('uxGroupSwap'),swap),hint,error);
+ if(config.fixed[item.id]!==undefined)dialog.append(button(T('uxGroupUnpinOne'),()=>{snapshot();delete config.fixed[item.id];save();render();close();}));
+ dialog.append(actions);stage.append(dialog);
+ dialog.addEventListener('close',()=>{dialog.remove();const control=results.querySelector('[data-member-id="'+item.id+'"]');(control||stage).focus({preventScroll:true});},{once:true});
+ dialog.showModal();target.focus();
 }
 function renderResults() {
   results.replaceChildren(); $('empty').hidden=hasResults(); if($('group-art')) $('group-art').hidden=teams.length>0;
@@ -119,7 +140,7 @@ function renderResults() {
       const card=el('article','tool-team'), header=el('div','tool-team-header'); card.style.setProperty('--team-color',palettes[config.theme][index%6]);
       header.append(el('h3','',titleOfTeam(index)),el('span','',T('people',team.length))); card.append(header);
       const list=el('ul','tool-members');
-      team.forEach(item=>{ const row=el('li'); const b=button(item.name,()=>chooseMove(item,index),'tool-member'); b.setAttribute('aria-label',item.name+' — '+T('move')); b.title=T('move'); b.append(el('span','tool-member-mark',config.fixed[item.id]===index?'●':'↗')); row.append(b); list.append(row); });
+      team.forEach(item=>{ const row=el('li'); const b=button(item.name,()=>chooseMove(item,index),'tool-member'); b.setAttribute('aria-label',item.name+' — '+T('move')); b.title=T('move'); b.dataset.memberId=item.id; b.append(el('span','tool-member-mark',config.fixed[item.id]===index?'●':'↗')); row.append(b); list.append(row); });
       card.append(list);
       const pinned=team.length>0 && team.every(item=>config.fixed[item.id]===index);
       const pin=button(T(pinned?'unpin':'pin'),()=>{snapshot(); for(const item of team) {if(pinned)delete config.fixed[item.id];else config.fixed[item.id]=index;}save();render();});pin.disabled=!team.length;pin.setAttribute('aria-pressed',String(pinned));card.append(pin);grid.append(card);
@@ -127,6 +148,15 @@ function renderResults() {
   }
   $('result-actions').hidden=!hasResults(); $('undo').disabled=undoStack.length===0 || busy; $('reset').disabled=!hasResults() || busy;
   $('run').textContent=T(kind==='picker'?(rounds.length?'drawAgain':'draw'):(teams.length?'reshuffle':'makeGroups'));
+  if(kind==='picker'){
+    const total=getEntries().items.length,remaining=pool().length,short=total>0&&!config.replacement&&remaining<config.count;
+    $('run').disabled=busy||short;
+    stage.dataset.drawComplete=String(total>0&&!config.replacement&&remaining===0);
+    if(short&&remaining===0)$('run').textContent=T('uxDrawComplete');
+    remainingButton.hidden=!short||remaining===0;remainingButton.disabled=busy;remainingButton.textContent=T('uxDrawRemaining',remaining);
+    $('pool-hint').textContent=short?T(remaining?'uxDrawShort':'uxDrawDone',remaining,config.count):'';
+  }
+
 }
 function render() {
   stage.dataset.theme=config.theme; stage.style.setProperty('--result-size',config.textSize+'px');
@@ -146,20 +176,22 @@ function finishDraw() {
   renderResults();$('summary').textContent=T('available',pool().length)+' · '+T('rulesSummary',config.count,T(config.replacement?'repeatsOn':'repeatsOff'));
   feedback(T('winnerMessage',winners.map(item=>item.name).join(' / ')));chime();results.focus({preventScroll:true});
 }
-function run() {
-  if(busy || !form.reportValidity() || !commit())return;
+function run({remainingOnly=false}={}) {
+  if(busy)return false;
+  if(!form.elements.names.value.trim()){stage.dispatchEvent(new Event('focus-request-settings'));form.elements.names.focus();feedback(T('uxNamesRequired'),true);return false;}
+  if(!form.reportValidity() || !commit())return false;
   try {
     setupAudio();
-    if(kind==='groups') {const next=group(getEntries().items,{mode:config.mode,value:config.value,fixed:config.fixed});snapshot();teams=next;render();feedback(T('finished',teams.length));chime();results.focus({preventScroll:true});return;}
-    const items=pool(), winners=draw(items,config.count,config.replacement), first=winners[0];
+    if(kind==='groups') {const next=group(getEntries().items,{mode:config.mode,value:config.value,fixed:config.fixed});snapshot();teams=next;render();feedback(T('finished',teams.length));chime();results.focus({preventScroll:true});return true;}
+    const items=pool(), winners=draw(items,remainingOnly?Math.min(items.length,config.count):config.count,config.replacement), first=winners[0];
     const total=items.reduce((sum,item)=>sum+item.weight,0);let before=0;for(const item of items){if(item.id===first.id)break;before+=item.weight;}
     const tau=Math.PI*2, desired=(tau-(before+first.weight/2)/total*tau)%tau;
     const start=angle, target=start+(tau-(start%tau)+desired)%tau+tau*5;
-    pending={items,winners,target};busy=true;fields.disabled=true;$('run').hidden=true;$('skip').hidden=false;$('undo').disabled=true;$('reset').disabled=true;$('result-actions').hidden=true;feedback(T('pickerDrawing'));
+    pending={items,winners,target};busy=true;fields.disabled=true;remainingButton.hidden=true;remainingButton.disabled=true;$('run').hidden=true;$('skip').hidden=false;$('undo').disabled=true;$('reset').disabled=true;$('result-actions').hidden=true;feedback(T('pickerDrawing'));
     const duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:config.duration*1000;
-    if(!duration){finishDraw();return;}const started=performance.now();
-    const animate=now=>{const p=Math.min(1,(now-started)/duration);angle=start+(target-start)*(1-Math.pow(1-p,4));drawWheel(items);if(p<1)frame=requestAnimationFrame(animate);else finishDraw();};frame=requestAnimationFrame(animate);
-  }catch(error){fail(error);}
+    if(!duration){finishDraw();return true;}const started=performance.now();
+    const animate=now=>{const p=Math.min(1,(now-started)/duration);angle=start+(target-start)*(1-Math.pow(1-p,4));drawWheel(items);if(p<1)frame=requestAnimationFrame(animate);else finishDraw();};frame=requestAnimationFrame(animate);return true;
+  }catch(error){fail(error);return false;}
 }
 function download(text,filename,type) {const url=URL.createObjectURL(new Blob([text],{type})),link=el('a');link.href=url;link.download=filename;link.hidden=true;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);feedback(T('saved'));}
 function resultRows() {
@@ -168,9 +200,12 @@ function resultRows() {
 }
 function replaceConfig(next) {config=next;clearResults();writeForm();save();render();feedback(T('loaded'));}
 form.addEventListener('submit',event=>{event.preventDefault();run();});
-form.addEventListener('change',event=>{if(event.target.closest('#tool-assignments'))return;commit();});
-form.addEventListener('input',event=>{if(['title','textSize','theme','teamNames'].includes(event.target.name))commit({ask:false});});
-$('go-stage').addEventListener('click',()=>{ if(!form.reportValidity() || !commit())return; stage.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'}); $('run').focus({preventScroll:true}); });
+form.addEventListener('change',event=>{if(event.target.closest('#tool-assignments')||['title','textSize','theme','teamNames'].includes(event.target.name))return;commit();});
+form.addEventListener('invalid',e=>{let d=e.target.closest('details');while(d){d.open=true;d=d.parentElement?.closest('details');}feedback(T('invalid'),true);},true);
+form.addEventListener('input',event=>{if(['title','textSize','theme','teamNames'].includes(event.target.name))applyStyle(event.target.name);});
+$('go-stage').textContent=T(kind==='picker'?'draw':'makeGroups');
+$('go-stage').addEventListener('click',()=>{if(!run())return;stage.scrollIntoView({behavior:'instant',block:'start'});stage.focus({preventScroll:true});});
+const enter=button(T('uxEnterNames'),()=>{stage.dispatchEvent(new Event('focus-request-settings'));form.elements.names.focus();});const example=button(T('sample'),()=>$('sample').click());const starter=el('div','tool-row');starter.append(enter,example);$('empty').append(starter);
 $('run').addEventListener('click',run);$('skip').addEventListener('click',finishDraw);
 $('undo').addEventListener('click',()=>{if(busy || !undoStack.length)return;const previous=undoStack.pop();rounds=previous.rounds;teams=previous.teams;removed=new Set(previous.removed);config.fixed=previous.fixed;save();render();feedback(T('undoDone'));});
 $('reset').addEventListener('click',()=>{if(busy || !window.confirm(T('resetWarning')))return;clearResults();render();feedback('');});

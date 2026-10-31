@@ -1,7 +1,7 @@
 import { toolBridge } from './tool-bridge.js';
 import { audienceView } from './presentation-core.js';
 let bridge=null;
-import { activityDefaults, validateActivity, TEAM_COLORS, initialScores, updateScore, initialTimer, controlTimer, tickTimer, formatDuration } from './activity-core.js';
+import { activityDefaults, validateActivity, TEAM_COLORS, initialScores, remapScoreProgress, updateScore, initialTimer, controlTimer, tickTimer, formatDuration } from './activity-core.js';
 import { MAX_FILE_BYTES, csv, ToolError } from './tools-core.js';
 import { takeHandoff } from './activity-handoff.js';
 import { toolText } from './tools-text.js';
@@ -39,12 +39,14 @@ function commit(){
 }
 function changeList(action,index){
  if(!commit())return;
- if(hasProgress()&&!confirm(T(board?'changeTeamsWarning':'timerChangeWarning')))return;
- const list=board?config.teams:config.phases;
- if(action==='add'){if(list.length>=(board?50:12))return;list.push(board?{name:'',color:TEAM_COLORS[list.length%6],members:[]}:{name:'',seconds:60});}
- else if(action==='remove'){if(list.length===1)return;list.splice(index,1);}
- else {const to=index+(action==='up'?-1:1);if(to<0||to>=list.length)return;[list[index],list[to]]=[list[to],list[index]];}
- resetProgress();writeForm();save();render();
+ if(!board&&hasProgress()&&!confirm(T('timerChangeWarning')))return;
+ if(board&&action==='remove'&&!confirm(T('uxRemoveTeam',teamName(index))))return;
+ if(board)config.teams.forEach((team,i)=>{if(!team.name.trim())team.name=T('team',i+1);});
+ const list=board?config.teams:config.phases,order=list.map((_,i)=>i);
+ if(action==='add'){if(list.length>=(board?50:12))return;let number=1;if(board)while(list.some(t=>t.name===T('team',number)))number++;list.push(board?{name:T('team',number),color:TEAM_COLORS[list.length%6],members:[]}:{name:'',seconds:60});}
+ else if(action==='remove'){if(list.length===1)return;list.splice(index,1);order.splice(index,1);}
+ else {const to=index+(action==='up'?-1:1);if(to<0||to>=list.length)return;[list[index],list[to]]=[list[to],list[index]];[order[index],order[to]]=[order[to],order[index]];}
+ if(board){if(action==='add')order.push(-1);const mapped=remapScoreProgress({scores,history},order,config.initial);scores=mapped.scores;history=mapped.history;undos=undos.map(p=>remapScoreProgress(p,order,config.initial));}else resetProgress();writeForm();save();render();
 }
 function writeEditors(){
  const target=$('editors');target.replaceChildren();const list=board?config.teams:config.phases;
@@ -85,7 +87,15 @@ let timerAnnouncement='';
 if(!board){
  const quick=el('div','timer-quick');quick.id='activity-quick-time';quick.setAttribute('role','group');quick.ariaLabel=T('workTimerQuick');
  for(const minutes of [1,3,5,10]){const b=btn(T('workTimerMinutes',minutes),()=>{if(timer.status!=='idle'||config.phases.length!==1||config.cycles!==1||!form.reportValidity()||!commit())return;config={...config,phases:[{...config.phases[0],seconds:minutes*60}]};resetProgress();writeForm();save();render();});b.dataset.minutes=minutes;quick.append(b);}
- quick.append(btn(T('workTimerCustom'),()=>stage.dispatchEvent(new Event('focus-request-settings'))));stage.querySelector('.timer-display').before(quick);
+ const custom=btn(T('uxTimerCustom'),()=>{
+  if(timer.status!=='idle'||config.phases.length!==1||config.cycles!==1)return;
+  const d=el('dialog','activity-score-dialog'),f=el('form'),h=el('h2','',T('uxTimerCustom')),note=el('p','tool-feedback');h.id='timer-custom-title';d.setAttribute('aria-labelledby',h.id);note.setAttribute('role','status');
+  const mins=input('number',Math.floor(config.phases[0].seconds/60),{min:0,max:1440,step:1,required:''}),secs=input('number',config.phases[0].seconds%60,{min:0,max:59,step:1,required:''});
+  const apply=btn(T('apply'),()=>{},'button primary');apply.type='submit';const cancel=btn(T('cancel'),()=>d.close());
+  const row=el('div','activity-time-inputs');row.append(label(T('minutes'),mins),label(T('seconds'),secs));const actions=el('div','dialog-actions');actions.append(cancel,apply);f.append(row,el('p','tool-note',T('uxTimerHelp')),note,actions);d.append(h,f);stage.append(d);
+  f.onsubmit=e=>{e.preventDefault();const total=Number(mins.value)*60+Number(secs.value);if(!f.reportValidity()||!Number.isInteger(total)||total<1||total>86400){note.textContent=T('uxTimerRange');return;}if(!commit())return;config={...config,phases:[{...config.phases[0],seconds:total}]};resetProgress();writeForm();save();render();d.close();};
+  d.addEventListener('close',()=>{d.remove();custom.focus({preventScroll:true});},{once:true});d.showModal();mins.focus();mins.select();
+ });custom.id='activity-custom-time';quick.append(custom);stage.querySelector('.timer-display').before(quick);
 }
 
 function renderTimer(){

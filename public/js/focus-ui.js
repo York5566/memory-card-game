@@ -65,7 +65,7 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
   const supported = {
     picker:['primary','undo'],groups:['primary','undo'],scoreboard:['scoreUp','scoreDown','scoreNext','scorePrevious','undo'],timer:['pause','next'],
     bingo:['primary','undo'],quiz:['pause','next','previous','undo','reveal'],tournament:[],
-    puzzle:['primary','pause','hint','next'],reveal:['primary','pause','hint','next'],sequence:['primary','pause','hint','next'],
+    puzzle:['primary','pause','hint','undo','next'],reveal:['primary','pause','hint','next'],sequence:['primary','pause','hint','next'],
     reaction:['primary','pause','next'],differences:['primary','pause','hint','next'],charades:['primary','pause','next','reveal'],
     drawing:['primary','pause','next','reveal'],dice:['primary','undo'],seating:['primary','undo'],
     whiteboard:['undo','redo','next','previous'],memory:['primary','pause'],pk:['primary'],
@@ -176,7 +176,8 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
     if(kind==='memory')return action==='primary'?[document.querySelector('#start'),document.querySelector('#pause')].find(usable):action==='pause'?document.querySelector('#pause'):null;
     if(kind==='pk')return action==='primary'?['#pk-ready','#pk-again','#pk-join'].map(s=>stage.querySelector(s)).find(usable):null;
     if(action==='primary'){
-      if(kind==='picker'||kind==='groups')return stage.querySelector('#tool-run');
+      if(kind==='picker')return candidate('#tool-run:not(:disabled),#tool-draw-remaining');
+      if(kind==='groups')return stage.querySelector('#tool-run');
       if(kind!=='party'&&owner?.dataset.mini){
         const again=candidate('.mini-result .button');if(again)return again;
         if(!stage.querySelector('.mini-board'))return candidate('.mini-ready-start')||document.querySelector('#mini-direct');
@@ -242,14 +243,16 @@ function install(stage, fullSelector, settingsSelector, headingSelector) {
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;fit();});}
   function fit(){
+    const sequence=kind==='sequence'&&stage.querySelector('.mini-pattern');
+    if(sequence)sequence.style.setProperty('--mini-cols',Math.min(stage.clientWidth<600&&sequence.children.length<=8?2:4,sequence.children.length));
     if(!stage.classList.contains('is-fullscreen')){stage.style.removeProperty('--focus-board-width');stage.style.removeProperty('--focus-canvas-width');return;}
     const available=stage.clientHeight-heading.offsetHeight-32;
     const board=stage.querySelector('.mini-board'), area=stage.querySelector('.mini-play-area');
     if(board&&area){
-      const status=stage.querySelector('#mini-status'),summary=stage.querySelector('.mini-summary'),controls=stage.querySelector('.mini-controls');
-      let height=Math.max(100,available-(status?.offsetHeight||0)-(summary?.offsetHeight||0)-(controls?.offsetHeight||0)-36), ratio=4/3;
+      const status=stage.querySelector('#mini-status'),summary=stage.querySelector('.mini-summary'),controls=stage.querySelector('.mini-controls'),cue=stage.querySelector('.mini-task-cue');
+      let height=Math.max(100,available-(status?.offsetHeight||0)-(summary?.offsetHeight||0)-(controls?.offsetHeight||0)-(cue?.offsetHeight||0)-36), ratio=4/3;
       if(board.classList.contains('mini-pattern')){const cols=Number(board.style.getPropertyValue('--mini-cols'))||4;ratio=cols/Math.ceil(board.children.length/cols);}
-      else if(board.classList.contains('mini-differences')){const img=board.querySelector('img'),cols=getComputedStyle(board).gridTemplateColumns.split(' ').length;ratio=(img?.naturalWidth/img?.naturalHeight||4/3)*(cols===2?2:.5);height-=16;}
+      else if(board.classList.contains('mini-differences')){const img=board.querySelector('img'),cols=getComputedStyle(board).gridTemplateColumns.split(' ').length;ratio=(img?.naturalWidth/img?.naturalHeight||4/3)*(cols===2?2:.5);height-=cols===2?16:32;}
       else if(board.classList.contains('mini-reveal'))height-=board.querySelector('.mini-guess')?.offsetHeight||0;
       if(!board.matches('.mini-charades,.mini-practice-drawing'))stage.style.setProperty('--focus-board-width',Math.floor(Math.min(area.clientWidth,Math.max(120,height*ratio)))+'px');
       if(board.classList.contains('mini-practice-drawing')){

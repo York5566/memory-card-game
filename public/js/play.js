@@ -3,28 +3,32 @@ import {quizMaterials} from './material-bridges.js';
 import {mountParty} from './party-ui.js';
 import { ToolError, csv } from './tools-core.js';
 import { TEAM_COLORS, formatDuration } from './activity-core.js';
-import { playDefaults, validatePlay, validatePlayState, makeBingo, bingoLines, callBingo, initialTournament, tournamentMatches, recordMatch, standings, initialQuiz, tickQuiz, quizControl, awardQuiz, quizScores, PLAY_FILE_LIMIT } from './play-core.js';
+import { playDefaults, validatePlay, validatePlayState, playRequiresRestart, jumpQuiz, revokeQuizAward, makeBingo, bingoLines, callBingo, initialTournament, tournamentMatches, recordMatch, standings, initialQuiz, tickQuiz, quizControl, awardQuiz, quizScores, PLAY_FILE_LIMIT } from './play-core.js';
 import { takeHandoff, saveHandoff, activityURL } from './activity-handoff.js';
 import { audienceView } from './presentation-core.js';
 import { toolBridge } from './tool-bridge.js';
 import { T, el, button, input, label, select, download, imagePicker, readable } from './tool-ui.js';
 const host=document.querySelector('[data-play]'),kind=host.dataset.play,$=key=>document.getElementById('play-'+key),form=$('form'),stage=$('stage');
 let config=playDefaults(kind),draft=structuredClone(config),state=null,bridge=null,leaving=false,audio=null,baseline='';
-const feedback=(s,error=false)=>{$('feedback').textContent=s;$('feedback').classList.toggle('is-error',error);};
+let currentRound=0, matchDrafts=new Map(), matchHistory=[], bingoManualOpen=false;
+function resetHostState(){currentRound=0;matchDrafts.clear();matchHistory=[];}
+function pendingMatchDrafts(){return [...matchDrafts.values()].some(d=>d.sa!==d.original.sa||d.sb!==d.original.sb||d.tie!==d.original.tie);}
+
+const feedback=(s,error=false)=>{for(const id of ['feedback','settings-feedback']){const n=$(id);if(n){n.textContent=s;n.classList.toggle('is-error',error);}}};
 const fail=e=>{let text;try{text=T(e instanceof ToolError||e instanceof MiniError?e.code:e.message==='imageError'?'imageError':'configError');}catch{text=T('configError');}feedback(text,true);};
 const name=i=>config.teams[i].name||T('team',i+1);
 const invoke=fn=>()=>{try{fn();}catch(e){fail(e);}};
 function init(c){return c.kind==='bingo'?makeBingo(c):c.kind==='tournament'?initialTournament(c):initialQuiz(c);}
 function meaningful(){return kind==='bingo'?state?.called.length>0:kind==='tournament'?Object.keys(state?.results||{}).length>0:state?.awards.length>0||state?.revealed.length>0||state?.index>0||state?.clock.status!=='idle';}
 function sound(){if(!config.sound)return;try{audio||=new(window.AudioContext||window.webkitAudioContext)();audio.resume().then(()=>{[523,659,784].forEach((f,i)=>{const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime+i*.1;o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.05,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.3);o.connect(g).connect(audio.destination);o.start(t);o.stop(t+.31);o.onended=()=>{o.disconnect();g.disconnect();};});}).catch(()=>{});}catch{}}
-function control(key,type,attrs={}){const n=input(type,draft[key],attrs);if(type==='checkbox')n.checked=draft[key];n.oninput=()=>draft[key]=type==='checkbox'?n.checked:['number','range'].includes(type)?Number(n.value):n.value;return type==='checkbox'?(()=>{const l=el('label','tool-check');l.append(n,el('span','',T(key)));return l;})():label(T(key),n);}
-function options(key,values){const n=select(values.map(v=>[v,T(v)]),draft[key]);n.onchange=()=>draft[key]=n.value;return label(T(key),n);}
+function control(key,type,attrs={}){const n=input(type,draft[key],attrs);n.dataset.setting=key;if(type==='checkbox')n.checked=draft[key];n.oninput=()=>draft[key]=type==='checkbox'?n.checked:['number','range'].includes(type)?Number(n.value):n.value;return type==='checkbox'?(()=>{const l=el('label','tool-check');l.append(n,el('span','',T(key)));return l;})():label(T(key),n);}
+function options(key,values){const n=select(values.map(v=>[v,T(v)]),draft[key]);n.dataset.setting=key;n.onchange=()=>draft[key]=n.value;return label(T(key),n);}
 function editors(){const box=$('editors');box.replaceChildren();if(kind==='quiz'){box.append(button(T('miniImportQuiz'),async()=>{try{const questions=await quizMaterials();if(!questions)return;if(!questions.length){feedback(T('miniNeedAnswer'),true);return;}if(!confirm(T('miniReplace')))return;draft.questions=questions;editors();feedback(T('matImported'));}catch(e){fail(e);}}));}
  if(kind==='bingo'){
-  const text=el('textarea');text.rows=8;text.maxLength=8100;text.value=draft.items.map(i=>i.label).join('\n');text.onchange=()=>{const old=new Map(draft.items.map(i=>[i.label,i.image]));draft.items=text.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(label=>({label,image:old.get(label)||''}));imageEditors();};box.append(label(T('bingoItems'),text));const images=el('details','tool-details');images.id='play-item-images';images.append(el('summary','',T('itemImages')),el('div','play-item-images'));box.append(images);imageEditors();
+  const text=el('textarea');text.dataset.setting='items';text.rows=8;text.maxLength=8100;text.value=draft.items.map(i=>i.label).join('\n');text.onchange=()=>{const old=new Map(draft.items.map(i=>[i.label,i.image]));draft.items=text.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(label=>({label,image:old.get(label)||''}));imageEditors();};box.append(label(T('bingoItems'),text));const images=el('details','tool-details');images.id='play-item-images';images.append(el('summary','',T('itemImages')),el('div','play-item-images'));box.append(images);imageEditors();
   box.append(control('size','number',{min:3,max:5,step:1,required:''}),control('cardCount','number',{min:1,max:30,step:1,required:''}),control('freeCenter','checkbox'),control('diagonal','checkbox'),control('winLines','number',{min:1,max:12,step:1,required:''}));
  }else{
-  const names=el('textarea');names.rows=4;names.maxLength=2600;names.value=draft.teams.map((t,i)=>t.name||T('team',i+1)).join('\n');names.onchange=()=>{
+  const names=el('textarea');names.dataset.setting='teams';names.rows=4;names.maxLength=2600;names.value=draft.teams.map((t,i)=>t.name||T('team',i+1)).join('\n');names.onchange=()=>{
    const labels=names.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),old=draft.teams,used=new Set();
    const picked=labels.map(name=>{const i=old.findIndex((t,j)=>!used.has(j)&&(t.name||T('team',j+1))===name);if(i>=0)used.add(i);return i;});
    draft.teams=labels.map((name,i)=>{let at=picked[i];if(at<0){at=old.findIndex((_,j)=>!used.has(j));if(at>=0)used.add(at);}return at<0?{name,color:TEAM_COLORS[i%TEAM_COLORS.length],members:[]}:structuredClone({...old[at],name});});teamEditors();};box.append(label(T('teamsLines'),names));const teams=el('details','tool-details');teams.id='play-team-details';teams.append(el('summary','',T('teamDetails')),el('div'));box.append(teams);teamEditors();
@@ -33,30 +37,158 @@ function editors(){const box=$('editors');box.replaceChildren();if(kind==='quiz'
  }
  const style=el('details','tool-details');style.append(el('summary','',T('style')),control('title','text',{maxlength:80}),label(T('activityBackground'),inputBinding('background','color')),label(T('activityAccent'),inputBinding('accent','color')),label(T('activityScale'),inputBinding('scale','range',{min:70,max:160,step:10})),control('sound','checkbox'));box.append(style);if(kind!=='tournament')box.append(el('p','tool-note',T('imageHint')));
 }
-function inputBinding(key,type,attrs={}){const n=input(type,draft[key],attrs);n.oninput=()=>draft[key]=type==='range'?Number(n.value):n.value;return n;}
+function inputBinding(key,type,attrs={}){const n=input(type,draft[key],attrs);n.dataset.setting=key;n.oninput=()=>draft[key]=type==='range'?Number(n.value):n.value;return n;}
 function imageEditors(){const target=document.querySelector('#play-item-images > div');if(!target)return;target.replaceChildren();draft.items.forEach((item,i)=>{const row=el('div','play-image-row');row.append(el('strong','',item.label),imagePicker(item.image,value=>{draft.items[i].image=value;imageEditors();},fail));target.append(row);});}
 function teamEditors(){const target=document.querySelector('#play-team-details > div');if(!target)return;target.replaceChildren();draft.teams.forEach((team,i)=>{const row=el('div','activity-editor'),color=input('color',team.color),members=el('textarea');members.rows=2;members.maxLength=60000;members.value=team.members.join('\n');color.oninput=()=>team.color=color.value;members.onchange=()=>team.members=members.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);row.append(el('strong','',team.name||T('team',i+1)),label(T('teamColor'),color),label(T('teamMembers'),members));target.append(row);});}
-function apply(force=false){if(!form.reportValidity())return false;try{const checked=validatePlay(draft,kind);if(!force&&JSON.stringify(checked)===JSON.stringify(config))return true;if(meaningful()&&!confirm(T('playReset')))return false;const next=init(checked);config=checked;draft=structuredClone(config);state=next;editors();render();feedback(T('loaded'));return true;}catch(e){fail(e);return false;}}
+function apply(){
+ if(!form.reportValidity())return false;
+ try{
+  const checked=validatePlay(draft,kind),restart=playRequiresRestart(config,checked);
+  if(pendingMatchDrafts()){feedback(T('uxPlayDraftScores'),true);return false;}
+  if(JSON.stringify(checked)===JSON.stringify(config)){feedback(T('uxPlayKept'));return true;}
+  if(restart&&(meaningful()||kind==='bingo')&&!confirm(T('uxPlayRestart_'+kind)))return false;
+  const next=restart?init(checked):state;
+  config=checked;draft=structuredClone(config);state=next;
+  if(restart)resetHostState();
+  editors();render();feedback(T(restart?'loaded':'uxPlayKept'));return true;
+ }catch(e){fail(e);return false;}
+}
 function board(card,marks=true){const grid=el('div','bingo-grid');grid.style.setProperty('--bingo-size',config.size);for(const i of card){const marked=marks&&(i<0||state.called.includes(i)),cell=el('div','bingo-cell'+(marked?' is-called':''));if(i>=0&&config.items[i].image){const img=el('img');img.src=config.items[i].image;img.alt='';cell.append(img);}cell.append(el('span','',i<0?T('bingoFree'):config.items[i].label));grid.append(cell);}return grid;}
-function renderBingo(){const target=$('content'),current=state.cards[state.selected],lines=bingoLines(config,current,state.called),choice=select(state.cards.map((_,i)=>[String(i),T('cardNumber',i+1)]),String(state.selected));choice.onchange=()=>{state.selected=Number(choice.value);render();};target.append(label(T('bingo'),choice),el('p','bingo-current',state.called.length?config.items[state.called.at(-1)].label:T('bingoReady')),board(current),el('p','',T('bingoStatus',state.called.length,lines.length,config.winLines)));if(lines.length>=config.winLines)target.append(el('p','bingo-victory',T('bingoWin')));
- const actions=el('div','tool-row'),call=idx=>{state=callBingo(config,state,idx);render();sound();};const random=button(T('randomCall'),invoke(()=>call(null)),'button primary');random.disabled=state.called.length===config.items.length;const undo=button(T('callUndo'),()=>{state.called.pop();render();});undo.disabled=!state.called.length;actions.append(random,undo);const manual=select(config.items.map((item,i)=>[String(i),item.label]),'0');manual.setAttribute('aria-label',T('manualCall'));for(const o of manual.options)o.disabled=state.called.includes(Number(o.value));const available=[...manual.options].find(o=>!o.disabled);if(available)manual.value=available.value;const go=button(T('manualCall'),invoke(()=>call(Number(manual.value))));go.disabled=!available;actions.append(manual,go);target.insertBefore(actions,target.querySelector('.bingo-grid'));
- const more=el('div','tool-row');more.append(button(T('resetCalls'),()=>{if(!confirm(T('playReset')))return;state.called=[];render();}),button(T('generateCards'),()=>{if(confirm(T('playReset')))try{state=makeBingo(config);render();}catch(e){fail(e);}}),button(T('printCards'),()=>{const print=document.getElementById('bingo-print');print.replaceChildren();state.cards.forEach((card,i)=>{const sheet=el('section','bingo-print-sheet');sheet.append(el('h2','',config.title||T('bingo')),el('p','',T('cardNumber',i+1)),board(card,false));print.append(sheet);});window.print();}));target.append(more);
+function renderBingo(){
+ const target=$('content'),current=state.cards[state.selected],lines=bingoLines(config,current,state.called);
+ const won=state.cards.map(card=>bingoLines(config,card,state.called).length>=config.winLines);
+ const choice=select(state.cards.map((_,i)=>[String(i),won[i]?T('uxBingoWinner',T('cardNumber',i+1)):T('cardNumber',i+1)]),String(state.selected));
+ choice.dataset.action='bingo-card';choice.onchange=()=>{state.selected=Number(choice.value);render();};
+ const print=button(T('printCards'),()=>{
+  const output=document.getElementById('bingo-print');output.replaceChildren();
+  state.cards.forEach((card,i)=>{const sheet=el('section','bingo-print-sheet');sheet.append(el('h2','',config.title||T('bingo')),el('p','',T('cardNumber',i+1)),board(card,false));output.append(sheet);});
+  window.print();
+ });
+ delete print.dataset.focusSecondary;
+ const printRow=el('div','tool-row');printRow.append(print);
+ if(!state.called.length)target.append(el('p','host-hint',T('uxBingoReady')));
+ target.append(printRow,el('p','bingo-current',state.called.length?config.items[state.called.at(-1)].label:T('bingoReady')));
+ const actions=el('div','tool-row'),call=idx=>{state=callBingo(config,state,idx);render();sound();};
+ const random=button(T('randomCall'),invoke(()=>call(null)),'button primary');random.disabled=state.called.length===config.items.length;
+ const undo=button(T('callUndo'),()=>{state.called.pop();render();});undo.disabled=!state.called.length;
+ actions.append(random,undo);target.append(actions,el('p','host-progress',T('uxBingoRemaining',config.items.length-state.called.length)));
+ const manualBox=el('details','tool-details bingo-manual');manualBox.open=bingoManualOpen;manualBox.ontoggle=()=>{if(manualBox.isConnected)bingoManualOpen=manualBox.open;};
+ const manual=select(config.items.map((item,i)=>[String(i),item.label]),'0');manual.setAttribute('aria-label',T('manualCall'));
+ for(const o of manual.options)o.disabled=state.called.includes(Number(o.value));
+ const available=[...manual.options].find(o=>!o.disabled);if(available)manual.value=available.value;
+ const go=button(T('manualCall'),invoke(()=>call(Number(manual.value))));go.disabled=!available;
+ const row=el('div','tool-row');row.append(manual,go);manualBox.append(el('summary','',T('manualCall')),row);
+ target.append(manualBox,label(T('uxBingoCards'),choice),board(current),el('p','host-progress',T('bingoStatus',state.called.length,lines.length,config.winLines)));
+ if(lines.length>=config.winLines)target.append(el('p','bingo-victory',T('bingoWin')));
+ target.append(el('p','host-progress',T('uxBingoWinners',won.filter(Boolean).length,state.cards.length)));
+ const more=el('div','tool-row');more.append(button(T('resetCalls'),()=>{if(!confirm(T('playReset')))return;state.called=[];render();}),button(T('generateCards'),()=>{if(confirm(T('uxPlayRestart_bingo')))try{state=makeBingo(config);render();}catch(e){fail(e);}}));target.append(more);
  const history=el('details','tool-history');history.append(el('summary','',T('history')),el('p','',state.called.map(i=>config.items[i].label).join(' · ')));target.append(history);
 }
-function renderTournament(){const target=$('content'),matches=tournamentMatches(config,state),rounds=[...new Set(matches.map(m=>m.round))];if(config.format==='knockout'&&matches.at(-1).result)target.append(el('p','bingo-victory',T('champion',name(matches.at(-1).winner))));const bracket=el('div','tournament-rounds');for(const round of rounds){const section=el('section','tournament-round');section.append(el('h2','',T('roundLabel',round+1)));for(const m of matches.filter(m=>m.round===round)){const card=el('form','tournament-match');card.dataset.match=m.id;card.append(el('h3','',(m.a===null?T('pendingMatch'):name(m.a))+' / '+(m.b===null?(m.bye?T('bye'):T('pendingMatch')):name(m.b))));if(m.bye)card.append(el('p','',T('bye')));else if(!m.ready)card.append(el('p','tool-note',T('pendingMatch')));else{const a=input('number',m.result?.sa??0,{min:0,max:1000000,step:1,required:''}),b=input('number',m.result?.sb??0,{min:0,max:1000000,step:1,required:''}),scores=el('div','match-scores');scores.append(label(name(m.a),a),label(name(m.b),b));card.append(scores);let tie=null;if(config.format==='knockout'){tie=select([['',T('noTieChoice')],[String(m.a),name(m.a)],[String(m.b),name(m.b)]],m.result?.tie==null?'':String(m.result.tie));card.append(label(T('tieChoice'),tie));}const save=el('button','button small',T('recordResult'));save.type='submit';card.append(save);card.onsubmit=e=>{e.preventDefault();try{if(m.result&&config.format==='knockout'&&!confirm(T('matchCorrection')))return;state=recordMatch(config,state,m.id,Number(a.value),Number(b.value),tie&&tie.value!==''?Number(tie.value):null);render();sound();}catch(error){fail(error);}};}section.append(card);}bracket.append(section);}target.append(bracket);
- if(config.format==='roundRobin'){const table=el('table','standings-table'),head=el('tr');for(const k of ['teamName','played','wins','draws','losses','points'])head.append(el('th','',T(k)));const thead=el('thead');thead.append(head);table.append(thead);const body=el('tbody');for(const r of standings(config,state)){const tr=el('tr');for(const value of [name(r.id),r.played,r.won,r.drawn,r.lost,r.points])tr.append(el('td','',value));body.append(tr);}table.append(body);const scroll=el('div','table-scroll');scroll.append(el('h2','',T('standings')),table);target.append(scroll);}target.append(button(T('resultCSV'),()=>download(csv([[T('roundLabel',''),T('teamName'),T('teamName'),T('score'),T('score')],...matches.map(m=>[m.round+1,m.a===null?'':name(m.a),m.b===null?'':name(m.b),m.result?.sa??'',m.result?.sb??''])]),'tournament-results.csv','text/csv;charset=utf-8')));
+function renderTournament(){
+ const target=$('content'),matches=tournamentMatches(config,state),rounds=[...new Set(matches.map(m=>m.round))];
+ // Drop an unfinished form only when its participating teams changed.
+ for(const[id,d]of matchDrafts){const m=matches.find(m=>m.id===id);if(!m?.ready||d.signature!==m.a+':'+m.b)matchDrafts.delete(id);}
+ currentRound=Math.max(0,Math.min(rounds.length-1,currentRound));
+ const unrecorded=matches.find(m=>m.ready&&!m.result);
+ if(config.format==='knockout'&&matches.at(-1).result)target.append(el('p','bingo-victory',T('champion',name(matches.at(-1).winner))));
+ const navigation=el('div','host-round-nav'),choice=select(rounds.map(round=>[String(round),T('roundLabel',round+1)]),String(currentRound));
+ choice.dataset.action='round';choice.onchange=()=>{currentRound=Number(choice.value);render();};
+ const move=delta=>{currentRound+=delta;render();};
+ const prev=button('←',()=>move(-1)),next=button('→',()=>move(1));
+ prev.ariaLabel=T('uxRoundPrevious');next.ariaLabel=T('uxRoundNext');
+ prev.disabled=currentRound===0;next.disabled=currentRound===rounds.length-1;
+ navigation.append(prev,label(T('uxRoundChoose'),choice),next);
+ const nextMatch=button(T('uxNextMatch'),()=>{if(!unrecorded)return;currentRound=unrecorded.round;render();const node=target.querySelector('[data-match="'+unrecorded.id+'"] input');node?.focus();node?.scrollIntoView({block:'center',behavior:'smooth'});});
+ nextMatch.disabled=!unrecorded;
+ target.append(el('p','host-hint',T('uxMatchHint')),el('p','host-progress',T('uxMatchProgress',matches.filter(m=>m.result).length,matches.filter(m=>!m.bye).length)),navigation,nextMatch);
+ const round=el('section','host-match-list');round.ariaLabel=T('roundLabel',currentRound+1);
+ for(const m of matches.filter(m=>m.round===currentRound)){
+  const card=el('form','tournament-match');card.dataset.match=m.id;
+  card.append(el('h3','',(m.a===null?T('pendingMatch'):name(m.a))+' / '+(m.b===null?(m.bye?T('bye'):T('pendingMatch')):name(m.b))));
+  if(m.bye)card.append(el('p','',T('bye')));
+  else if(!m.ready)card.append(el('p','tool-note',T('pendingMatch')));
+  else{
+   let d=matchDrafts.get(m.id);
+   if(m.result&&!d){
+    card.append(el('strong','match-result',m.result.sa+' : '+m.result.sb));
+    if(config.format==='knockout')card.append(el('p','tool-note',T('uxMatchAdvances',name(m.winner))));
+    card.append(button(T('uxMatchEdit'),()=>{makeDraft();render();target.querySelector('[data-match="'+m.id+'"] input')?.focus();}));
+   }else{
+    d||=makeDraft();
+    const a=input('number',d.sa,{min:0,max:1000000,step:1,required:'',inputmode:'numeric'}),b=input('number',d.sb,{min:0,max:1000000,step:1,required:'',inputmode:'numeric'}),scores=el('div','match-scores');
+    scores.append(label(name(m.a),a),label(name(m.b),b));card.append(scores);
+    let tie=null,tieField=null;
+    if(config.format==='knockout'){tie=select([['',T('noTieChoice')],[String(m.a),name(m.a)],[String(m.b),name(m.b)]],d.tie);tie.onchange=()=>d.tie=tie.value;tieField=label(T('tieChoice'),tie);card.append(tieField);}
+    const sync=()=>{d.sa=a.value;d.sb=b.value;if(tieField)tieField.hidden=a.value===''||b.value===''||Number(a.value)!==Number(b.value);};
+    a.oninput=sync;b.oninput=sync;sync();
+    const error=el('p','tool-feedback');error.setAttribute('role','alert');
+    const save=el('button','button primary',T('recordResult'));save.type='submit';card.append(save);
+    if(m.result)card.append(button(T('uxMatchCancel'),()=>{matchDrafts.delete(m.id);render();}));
+    card.append(error);
+    card.onsubmit=e=>{
+     e.preventDefault();
+     try{
+      const nextState=recordMatch(config,state,m.id,Number(a.value),Number(b.value),tie&&tie.value!==''?Number(tie.value):null);
+      const removed=Object.keys(state.results).some(id=>id!==m.id&&!nextState.results[id]);
+      if(removed&&!confirm(T('matchCorrection')))return;
+      if(JSON.stringify(nextState)!==JSON.stringify(state)){matchHistory.push({state:structuredClone(state),id:m.id});if(matchHistory.length>20)matchHistory.shift();}
+      state=nextState;matchDrafts.delete(m.id);render();feedback(T('uxMatchSaved'));sound();
+     }catch(e){error.textContent=T(e.code||'matchError');error.classList.add('is-error');if(e.code==='tieWinner')tie?.focus();}
+    };
+   }
+   function makeDraft(){const values={sa:m.result?String(m.result.sa):'',sb:m.result?String(m.result.sb):'',tie:m.result?.tie==null?'':String(m.result.tie)};const draft={...values,original:{...values},signature:m.a+':'+m.b};matchDrafts.set(m.id,draft);return draft;}
+  }
+  round.append(card);
+ }
+ target.append(round);
+ const undo=button(T('uxMatchUndo'),()=>{const last=matchHistory.pop();if(!last)return;state=last.state;matchDrafts.delete(last.id);currentRound=Number(last.id.split('-')[0]);render();feedback(T('uxMatchRestored'));});undo.disabled=!matchHistory.length;target.append(undo);
+ if(config.format==='roundRobin'){
+  const table=el('table','standings-table'),head=el('tr');for(const k of ['teamName','played','wins','draws','losses','points'])head.append(el('th','',T(k)));
+  const thead=el('thead');thead.append(head);table.append(thead);const body=el('tbody');
+  for(const r of standings(config,state)){const tr=el('tr');for(const value of [name(r.id),r.played,r.won,r.drawn,r.lost,r.points])tr.append(el('td','',value));body.append(tr);}
+  table.append(body);const scroll=el('div','table-scroll');scroll.append(el('h2','',T('standings')),table);target.append(scroll);
+ }
+ target.append(button(T('resultCSV'),()=>download(csv([[T('roundLabel',''),T('teamName'),T('teamName'),T('score'),T('score')],...matches.map(m=>[m.round+1,m.a===null?'':name(m.a),m.b===null?'':name(m.b),m.result?.sa??'',m.result?.sb??''])]),'tournament-results.csv','text/csv;charset=utf-8')));
 }
-function renderQuiz(){const target=$('content'),q=config.questions[state.index];target.append(el('p','',T('question',state.index+1)+' / '+config.questions.length),el('h2','quiz-prompt',q.prompt));if(q.image){const img=el('img','quiz-image');img.src=q.image;img.alt='';target.append(img);}const time=el('div','timer-digits',q.seconds?formatDuration(state.clock.remaining):T('noTimer'));time.id='quiz-clock';target.append(time);const actions=el('div','tool-row');for(const[action,key]of [['previous','previousQuestion'],['start','timerStart'],['pause','timerPause'],['resetClock','restartClock'],['reveal','quizRevealAction'],['next','nextQuestion']]){const b=button(T(key),()=>{state=quizControl(config,state,action,Date.now());if(action==='start'&&config.sound){try{audio||=new(window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});}catch{}}render();},'button '+(action==='reveal'?'primary':'small'));b.disabled=action==='previous'&&state.index===0||action==='next'&&state.index===config.questions.length-1||action==='reveal'&&state.revealed.includes(state.index)||['start','pause','resetClock'].includes(action)&&!q.seconds||action==='start'&&(state.clock.status==='running'||!state.clock.remaining)||action==='pause'&&state.clock.status!=='running';actions.append(b);}target.append(actions,el('p','quiz-answer',state.revealed.includes(state.index)?T('answer')+': '+q.answer:T('hiddenAnswer')));
- const scores=quizScores(config,state),teams=el('div','quiz-teams');config.teams.forEach((team,i)=>{const row=el('article','quiz-team');row.style.borderColor=team.color;row.append(el('h3','',name(i)),el('strong','quiz-score',scores[i]));for(const correct of [true,false]){const b=button(T(correct?'correct':'incorrect')+' '+(correct?'+':'−')+(correct?q.points:config.wrongPenalty),invoke(()=>{state=awardQuiz(config,state,i,correct);render();}));b.disabled=state.awards.some(a=>a.question===state.index&&a.team===i);row.append(b);}teams.append(row);});target.append(teams);const undo=button(T('undoAward'),()=>{state.awards.pop();render();});undo.disabled=!state.awards.length;target.append(undo,button(T('transferScores'),()=>{try{saveHandoff(sessionStorage,{version:1,target:'scoreboard',title:config.title,teams:config.teams.map((t,i)=>({...t,name:name(i)})),scores:quizScores(config,state)});leaving=true;const url=new URL(activityURL('scoreboard',document.body.dataset.base,document.documentElement.lang),location.origin);if(bridge?.eventID){url.searchParams.set('event',bridge.eventID);url.searchParams.set('handoff','1');}location.assign(url.href);}catch(e){fail(e);}}),button(T('resultCSV'),()=>download(csv([[T('question',''),T('teamName'),T('score')],...state.awards.map(a=>[a.question+1,name(a.team),a.points])]),'quiz-results.csv','text/csv;charset=utf-8')));
+function renderQuiz(){
+ const target=$('content'),q=config.questions[state.index];
+ const choose=select(config.questions.map((q,i)=>[String(i),T('question',i+1)+' · '+q.prompt]),String(state.index));choose.dataset.action='question';
+ choose.onchange=()=>{state=jumpQuiz(config,state,Number(choose.value),Date.now());render();};
+ target.append(label(T('uxQuestionChoose'),choose),el('p','host-hint',T('uxQuestionJumpHint')),el('h2','quiz-prompt',q.prompt));
+ if(q.image){const img=el('img','quiz-image');img.src=q.image;img.alt='';target.append(img);}
+ const time=el('div','timer-digits',q.seconds?formatDuration(state.clock.remaining):T('noTimer'));time.id='quiz-clock';target.append(time);
+ const running=state.clock.status==='running',actions=el('div','tool-row');
+ for(const[action,key]of [['previous','previousQuestion'],[running?'pause':'start',running?'timerPause':state.clock.status==='paused'?'timerResume':'timerStart'],['resetClock','restartClock'],['reveal','quizRevealAction'],['next','nextQuestion']]){
+  const b=button(T(key),()=>{state=quizControl(config,state,action,Date.now());if(action==='start'&&config.sound){try{audio||=new(window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});}catch{}}render();},'button '+(action==='reveal'?'primary':'small'));
+  b.disabled=action==='previous'&&state.index===0||action==='next'&&state.index===config.questions.length-1||action==='reveal'&&state.revealed.includes(state.index)||['start','pause','resetClock'].includes(action)&&!q.seconds||action==='start'&&!state.clock.remaining;actions.append(b);
+ }
+ target.append(actions,el('p','quiz-answer',state.revealed.includes(state.index)?T('answer')+': '+q.answer:T('hiddenAnswer')));
+ const scores=quizScores(config,state),teams=el('div','quiz-teams');
+ config.teams.forEach((team,i)=>{
+  const row=el('article','quiz-team');row.dataset.team=i;row.style.borderColor=team.color;
+  row.append(el('h3','',name(i)),el('strong','quiz-score',scores[i]));
+  const award=state.awards.find(a=>a.question===state.index&&a.team===i);
+  if(award){
+   row.append(el('p','quiz-award-status',T('uxAwardRecorded',award.points)),button(T('uxAwardEdit'),()=>{state=revokeQuizAward(state,i);render();feedback(T('uxAwardCleared',name(i)));}));
+  }else for(const correct of [true,false]){
+   const points=correct?q.points:-config.wrongPenalty,text=T(correct?'correct':'incorrect')+(points?' '+(points>0?'+':'')+points:'');
+   row.append(button(text,invoke(()=>{state=awardQuiz(config,state,i,correct);render();})));
+  }
+  teams.append(row);
+ });
+ target.append(teams);
+ const undo=button(T('undoAward'),()=>{state.awards.pop();render();});undo.disabled=!state.awards.length;
+ const undoRow=el('div','quiz-undo');undoRow.append(undo);const last=state.awards.at(-1);if(last)undoRow.append(el('p','tool-note',T('uxAwardUndoHint',last.question+1,name(last.team),last.points)));
+ target.append(undoRow,button(T('transferScores'),()=>{try{saveHandoff(sessionStorage,{version:1,target:'scoreboard',title:config.title,teams:config.teams.map((t,i)=>({...t,name:name(i)})),scores:quizScores(config,state)});leaving=true;const url=new URL(activityURL('scoreboard',document.body.dataset.base,document.documentElement.lang),location.origin);if(bridge?.eventID){url.searchParams.set('event',bridge.eventID);url.searchParams.set('handoff','1');}location.assign(url.href);}catch(e){fail(e);}}),button(T('resultCSV'),()=>download(csv([[T('question',''),T('teamName'),T('score')],...state.awards.map(a=>[a.question+1,name(a.team),a.points])]),'quiz-results.csv','text/csv;charset=utf-8')));
 }
-function render(){$('title').textContent=config.title||T(kind);stage.style.backgroundColor=config.background;stage.style.setProperty('--activity-ink',readable(config.background));stage.style.setProperty('--activity-accent',config.accent);stage.style.setProperty('--activity-button-ink',readable(config.accent));stage.style.setProperty('--display-scale',config.scale/100);$('content').replaceChildren();if(!state){$('content').append(el('p','',T('readyPlay')));return;}if(kind==='bingo')renderBingo();else if(kind==='tournament')renderTournament();else renderQuiz();bridge?.publish();}
-form.onsubmit=e=>{e.preventDefault();if(apply(true))stage.dispatchEvent(new Event('focus-settings-applied'));};form.addEventListener('invalid',e=>{let p=e.target.closest('details');while(p){p.open=true;p=p.parentElement?.closest('details');}},true);
+function render(){const active=document.activeElement,content=$('content'),focus=content.contains(active)?{action:active.dataset.action,shortcut:active.dataset.shortcutAction,team:active.closest('[data-team]')?.dataset.team,match:active.closest('[data-match]')?.dataset.match}:null;$('title').textContent=config.title||T(kind);stage.style.backgroundColor=config.background;stage.style.setProperty('--activity-ink',readable(config.background));stage.style.setProperty('--activity-accent',config.accent);stage.style.setProperty('--activity-button-ink',readable(config.accent));stage.style.setProperty('--display-scale',config.scale/100);$('content').replaceChildren();if(!state){$('content').append(el('p','',T('readyPlay')));return;}if(kind==='bingo')renderBingo();else if(kind==='tournament')renderTournament();else renderQuiz();if(focus){const selector=focus.action?'[data-action="'+focus.action+'"]':focus.team!==undefined?'[data-team="'+focus.team+'"] button':focus.match?'[data-match="'+focus.match+'"] button':focus.shortcut?'[data-shortcut-action="'+focus.shortcut+'"]':null;const next=selector&&content.querySelector(selector);if(next&&!next.disabled)next.focus({preventScroll:true});}bridge?.publish();}
+form.onsubmit=e=>{e.preventDefault();if(apply(true))stage.dispatchEvent(new Event('focus-settings-applied'));};form.addEventListener('invalid',e=>{feedback(T('invalid'),true);let p=e.target.closest('details');while(p){p.open=true;p=p.parentElement?.closest('details');}},true);
 
-$('export').onclick=invoke(()=>{const checked=validatePlay(draft,kind);download(JSON.stringify(checked),kind+'-settings.json');feedback(T('saved'));});$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>PLAY_FILE_LIMIT)throw new ToolError('largeActivity');let raw;try{raw=JSON.parse(await file.text());}catch{throw new ToolError('configError');}const next=validatePlay(raw,kind),nextState=init(next);if(!confirm(T('eventReplace')))return;config=next;draft=structuredClone(next);state=nextState;editors();render();feedback(T('loaded'));}catch(error){fail(error);}};
+$('export').onclick=invoke(()=>{const checked=validatePlay(draft,kind);download(JSON.stringify(checked),kind+'-settings.json');feedback(T('saved'));});$('import').onclick=()=>$('file').click();$('file').onchange=async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;try{if(file.size>PLAY_FILE_LIMIT)throw new ToolError('largeActivity');let raw;try{raw=JSON.parse(await file.text());}catch{throw new ToolError('configError');}const next=validatePlay(raw,kind),nextState=init(next);if(!confirm(T('eventReplace')))return;config=next;draft=structuredClone(next);state=nextState;resetHostState();editors();render();feedback(T('loaded'));}catch(error){fail(error);}};
 try{if(kind!=='bingo'){const payload=takeHandoff(sessionStorage,kind);if(payload){config=validatePlay({...config,title:payload.title,teams:payload.teams},kind);draft=structuredClone(config);}}state=init(config);}catch(e){fail(e);}
 if(kind==='quiz'){const online=el('section','party-panel');host.querySelector('.tool-guide').before(online);mountParty(online,()=>validatePlay(draft,'quiz'));}
-editors();render();baseline=JSON.stringify({config,state});bridge=toolBridge(host,{kind,config:()=>config,progress:()=>{if(kind==='quiz'&&state)state=tickQuiz(config,state,Date.now());return state;},prepare:()=>apply(),load:(c,p)=>{const next=p?validatePlayState(c,p):init(c);config=structuredClone(c);draft=structuredClone(c);state=next;editors();render();},view:()=>audienceView(config,state,T)});
+editors();render();baseline=JSON.stringify({config,state});bridge=toolBridge(host,{kind,config:()=>config,progress:()=>{if(kind==='quiz'&&state)state=tickQuiz(config,state,Date.now());return state;},prepare:()=>apply(),load:(c,p)=>{const next=p?validatePlayState(c,p):init(c);config=structuredClone(c);draft=structuredClone(c);state=next;resetHostState();editors();render();},view:()=>audienceView(config,state,T)});
 if(kind==='quiz')setInterval(()=>{if(state?.clock.status!=='running')return;const previous=state.clock.status;state=tickQuiz(config,state,Date.now());if(previous!==state.clock.status){render();sound();}else{const time=document.getElementById('quiz-clock');if(time)time.textContent=formatDuration(state.clock.remaining);}},200);
-function needsWarning(){if(JSON.stringify(draft)!==JSON.stringify(config))return true;return !bridge.isSaved()&&JSON.stringify({config,state})!==baseline;}
+function needsWarning(){if(pendingMatchDrafts())return true;if(JSON.stringify(draft)!==JSON.stringify(config))return true;return !bridge.isSaved()&&JSON.stringify({config,state})!==baseline;}
 function mayLeave(){if(needsWarning()&&!confirm(T('toolUnsaved')))return false;leaving=true;return true;}
 document.addEventListener('languagechange-request',e=>{if(!mayLeave())e.preventDefault();});document.addEventListener('click',e=>{const a=e.target.closest('a[href]');if(!a||a.hasAttribute('download')||a.hasAttribute('data-language-link')||a.target==='_blank'||e.defaultPrevented||e.button!==0||e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;const url=new URL(a.href,location.href);if(['http:','https:'].includes(url.protocol)&&url.pathname!==location.pathname&&!mayLeave())e.preventDefault();});window.addEventListener('beforeunload',e=>{if(!leaving&&needsWarning()){e.preventDefault();e.returnValue='';}});

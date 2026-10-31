@@ -21,6 +21,17 @@ export const hitSpot=(spots,x,y,found=[])=>spots.findIndex((p,i)=>!found.include
 export function reactionBoard(size,mode){const n=size*size;check(n>=4&&n<=64);const values=shuffle(Array.from({length:n},(_,i)=>i+1));return {values,target:mode==='numbers'?1:values[randomInt(n)]};}
 export function charadeDeck(items){check(items.length>0);return shuffle(items.map((_,i)=>i));}
 export function makeRun(config,now=Date.now()){return {started:now,deadline:config.seconds?now+config.seconds*1000:0,paused:0,remaining:config.seconds*1000,score:0,round:0,mistakes:0,hints:0,ended:false};}
-export function pauseRun(run,now=Date.now()){if(run.ended)return;run.paused=now;run.remaining=run.deadline?Math.max(0,run.deadline-now):0;}
+export function pauseRun(run,now=Date.now()){if(run.ended||run.paused)return;run.paused=now;run.remaining=run.deadline?Math.max(0,run.deadline-now):0;}
 export function resumeRun(run,now=Date.now()){if(!run.paused)return;run.deadline=run.deadline?now+run.remaining:0;run.started+=now-run.paused;run.paused=0;}
-export const runRemaining=(run,now=Date.now())=>run.paused?run.remaining:run.deadline?Math.max(0,run.deadline-now):null;
+export const runRemaining=(run,now=Date.now())=>!run.deadline?null:run.paused?run.remaining:Math.max(0,run.deadline-now);
+export function playableMini(raw){
+ const c=validateMini(raw),items=c.items.filter(i=>c.kind==='differences'?i.image&&i.image2&&i.spots.length:['puzzle','reveal'].includes(c.kind)?i.image&&(c.kind!=='reveal'||i.answer):i.label||i.answer);
+ if(!items.length)throw new MiniError(['puzzle','reveal','differences'].includes(c.kind)?'miniNeedImage':'miniEmpty');
+ if(c.kind==='sequence'&&items.length<2)throw new MiniError('miniEmpty');
+ return {...c,items};
+}
+export function miniSettingsPlan(current,raw){
+ const config=playableMini(raw);if(!current)return {config,restart:true};
+ const fields=['kind','items','seconds','rounds',...({puzzle:['rows','cols','rotate'],reveal:['speed','revealStyle'],sequence:['startLength','lives','speed'],reaction:['grid','reactionMode','penalty'],differences:['penalty'],charades:['teams','skips','points'],drawing:['points']}[config.kind])];
+ return {config,restart:fields.some(k=>JSON.stringify(config[k])!==JSON.stringify(current[k]))};
+}

@@ -6,3 +6,38 @@ body[data-page=display] .site-header,body[data-page=display] .site-footer,body[d
 @media print{body:has(#bingo-print) *{visibility:hidden!important}body:has(#bingo-print) #bingo-print,body:has(#bingo-print) #bingo-print *{visibility:visible!important}#bingo-print{display:block!important;position:absolute;left:0;top:0;width:100%;color:black}.bingo-print-sheet{break-after:page;padding:15mm}.bingo-print-sheet:last-child{break-after:auto}.bingo-print-sheet .bingo-grid{max-width:160mm}.bingo-print-sheet .bingo-cell{border:1px solid #333;background:white}.bingo-print-sheet h2,.bingo-print-sheet p{text-align:center}.bingo-print-sheet .bingo-cell span{font-size:11pt}}
 .play-tool .tool-settings{padding:1.1rem}.play-tool .tool-settings .tool-details{margin:.8rem 0}.play-tool .tool-settings .tool-details>div{padding:1rem}.play-tool .tool-settings .tool-details .tool-details>div{padding:.7rem}.play-tool .tool-settings .tool-details>summary{padding:1rem .5rem}.play-tool .tool-settings>details>div{padding:0!important}.bingo-grid{max-width:min(100%,560px)}.bingo-current{font-size:1.6em;margin:.7rem 0}.event-bridge select,.workspace-page select{width:100%}.play-stage .tool-feedback:empty{margin:0;min-height:0}.play-tool #play-content>label:first-child{margin-bottom:.5rem}
 @media print{body:has(#bingo-print)>*:not(main){display:none!important}body:has(#bingo-print) main{margin:0!important;padding:0!important;max-width:none!important}body:has(#bingo-print) .play-tool>*:not(#bingo-print){display:none!important}#bingo-print{position:static!important}.bingo-print-sheet{box-sizing:border-box;break-inside:avoid;padding:10mm}.bingo-print-sheet .bingo-grid{width:160mm;max-width:100%}}
+
+/* Host controls follow each activity: one round, one question, or one call at a time. */
+.play-stage .host-hint{font-size:.9em;line-height:1.65;margin:8px 0 16px;overflow-wrap:anywhere}
+.play-stage .host-progress{font-size:.9em;font-weight:650;text-align:center;margin:10px 0}
+.host-round-nav{display:flex;align-items:end;gap:8px;margin:16px 0 10px}
+.host-round-nav>.tool-field{flex:1;min-width:0;margin:0}
+.host-round-nav .button{min-width:44px;min-height:44px}
+.play-stage label>select{width:100%;padding:10px;border:1px solid #b8cbb8;border-radius:10px;background:#fffefa;color:#263e35;font:inherit;min-height:44px}
+.host-match-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin:16px 0}
+.host-match-list .tournament-match{margin:0;align-self:start;min-width:0}
+.host-match-list .tournament-match h3{margin:0 0 12px}
+.host-match-list .tournament-match .button{min-height:42px;margin-right:6px}
+.host-match-list .tournament-match .tool-feedback:empty{display:none}
+.host-match-list .match-result{display:block;font-size:1.6em}
+.host-match-list .tool-field[hidden]{display:none}
+.host-match-list .tool-field input{width:100%;min-width:0;min-height:44px;padding:10px;border:1px solid #b8cbb8;border-radius:10px;font:inherit}
+.play-stage .bingo-manual{margin:10px 0 20px}
+.play-stage .bingo-manual>summary{padding:8px;cursor:pointer}
+.play-stage .bingo-manual select{flex:1;min-height:44px}
+.quiz-undo{margin:16px 0}
+.quiz-undo .tool-note{margin:6px 0}
+.quiz-award-status{margin:0;font-size:.9em;overflow-wrap:anywhere}
+.play-stage .quiz-team .button{white-space:normal;min-height:42px}
+#play-settings-feedback:empty{display:none}
+.focus-stage.is-fullscreen .host-hint{display:none}
+@media(max-width:480px){
+ .host-match-list{grid-template-columns:1fr}
+ .host-match-list .tournament-match{padding:12px}
+ .play-stage .quiz-teams{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .play-stage .quiz-team{padding:8px}
+ .play-stage .quiz-team h3{margin:0}
+}
+/* Activity management keeps destructive and setup actions out of the resume path. */
+.event-create{align-items:flex-start}.event-create>details{flex:1;min-width:0;border:1px solid #c8d9c9;border-radius:14px;padding:14px 18px;background:#fffefa}.event-create summary{cursor:pointer;font-weight:700}.event-create form{margin-top:14px}.workspace-page #event-detail{min-width:0}.event-list-heading{font-size:1rem;margin:0 0 12px}.event-panel h2{overflow-wrap:anywhere;margin:0 0 8px}.event-management,.event-tool-options{margin-top:16px}.event-management summary,.event-tool-options summary,.bridge-advanced summary{cursor:pointer;font-size:.94rem;color:#496254}.event-management .tool-row,.event-tool-options .tool-row,.bridge-advanced .tool-row{margin-top:12px}.event-section-title{font-size:1.3rem;margin-top:28px}.event-tool h3{margin:0 0 8px;font-size:1.15rem}.event-tool{display:flex;flex-direction:column}.event-tool>.tool-row{margin-top:auto}.event-add-tools{border:1px dashed #aabeae;border-radius:16px;padding:18px;margin-top:20px}.event-add-tools>summary{cursor:pointer;font-weight:700}.event-add-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:12px}.event-empty{padding:28px;background:#edf4eb;border-radius:18px}.event-editor form{display:grid;gap:12px}.event-editor .tool-check{align-items:flex-start}.event-editor .display-tool-checks{min-width:0;padding:12px}.event-editor input[type=range]{width:100%}.bridge-save-state{padding:10px 14px;border-left:3px solid #a88536;background:#faf5e8;font-size:.95rem}.bridge-save-state[data-saved=true]{border-color:#47715d;background:#edf5ed}.bridge-advanced{margin-top:16px}.event-bridge>div>.tool-row{flex-wrap:wrap}.event-bridge select{max-width:100%;text-overflow:ellipsis}.event-bridge .tool-row>.tool-field{min-width:0;flex:1 1 240px}.event-bridge .button{white-space:normal;overflow-wrap:anywhere}.event-bridge>div{min-width:0}
+@media(max-width:850px){#event-list .event-list-heading{flex-basis:100%;margin:0}#event-list{flex-wrap:wrap;max-height:190px;overflow:auto}#event-list .event-list-item{max-width:100%;overflow-wrap:anywhere;white-space:normal}.event-create{flex-wrap:wrap}.event-create>details{flex-basis:100%}.event-create form{flex-wrap:wrap}.event-add-grid{grid-template-columns:1fr}.event-panel,.event-tool{padding:16px}.event-editor{max-width:calc(100vw - 24px)}}

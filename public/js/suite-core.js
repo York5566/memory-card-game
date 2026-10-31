@@ -34,7 +34,33 @@ export function arrangeSeats(v,rng=randomInt){v=validateSuite(v,'seating');const
  const fixed=new Array(cap).fill(null);for(const i of v.locked)if(v.seats[i]!=null)fixed[i]=v.seats[i];if(!seatingValid(v,fixed))throw new SuiteError('seatRuleError');
  for(let attempt=0;attempt<160;attempt++){const seats=[...fixed],batches=shuffle([...groups.values()],rng).sort((a,b)=>b.length-a.length);let ok=true;for(const group of batches){const assigned=group.map(n=>seats.indexOf(n)).filter(i=>i>=0),tables=[...new Set(assigned.map(i=>Math.floor(i/v.perTable)))];if(tables.length>1){ok=false;break;}const todo=group.filter(n=>!seats.includes(n));let placed=false;for(const table of tables.length?tables:shuffle(Array.from({length:v.rows*v.cols},(_,i)=>i),rng)){const slots=shuffle(Array.from({length:v.perTable},(_,i)=>table*v.perTable+i).filter(i=>seats[i]===null&&!v.blocked.includes(i)&&!v.locked.includes(i)),rng);if(slots.length<todo.length)continue;todo.forEach((n,i)=>seats[slots[i]]=n);if(seatingValid(v,seats)){placed=true;break;}todo.forEach((_,i)=>seats[slots[i]]=null);}if(!placed){ok=false;break;}}if(ok&&seatingValid(v,seats,true))return seats;}throw new SuiteError('seatRuleError');}
 export function swapSeats(v,a,b){if(v.locked.includes(a)||v.locked.includes(b))throw new SuiteError('seatLocked');if(v.blocked.includes(a)||v.blocked.includes(b))throw new SuiteError('seatRuleError');const seats=[...v.seats];[seats[a],seats[b]]=[seats[b],seats[a]];if(!seatingValid(v,seats))throw new SuiteError('seatRuleError');return seats;}
-export function nextDice(v,rng=randomInt){v=validateSuite(v,'dice');let results=[],remaining=[...v.remaining];if(v.mode==='dice')results=Array.from({length:v.count},(_,i)=>v.held[i]&&v.results[i]!==undefined?v.results[i]:rng(v.faces.length));else{if(!v.history.length&&!v.results.length&&!remaining.length)remaining=v.faces.map((_,i)=>i);if(!v.replacement&&remaining.length<v.count)throw new SuiteError('notEnough');for(let i=0;i<v.count;i++){if(v.replacement)results.push(rng(v.faces.length));else results.push(remaining.splice(rng(remaining.length),1)[0]);}}return {...v,results,remaining,held:v.mode==='dice'?v.held:[],history:[results,...v.history].slice(0,30)};}
+export function placeSeat(config,seat,person){
+ const v=validateSuite(config,'seating'),names=lines(v.names),capacity=v.rows*v.cols*v.perTable;
+ if(!Number.isInteger(seat)||seat<0||seat>=capacity||person!==null&&(!Number.isInteger(person)||person<0||person>=names.length))throw new SuiteError();
+ const seats=v.seats.length?[...v.seats]:new Array(capacity).fill(null),source=person===null?-1:seats.indexOf(person);
+ if(seats[seat]===person)return seats;
+ if(v.locked.includes(seat)||source>=0&&v.locked.includes(source))throw new SuiteError('seatLocked');
+ if(v.blocked.includes(seat))throw new SuiteError('seatRuleError');
+ if(source>=0)seats[source]=seats[seat];
+ seats[seat]=person;
+ if(!seatingValid(v,seats))throw new SuiteError('seatRuleError');
+ return seats;
+}
+export function diceSettingsPlan(current,raw,names){
+ const labels=lines(names,100,100),pool=current.faces.map(f=>({...f}));
+ // Preserve each image by its label, including repeated labels, when faces are reordered.
+ const faces=labels.map(label=>{const i=pool.findIndex(f=>f.label===label);return i<0?{label,image:''}:pool.splice(i,1)[0];});
+ const reset=['mode','count','replacement'].some(k=>raw[k]!==current[k])||labels.join('\n')!==current.faces.map(f=>f.label).join('\n');
+ const state=validateSuite({...raw,faces,...(reset?{results:[],held:[],remaining:[],history:[]}:{})},'dice');
+ return {state,reset};
+}
+export function diceRemaining(v){return v.history.length||v.results.length?v.remaining.length:v.faces.length;}
+export function nextDice(v,rng=randomInt,{remainingOnly=false}={}){
+ v=validateSuite(v,'dice');let results=[],remaining=[...v.remaining];
+ if(v.mode==='dice')results=Array.from({length:v.count},(_,i)=>v.held[i]&&v.results[i]!==undefined?v.results[i]:rng(v.faces.length));
+ else{if(!v.history.length&&!v.results.length&&!remaining.length)remaining=v.faces.map((_,i)=>i);const count=remainingOnly&&!v.replacement?Math.min(v.count,remaining.length):v.count;if(!count||!v.replacement&&remaining.length<count)throw new SuiteError('notEnough');for(let i=0;i<count;i++){if(v.replacement)results.push(rng(v.faces.length));else results.push(remaining.splice(rng(remaining.length),1)[0]);}}
+ return {...v,results,remaining,held:v.mode==='dice'?v.held:[],history:[results,...v.history].slice(0,30)};
+}
 export function wifiPayload(ssid,password,security='WPA',hidden=false){const escape=s=>String(s).replace(/[\\;,:\"]/g,'\\$&');return `WIFI:T:${security};S:${escape(ssid)};P:${security==='nopass'?'':escape(password)};H:${hidden?'true':'false'};;`;}
 export function cropRect(sw,sh,{ratio,x,y,width,upscale}){const [a,b]=ratio==='original'?[sw,sh]:ratio.split(':').map(Number),r=a/b;let w=sw,h=sh;if(sw/sh>r)w=sh*r;else h=sw/r;let ow=upscale?width:Math.min(width,w),oh=ow/r;if(oh>4096){ow*=4096/oh;oh=4096;}return {sx:(sw-w)*x/100,sy:(sh-h)*y/100,sw:w,sh:h,width:Math.max(1,Math.round(ow)),height:Math.max(1,Math.round(oh))};}
 // Uncompressed ZIP keeps batches entirely local; UTF-8 names and CRC32 are standard ZIP fields.

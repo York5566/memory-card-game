@@ -34,7 +34,7 @@ export function qr(){
    s.set(v);canvases=next;changed=false;s.stage.replaceChildren();s.stage.classList.add('qr-results');
    canvases.forEach((c,i)=>{const figure=el('figure','qr-item');figure.append(c,button(T('sDownloadOne'),()=>s.run(()=>{if(changed)throw new SuiteError('workQRChanged');return saveCanvas(c,'qr-'+(i+1)+'.png');})));s.stage.append(figure);});
    downloads();s.note(T('workQRDone',canvases.length));
-   if(matchMedia('(max-width:700px)').matches)s.root.querySelector('#suite-stage').scrollIntoView({block:'start'});
+   s.root.dispatchEvent(new Event('workflow-show-preview'));
   },true);
   zip=s.action('suiteZIP',async()=>{if(changed||!canvases.length)throw new SuiteError('workQRChanged');await downloadZip(canvases.map((c,i)=>({name:'qr-'+(i+1)+'.png',blob:()=>canvasBlob(c)})),'qr-codes.zip');});
   downloads();s.stage.append(el('p','workflow-empty',T('workQREmpty')));s.note('');

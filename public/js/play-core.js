@@ -4,6 +4,13 @@ export const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
 export const shortText=(v,max=80)=>typeof v==='string'&&v.length<=max&&!/[\r\n]/.test(v);
 export const imageData=v=>v===''||typeof v==='string'&&v.length<=300000&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(v);
 export const PLAY_FILE_LIMIT=8000000;
+// Only changes to participant identity, content or game structure need fresh progress.
+export function playRequiresRestart(before,after){
+ if(before.kind!==after.kind)return true;
+ const fields=before.kind==='bingo'?['size','freeCenter','cardCount','items']:before.kind==='tournament'?['format','seeding']:['questions','wrongPenalty'];
+ if(fields.some(k=>JSON.stringify(before[k])!==JSON.stringify(after[k])))return true;
+ return before.kind!=='bingo'&&JSON.stringify(before.teams.map(t=>t.name))!==JSON.stringify(after.teams.map(t=>t.name));
+}
 export function playDefaults(kind){
  const common={version:1,kind,title:'',background:'#f0f5ec',accent:'#47715d',scale:100,sound:false};
  if(kind==='bingo')return {...common,size:5,freeCenter:true,winLines:1,diagonal:true,cardCount:4,items:Array.from({length:25},(_,i)=>({label:String(i+1),image:''}))};
@@ -57,20 +64,30 @@ export function tournamentMatches(config,state){
 export function recordMatch(config,state,id,sa,sb,tie=null){
  const matches=tournamentMatches(config,state),match=matches.find(m=>m.id===id);if(!match?.ready||!integer(sa,0,1000000)||!integer(sb,0,1000000))throw new ToolError('matchError');
  if(config.format==='knockout'&&sa===sb&&!([match.a,match.b].includes(tie)))throw new ToolError('tieWinner');
- const next=structuredClone(state);next.results[id]={a:match.a,b:match.b,sa,sb,tie:sa===sb?tie:null};
+ const next=structuredClone(state),result={a:match.a,b:match.b,sa,sb,tie:sa===sb?tie:null};
+ if(match.result&&['a','b','sa','sb','tie'].every(k=>match.result[k]===result[k]))return next;
+ next.results[id]=result;
  if(config.format==='knockout'){// Changing an earlier result invalidates only its downstream branch.
   let round=match.round+1,index=Math.floor(Number(id.split('-')[1])/2);while(round<Math.ceil(Math.log2(config.teams.length))){delete next.results[`${round}-${index}`];round++;index=Math.floor(index/2);}
  }return next;
 }
 export function standings(config,state){const rows=config.teams.map((_,id)=>({id,played:0,won:0,drawn:0,lost:0,points:0,for:0,against:0}));for(const m of tournamentMatches(config,state)){if(!m.result)continue;const {sa,sb}=m.result;for(const[id,own,other]of [[m.a,sa,sb],[m.b,sb,sa]]){const r=rows[id];r.played++;r.for+=own;r.against+=other;if(own>other){r.won++;r.points+=config.winPoints;}else if(own===other){r.drawn++;r.points+=config.drawPoints;}else{r.lost++;r.points+=config.lossPoints;}}}rows.sort((a,b)=>b.points-a.points||(b.for-b.against)-(a.for-a.against)||b.for-a.for||a.id-b.id);return rows;}
 export function initialQuiz(config){return {index:0,revealed:[],awards:[],clock:{status:'idle',remaining:config.questions[0].seconds*1000,deadline:null}};}
+export function jumpQuiz(config,state,index,now){
+ if(!integer(index,0,config.questions.length-1))throw new ToolError('quizRules');
+ const next=tickQuiz(config,state,now);if(index===next.index)return next;
+ return {...next,index,clock:{status:'idle',remaining:config.questions[index].seconds*1000,deadline:null}};
+}
+export function revokeQuizAward(state,team){
+ return {...state,awards:state.awards.filter(a=>a.question!==state.index||a.team!==team)};
+}
 export function tickQuiz(config,state,now){const next=structuredClone(state);if(next.clock.status==='running'){next.clock.remaining=Math.max(0,next.clock.deadline-now);if(next.clock.remaining===0){next.clock.status='finished';next.clock.deadline=null;if(config.autoReveal&&!next.revealed.includes(next.index))next.revealed.push(next.index);}}return next;}
 export function quizControl(config,state,action,now){let next=tickQuiz(config,state,now);const clock=next.clock;
  if(action==='reveal'&&!next.revealed.includes(next.index))next.revealed.push(next.index);
  if(action==='start'&&clock.remaining>0){clock.deadline=now+clock.remaining;clock.status='running';}
  if(action==='pause'&&clock.status==='running'){clock.status='paused';clock.deadline=null;}
  if(action==='resetClock')next.clock={status:'idle',remaining:config.questions[next.index].seconds*1000,deadline:null};
- if(action==='next'||action==='previous'){next.index=Math.max(0,Math.min(config.questions.length-1,next.index+(action==='next'?1:-1)));next.clock={status:'idle',remaining:config.questions[next.index].seconds*1000,deadline:null};}return next;
+ if(action==='next'||action==='previous')return jumpQuiz(config,next,Math.max(0,Math.min(config.questions.length-1,next.index+(action==='next'?1:-1))),now);return next;
 }
 export function awardQuiz(config,state,team,correct){if(!integer(team,0,config.teams.length-1)||state.awards.some(a=>a.question===state.index&&a.team===team))throw new ToolError('alreadyAwarded');return {...state,awards:[...state.awards,{question:state.index,team,points:correct?config.questions[state.index].points:-config.wrongPenalty}]};}
 export function quizScores(config,state){return config.teams.map((_,i)=>state.awards.filter(a=>a.team===i).reduce((sum,a)=>sum+a.points,0));}

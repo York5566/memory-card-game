@@ -74,6 +74,17 @@ export function csv(rows) {
     return '"' + text.replaceAll('"', '""') + '"';
   }).join(',')).join('\r\n');
 }
+// Explicit manual moves may change group balance; swaps keep both group sizes.
+export function moveGroupMember(teams,fixed,from,to,id,swapId=null,{mode='count',value=50}={}){
+ if(!Number.isInteger(from)||!Number.isInteger(to)||from===to||!teams[from]||!teams[to])throw new ToolError('fixedInvalid');
+ const source=teams[from].find(p=>p.id===id),other=swapId===null?null:teams[to].find(p=>p.id===swapId);
+ if(!source||(swapId!==null&&!other))throw new ToolError('fixedInvalid');
+ if(!other&&mode==='size'&&teams[to].length>=value)throw new ToolError('fixedFull');
+ const next=teams.map(row=>[...row]),pins={...fixed};
+ if(other){const a=next[from].findIndex(p=>p.id===id),b=next[to].findIndex(p=>p.id===swapId);next[from][a]=other;next[to][b]=source;pins[other.id]=from;}
+ else{next[from]=next[from].filter(p=>p.id!==id);next[to].push(source);}
+ pins[id]=to;return {teams:next,fixed:pins};
+}
 // A name list or a standard CSV (first column = name, optional second = weight).
 export function importList(text, weighted = false, format = 'auto') {
   if (typeof text !== 'string' || text.length > 100000) throw new ToolError('fileLimit');
